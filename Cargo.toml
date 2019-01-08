@@ -1,0 +1,16 @@
+[package]
+name = "kvm-fw"
+version = "0.1.0"
+authors = ["Rob Bradford <robert.bradford@intel.com>"]
+edition = "2018"
+
+# the profile used for `cargo build`
+[profile.dev]
+panic = "abort" # disable stack unwinding on panic
+
+# the profile used for `cargo build --release`
+[profile.release]
+panic = "abort" # disable stack unwinding on panic
+
+[dependencies]
+cpuio = "*"
