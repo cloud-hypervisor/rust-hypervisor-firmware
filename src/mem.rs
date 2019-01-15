@@ -15,6 +15,7 @@
 // TODO(rbradford): Use generics ?
 
 #![allow(dead_code)]
+#[derive(Default)]
 /// Provides a checked way to access memory offsets from a range of raw memory
 pub struct MemoryRegion {
     base: u64,

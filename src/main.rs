@@ -19,7 +19,10 @@ use core::panic::PanicInfo;
 
 use cpuio::Port;
 
+mod block;
 mod mem;
+
+use self::block::SectorRead;
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -66,5 +69,27 @@ pub extern "C" fn _start() -> ! {
     serial_message("Starting..\n");
 
     setup_pagetables();
+
+    let mut device = block::VirtioMMIOBlockDevice::new(0xd0000000u64);
+    match device.init() {
+        Err(_) => serial_message("Error configuring block device\n"),
+        Ok(_) => serial_message("Virtio block device configured\n"),
+    }
+
+    let mut data: [u8; 512] = [0; 512];
+    match device.read(0, &mut data[..]) {
+        Err(_) => serial_message("Error reading from device\n"),
+        Ok(_) => serial_message("Read from device\n"),
+    }
+
+    match device.read(1, &mut data[..]) {
+        Err(_) => serial_message("Error reading from device\n"),
+        Ok(_) => serial_message("Read from device\n"),
+    }
+
+    if data[0] == b'E' && data[1] == b'F' && data[2] == b'I' {
+        serial_message("Found EFI marker\n")
+    }
+
     i8042_reset()
 }
