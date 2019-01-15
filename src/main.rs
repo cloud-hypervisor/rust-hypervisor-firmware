@@ -19,6 +19,8 @@ use core::panic::PanicInfo;
 
 use cpuio::Port;
 
+mod mem;
+
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
@@ -44,8 +46,25 @@ fn i8042_reset() -> ! {
     }
 }
 
+/// Setup page tables to provide an identity mapping over the full 4GiB range
+fn setup_pagetables() {
+    let pte = mem::MemoryRegion::new(0xb000, 2048 * 8);
+    for i in 0..2048 {
+        pte.io_write_u64(i * 8, (i << 21) + 0x83u64)
+    }
+
+    let pde = mem::MemoryRegion::new(0xa000, 4096);
+    for i in 0..4 {
+        pde.io_write_u64(i * 8, (0xb000u64 + (0x1000u64 * i)) | 0x03);
+    }
+
+    serial_message("Page tables setup\n");
+}
+
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    serial_message("hello world\n");
+    serial_message("Starting..\n");
+
+    setup_pagetables();
     i8042_reset()
 }
