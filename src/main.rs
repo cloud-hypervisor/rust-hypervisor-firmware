@@ -22,9 +22,7 @@ use cpuio::Port;
 
 mod block;
 mod mem;
-
-#[cfg(not(test))]
-use self::block::SectorRead;
+mod part;
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -83,19 +81,9 @@ pub extern "C" fn _start() -> ! {
         Ok(_) => serial_message("Virtio block device configured\n"),
     }
 
-    let mut data: [u8; 512] = [0; 512];
-    match device.read(0, &mut data[..]) {
-        Err(_) => serial_message("Error reading from device\n"),
-        Ok(_) => serial_message("Read from device\n"),
-    }
-
-    match device.read(1, &mut data[..]) {
-        Err(_) => serial_message("Error reading from device\n"),
-        Ok(_) => serial_message("Read from device\n"),
-    }
-
-    if data[0] == b'E' && data[1] == b'F' && data[2] == b'I' {
-        serial_message("Found EFI marker\n")
+    match part::find_header(&mut device) {
+        Ok(_) => serial_message("Found header ok\n"),
+        Err(_) => serial_message("Did not find header\n"),
     }
 
     i8042_reset()
