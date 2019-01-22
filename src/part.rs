@@ -14,46 +14,104 @@
 
 use crate::block::SectorRead;
 
-#[repr(C)]
+#[repr(packed)]
 /// GPT header
 struct Header {
     signature: u64,
-    revision: u32,
-    header_size: u32,
-    header_crc: u32,
-    reserved: u32,
-    current_lba: u64,
-    backup_lba: u64,
+    _revision: u32,
+    _header_size: u32,
+    _header_crc: u32,
+    _reserved: u32,
+    _current_lba: u64,
+    _backup_lba: u64,
     first_usable_lba: u64,
-    last_usable_lba: u64,
-    disk_guid: [u8; 16],
+    _last_usable_lba: u64,
+    _disk_guid: [u8; 16],
     first_part_lba: u64,
     part_count: u32,
-    part_entry_size: u32,
-    part_crc: u32,
+    _part_entry_size: u32,
+    _part_crc: u32,
+}
+
+#[repr(packed)]
+struct Partition {
+    type_guid: [u8; 16],
+    _guid: [u8; 16],
+    first_lba: u64,
+    last_lba: u64,
+    _flags: u64,
+    _partition_name: [u32; 18],
+}
+
+impl Partition {
+    fn is_efi_partition(&self) -> bool {
+        // GUID is C12A7328-F81F-11D2-BA4B-00A0C93EC93B in mixed-endian
+        // 0-3, 4-5, 6-7 are LE, 8-19, and 10-15 are BE
+        self.type_guid
+            == [
+                0x28, 0x73, 0x2a, 0xc1, // LE C12A7328
+                0x1f, 0xf8, // LE F81F
+                0xd2, 0x11, // LE 11D2
+                0xba, 0x4b, // BE BA4B
+                0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b, // BE 00A0C93EC93B
+            ]
+    }
 }
 
 pub enum Error {
     BlockError,
     HeaderNotFound,
+    ViolatesSpecification,
+    ExceededPartitionCount,
+    NoEFIPartition,
 }
 
-/// Find partition table header
-pub fn find_header(r: &mut SectorRead) -> Result<(), Error> {
+/// Find EFI partition
+pub fn find_efi_partition(r: &mut SectorRead) -> Result<(u64, u64), Error> {
     let mut data: [u8; 512] = [0; 512];
     match r.read(1, &mut data) {
         Ok(_) => {}
         Err(_) => return Err(Error::BlockError),
     };
-    unsafe {
-        let h = &*(data.as_ptr() as *const Header);
 
-        // GPT magic constant
-        if h.signature != 0x5452415020494645u64 {
-            return Err(Error::HeaderNotFound);
+    // Safe as sizeof header is less than 512 bytes (size of data)
+    let h = unsafe { &*(data.as_ptr() as *const Header) };
+
+    // GPT magic constant
+    if h.signature != 0x5452415020494645u64 {
+        return Err(Error::HeaderNotFound);
+    }
+
+    if h.first_usable_lba < 34 {
+        return Err(Error::ViolatesSpecification);
+    }
+
+    let mut checked_part_count = 0u32;
+    let part_count = h.part_count;
+    let first_usable_lba = h.first_usable_lba;
+    let first_part_lba = h.first_part_lba;
+
+    for lba in first_part_lba..first_usable_lba {
+        match r.read(lba, &mut data) {
+            Ok(_) => {}
+            Err(_) => return Err(Error::BlockError),
+        }
+
+        // Safe as size of partition struct * 4 is 512 bytes (size of data)
+        let parts = unsafe { core::slice::from_raw_parts(data.as_ptr() as *const Partition, 4) };
+
+        for p in parts {
+            if p.is_efi_partition() {
+                return Ok((p.first_lba, p.last_lba));
+            }
+            checked_part_count += 1;
+            if checked_part_count == part_count {
+                return Err(Error::ExceededPartitionCount);
+            }
         }
     }
-    Ok(())
+
+    Err(Error::NoEFIPartition)
 }
 
 #[cfg(test)]
@@ -95,9 +153,16 @@ mod tests {
     }
 
     #[test]
-    fn test_find_part_header() {
+    fn test_find_efi_partition() {
         let mut d = FakeDisk::new();
-        assert!(super::find_header(&mut d).is_ok(), "header should exist");
+
+        match super::find_efi_partition(&mut d) {
+            Ok((start, end)) => {
+                assert_eq!(start, 220);
+                assert_eq!(end, 5979);
+            }
+            Err(e) => panic!(e),
+        }
     }
 
 }
