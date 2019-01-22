@@ -75,15 +75,28 @@ pub struct VirtioMMIOBlockDevice {
     next_head: usize,
 }
 
-#[cfg(not(test))]
 pub enum Error {
+    #[cfg(not(test))]
     VirtioMagicInvalid,
+
+    #[cfg(not(test))]
     VirtioVersionInvalid,
+
+    #[cfg(not(test))]
     VirtioUnsupportedDevice,
+
+    #[cfg(not(test))]
     VirtioLegacyOnly,
+
+    #[cfg(not(test))]
     VirtioFeatureNegotiationFailed,
+
+    #[cfg(not(test))]
     VirtioQueueTooSmall,
+
     BlockIOError,
+
+    #[cfg(not(test))]
     BlockNotSupported,
 }
 
@@ -103,9 +116,8 @@ struct BlockRequestFooter {
     status: u8,
 }
 
-#[cfg(not(test))]
 pub trait SectorRead {
-    /// Read a single sector (512 bytes) from the block device. `data` must be 
+    /// Read a single sector (512 bytes) from the block device. `data` must be
     /// exactly 512 bytes long.
     fn read(&mut self, sector: u64, data: &mut [u8]) -> Result<(), Error>;
 }
