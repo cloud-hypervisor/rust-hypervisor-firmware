@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![no_std]
-#![no_main]
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
+#![cfg_attr(test, allow(unused_imports))]
 
 use core::panic::PanicInfo;
 
@@ -22,14 +23,17 @@ use cpuio::Port;
 mod block;
 mod mem;
 
+#[cfg(not(test))]
 use self::block::SectorRead;
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-/// Output the message proviced in `message` over the serial port
+#[cfg(not(test))]
+/// Output the message provided in `message` over the serial port
 fn serial_message(message: &str) {
     let mut serial: Port<u8> = unsafe { Port::new(0x3f8) };
     for c in message.chars() {
@@ -37,6 +41,7 @@ fn serial_message(message: &str) {
     }
 }
 
+#[cfg(not(test))]
 /// Reset the VM via the keyboard controller
 fn i8042_reset() -> ! {
     loop {
@@ -49,6 +54,7 @@ fn i8042_reset() -> ! {
     }
 }
 
+#[cfg(not(test))]
 /// Setup page tables to provide an identity mapping over the full 4GiB range
 fn setup_pagetables() {
     let pte = mem::MemoryRegion::new(0xb000, 2048 * 8);
@@ -64,6 +70,7 @@ fn setup_pagetables() {
     serial_message("Page tables setup\n");
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     serial_message("Starting..\n");

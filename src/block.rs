@@ -14,11 +14,13 @@
 
 use super::mem;
 
+#[cfg(not(test))]
 const QUEUE_SIZE: usize = 16;
 
 #[repr(C)]
 #[repr(align(16))]
 #[derive(Default)]
+#[cfg(not(test))]
 /// A virtio qeueue entry descriptor
 struct Desc {
     addr: u64,
@@ -30,6 +32,7 @@ struct Desc {
 #[repr(C)]
 #[repr(align(2))]
 #[derive(Default)]
+#[cfg(not(test))]
 /// The virtio available ring
 struct AvailRing {
     flags: u16,
@@ -40,6 +43,7 @@ struct AvailRing {
 #[repr(C)]
 #[repr(align(4))]
 #[derive(Default)]
+#[cfg(not(test))]
 /// The virtio used ring
 struct UsedRing {
     flags: u16,
@@ -49,6 +53,7 @@ struct UsedRing {
 
 #[repr(C)]
 #[derive(Default)]
+#[cfg(not(test))]
 /// A single element in the used ring
 struct UsedElem {
     id: u32,
@@ -58,6 +63,7 @@ struct UsedElem {
 #[repr(C)]
 #[repr(align(64))]
 #[derive(Default)]
+#[cfg(not(test))]
 /// Device driver for virtio block over MMIO
 pub struct VirtioMMIOBlockDevice {
     descriptors: [Desc; QUEUE_SIZE],
@@ -69,6 +75,7 @@ pub struct VirtioMMIOBlockDevice {
     next_head: usize,
 }
 
+#[cfg(not(test))]
 pub enum Error {
     VirtioMagicInvalid,
     VirtioVersionInvalid,
@@ -81,6 +88,7 @@ pub enum Error {
 }
 
 #[repr(C)]
+#[cfg(not(test))]
 /// Header used for virtio block requests
 struct BlockRequestHeader {
     request: u32,
@@ -89,17 +97,20 @@ struct BlockRequestHeader {
 }
 
 #[repr(C)]
+#[cfg(not(test))]
 /// Footer used for virtio block requests
 struct BlockRequestFooter {
     status: u8,
 }
 
+#[cfg(not(test))]
 pub trait SectorRead {
     /// Read a single sector (512 bytes) from the block device. `data` must be 
     /// exactly 512 bytes long.
     fn read(&mut self, sector: u64, data: &mut [u8]) -> Result<(), Error>;
 }
 
+#[cfg(not(test))]
 impl VirtioMMIOBlockDevice {
     pub fn new(base: u64) -> VirtioMMIOBlockDevice {
         VirtioMMIOBlockDevice {
@@ -213,6 +224,7 @@ impl VirtioMMIOBlockDevice {
     }
 }
 
+#[cfg(not(test))]
 impl SectorRead for VirtioMMIOBlockDevice {
     fn read(&mut self, sector: u64, data: &mut [u8]) -> Result<(), Error> {
         assert_eq!(512, data.len());
