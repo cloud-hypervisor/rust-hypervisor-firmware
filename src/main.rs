@@ -81,9 +81,9 @@ pub extern "C" fn _start() -> ! {
         Ok(_) => serial_message("Virtio block device configured\n"),
     }
 
-    match part::find_header(&mut device) {
-        Ok(_) => serial_message("Found header ok\n"),
-        Err(_) => serial_message("Did not find header\n"),
+    match part::find_efi_partition(&mut device) {
+        Ok(_) => serial_message("Found EFI partition\n"),
+        Err(_) => serial_message("Could not find EFI partition\n"),
     }
 
     i8042_reset()
