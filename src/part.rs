@@ -115,7 +115,7 @@ pub fn find_efi_partition(r: &mut SectorRead) -> Result<(u64, u64), Error> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::env;
     use std::fs;
     use std::fs::File;
@@ -126,12 +126,12 @@ mod tests {
     use crate::block;
     use crate::block::SectorRead;
 
-    struct FakeDisk {
+    pub struct FakeDisk {
         file: File,
     }
 
     impl FakeDisk {
-        fn new() -> FakeDisk {
+        pub fn new() -> FakeDisk {
             let file =
                 File::open("super_grub2_disk_x86_64_efi_2.02s10.iso").expect("missing disk image");
             return FakeDisk { file };
@@ -164,5 +164,4 @@ mod tests {
             Err(e) => panic!(e),
         }
     }
-
 }
