@@ -21,6 +21,7 @@ use core::panic::PanicInfo;
 use cpuio::Port;
 
 mod block;
+mod fat;
 mod mem;
 mod part;
 
