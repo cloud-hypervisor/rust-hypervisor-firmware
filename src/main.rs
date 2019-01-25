@@ -83,8 +83,24 @@ pub extern "C" fn _start() -> ! {
     }
 
     match part::find_efi_partition(&mut device) {
-        Ok(_) => serial_message("Found EFI partition\n"),
-        Err(_) => serial_message("Could not find EFI partition\n"),
+        Ok((start, end)) => {
+            serial_message("Found EFI partition\n");
+            let mut f = fat::Filesystem::new(&mut device, start);
+            match f.init() {
+                Ok(()) => {
+                    serial_message("Filesystem ready\n");
+                    let (ftype, cluster) = f.directory_find_at_root("EFI").unwrap();
+                    let (ftype, cluster) = f.directory_find_at_cluster(cluster, "BOOT").unwrap();
+                    let (ftype, cluster) =
+                        f.directory_find_at_cluster(cluster, "BOOTX64 EFI").unwrap();
+                    if cluster > 0 {
+                        serial_message("Found bootloader (BOOTX64.EFI)\n")
+                    }
+                }
+                Err(e) => serial_message("Failed to create filesystem\n"),
+            }
+        }
+        Err(e) => serial_message("Failed to find EFI partition\n"),
     }
 
     i8042_reset()
