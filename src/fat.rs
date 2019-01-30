@@ -280,7 +280,7 @@ impl<'a> Filesystem<'a> {
         &mut self,
         sector: u64,
         name: &str,
-    ) -> Result<(FileType, u32), Error> {
+    ) -> Result<(FileType, u32, u32), Error> {
         let mut data: [u8; 512] = [0; 512];
         match self.read(sector, &mut data) {
             Ok(_) => {}
@@ -313,6 +313,7 @@ impl<'a> Filesystem<'a> {
                         FileType::File
                     },
                     (d.cluster_high as u32) << 16 | d.cluster_low as u32,
+                    d.size,
                 ));
             }
         }
@@ -324,7 +325,7 @@ impl<'a> Filesystem<'a> {
         &mut self,
         cluster: u32,
         name: &str,
-    ) -> Result<(FileType, u32), Error> {
+    ) -> Result<(FileType, u32, u32), Error> {
         let cluster_start = ((cluster - 2) * self.sectors_per_cluster) + self.first_data_sector;
         for s in 0..self.sectors_per_cluster {
             match self.directory_find_at_sector((s + cluster_start) as u64, name) {
@@ -344,7 +345,7 @@ impl<'a> Filesystem<'a> {
         }
     }
 
-    pub fn directory_find_at_root(&mut self, name: &str) -> Result<(FileType, u32), Error> {
+    pub fn directory_find_at_root(&mut self, name: &str) -> Result<(FileType, u32, u32), Error> {
         match self.fat_type {
             FatType::FAT12 | FatType::FAT16 => {
                 let root_directory_start = self.first_data_sector - self.root_dir_sectors;
@@ -397,16 +398,17 @@ mod tests {
                 let mut f = crate::fat::Filesystem::new(&mut d, start);
                 match f.init() {
                     Ok(()) => {
-                        let (ftype, cluster) = f.directory_find_at_root("EFI").unwrap();
+                        let (ftype, cluster, _) = f.directory_find_at_root("EFI").unwrap();
 
                         assert_eq!(ftype, super::FileType::Directory);
-                        let (ftype, cluster) =
+                        let (ftype, cluster, _) =
                             f.directory_find_at_cluster(cluster, "BOOT").unwrap();
                         assert_eq!(ftype, super::FileType::Directory);
-                        let (ftype, cluster) =
+                        let (ftype, cluster, size) =
                             f.directory_find_at_cluster(cluster, "BOOTX64 EFI").unwrap();
                         assert_eq!(ftype, super::FileType::File);
                         assert_eq!(cluster, 4);
+                        assert_eq!(size, 133120);
                     }
                     Err(e) => panic!(e),
                 }
