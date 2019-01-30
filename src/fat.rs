@@ -96,7 +96,7 @@ pub enum Error {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum FileType {
+enum FileType {
     File,
     Directory,
 }
@@ -361,7 +361,7 @@ impl<'a> Filesystem<'a> {
         Err(Error::NotFound)
     }
 
-    pub fn directory_find_at_cluster(
+    fn directory_find_at_cluster(
         &mut self,
         cluster: u32,
         name: &str,
@@ -385,7 +385,7 @@ impl<'a> Filesystem<'a> {
         }
     }
 
-    pub fn directory_find_at_root(&mut self, name: &str) -> Result<(FileType, u32, u32), Error> {
+    fn directory_find_at_root(&mut self, name: &str) -> Result<(FileType, u32, u32), Error> {
         match self.fat_type {
             FatType::FAT12 | FatType::FAT16 => {
                 let root_directory_start = self.first_data_sector - self.root_dir_sectors;
@@ -408,7 +408,7 @@ impl<'a> Filesystem<'a> {
         }
     }
 
-    pub fn get_file(&'a mut self, cluster: u32, size: u32) -> Result<File, Error> {
+    fn get_file(&'a mut self, cluster: u32, size: u32) -> Result<File, Error> {
         return Ok(File {
             filesystem: self,
             active_cluster: cluster,
