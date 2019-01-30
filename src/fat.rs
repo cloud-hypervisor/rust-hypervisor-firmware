@@ -14,64 +14,49 @@
 
 use crate::block::SectorRead;
 
-#[derive(Debug)]
 #[repr(packed)]
 struct Header {
-    magic: [u8; 3],
-    identifier: [u8; 8],
+    _magic: [u8; 3],
+    _identifier: [u8; 8],
     bytes_per_sector: u16,
     sectors_per_cluster: u8,
     reserved_sectors: u16,
     fat_count: u8,
     root_dir_count: u16,
     legacy_sectors: u16,
-    media_type: u8,
+    _media_type: u8,
     legacy_sectors_per_fat: u16,
-    sectors_per_track: u16,
-    head_count: u16,
-    hidden_sectors: u32,
+    _sectors_per_track: u16,
+    _head_count: u16,
+    _hidden_sectors: u32,
     sectors: u32,
 }
 
-#[derive(Debug)]
-#[repr(packed)]
-struct Fat12Header {
-    header: Header,
-    drive_number: u8,
-    signature: u8,
-    nt_flags: u8,
-    serial: u32,
-    volume: [u8; 11],
-    id: [u8; 8],
-}
-
-#[derive(Debug)]
 #[repr(packed)]
 struct Fat32Header {
-    header: Header,
+    _header: Header,
     sectors_per_fat: u32,
-    flags: u16,
-    version: u16,
+    _flags: u16,
+    _version: u16,
     root_cluster: u32,
-    fsinfo_sector: u16,
-    backup_boot_sector: u16,
-    reserved: [u8; 12],
-    drive_no: u8,
-    nt_flags: u8,
-    signature: u8,
-    serial: u32,
-    volume: [u8; 11],
-    id: [u8; 8],
+    _fsinfo_sector: u16,
+    _backup_boot_sector: u16,
+    _reserved: [u8; 12],
+    _drive_no: u8,
+    _nt_flags: u8,
+    _signature: u8,
+    _serial: u32,
+    _volume: [u8; 11],
+    _id: [u8; 8],
 }
 
 #[repr(packed)]
-#[derive(Debug)]
 struct Directory {
     name: [u8; 11],
     flags: u8,
-    unused1: [u8; 8],
+    _unused1: [u8; 8],
     cluster_high: u16,
-    unused2: [u8; 4],
+    _unused2: [u8; 4],
     cluster_low: u16,
     size: u32,
 }
@@ -114,6 +99,61 @@ pub enum Error {
 pub enum FileType {
     File,
     Directory,
+}
+
+pub struct File<'a> {
+    filesystem: &'a mut Filesystem<'a>,
+    active_cluster: u32,
+    sector_offset: u64,
+    size: u32,
+    position: u32,
+}
+
+pub trait Read {
+    fn read(&mut self, data: &mut [u8]) -> Result<u32, Error>;
+}
+
+impl<'a> Read for File<'a> {
+    fn read(&mut self, data: &mut [u8]) -> Result<u32, Error> {
+        assert_eq!(data.len(), 512);
+
+        if self.position >= self.size {
+            return Err(Error::EndOfFile);
+        }
+
+        if self.sector_offset == self.filesystem.sectors_per_cluster as u64 {
+            match self.filesystem.next_cluster(self.active_cluster) {
+                Err(e) => {
+                    return Err(e);
+                }
+                Ok(cluster) => {
+                    self.active_cluster = cluster;
+                    self.sector_offset = 0;
+                }
+            }
+        }
+
+        let cluster_start = ((self.active_cluster - 2) * self.filesystem.sectors_per_cluster)
+            + self.filesystem.first_data_sector;
+
+        match self
+            .filesystem
+            .read(cluster_start as u64 + self.sector_offset, data)
+        {
+            Err(_) => Err(Error::BlockError),
+            Ok(()) => {
+                self.sector_offset += 1;
+                if (self.position + 512) > self.size {
+                    let bytes_read = self.size - self.position;
+                    self.position = self.size;
+                    Ok(bytes_read)
+                } else {
+                    self.position += 512;
+                    Ok(512)
+                }
+            }
+        }
+    }
 }
 
 impl<'a> SectorRead for Filesystem<'a> {
@@ -367,11 +407,105 @@ impl<'a> Filesystem<'a> {
             _ => Err(Error::Unsupported),
         }
     }
+
+    pub fn get_file(&'a mut self, cluster: u32, size: u32) -> Result<File, Error> {
+        return Ok(File {
+            filesystem: self,
+            active_cluster: cluster,
+            sector_offset: 0,
+            size,
+            position: 0,
+        });
+    }
+
+    pub fn open(&'a mut self, path: &str) -> Result<File, Error> {
+        assert_eq!(path.find('\\'), Some(0));
+
+        let mut residual = path;
+        let mut next_cluster = 0;
+        let mut root = true;
+        loop {
+            // sub is the directory or file name
+            // residual is what is left
+            let sub = match &residual[1..].find('\\') {
+                None => &residual[1..],
+                Some(x) => {
+                    // +1 due to above find working on substring
+                    let sub = &residual[1..(*x + 1)];
+                    residual = &residual[(*x + 1)..];
+                    sub
+                }
+            };
+
+            if sub.len() == 0 {
+                return Err(Error::NotFound);
+            }
+
+            match if root {
+                self.directory_find_at_root(sub)
+            } else {
+                self.directory_find_at_cluster(next_cluster, sub)
+            } {
+                Ok((ft, cluster, size)) => match ft {
+                    FileType::Directory => {
+                        next_cluster = cluster;
+                    }
+                    FileType::File => return self.get_file(cluster, size),
+                },
+                Err(e) => {
+                    return Err(match e {
+                        Error::EndOfFile => Error::NotFound,
+                        _ => e,
+                    });
+                }
+            }
+            root = false;
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::Read;
     use crate::part::tests::FakeDisk;
+
+    #[test]
+    fn test_fat_file_reads() {
+        let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
+
+        for image in &images {
+            let mut d = FakeDisk::new(image);
+
+            for n in 9..16 {
+                for o in 0..2 {
+                    let v = 2u32.pow(n) - o;
+                    let mut fs = crate::fat::Filesystem::new(&mut d, 0);
+                    fs.init().expect("Error initialising filesystem");
+                    let path = format!("\\A\\B\\C\\{}", v);
+                    let mut f = fs.open(&path).expect("Error opening file");
+
+                    assert_eq!(f.size, v);
+
+                    let mut bytes_so_far = 0;
+                    loop {
+                        let mut data: [u8; 512] = [0; 512];
+                        match f.read(&mut data) {
+                            Ok(bytes) => {
+                                bytes_so_far += bytes;
+                            }
+                            Err(super::Error::EndOfFile) => {
+                                break;
+                            }
+                            Err(e) => panic!(e),
+                        }
+                    }
+
+                    assert_eq!(bytes_so_far, f.size);
+                }
+            }
+        }
+    }
+
     #[test]
     fn test_fat_init() {
         let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
@@ -409,6 +543,25 @@ mod tests {
                         assert_eq!(ftype, super::FileType::File);
                         assert_eq!(cluster, 4);
                         assert_eq!(size, 133120);
+                    }
+                    Err(e) => panic!(e),
+                }
+            }
+            Err(e) => panic!(e),
+        }
+    }
+
+    #[test]
+    fn test_fat_open() {
+        let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
+        match crate::part::find_efi_partition(&mut d) {
+            Ok((start, end)) => {
+                let mut f = crate::fat::Filesystem::new(&mut d, start);
+                match f.init() {
+                    Ok(()) => {
+                        let file = f.open("\\EFI\\BOOT\\BOOTX64 EFI").unwrap();
+                        assert_eq!(file.active_cluster, 4);
+                        assert_eq!(file.size, 133120);
                     }
                     Err(e) => panic!(e),
                 }
