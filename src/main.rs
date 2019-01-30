@@ -89,9 +89,9 @@ pub extern "C" fn _start() -> ! {
             match f.init() {
                 Ok(()) => {
                     serial_message("Filesystem ready\n");
-                    let (ftype, cluster) = f.directory_find_at_root("EFI").unwrap();
-                    let (ftype, cluster) = f.directory_find_at_cluster(cluster, "BOOT").unwrap();
-                    let (ftype, cluster) =
+                    let (ftype, cluster, _) = f.directory_find_at_root("EFI").unwrap();
+                    let (ftype, cluster, _) = f.directory_find_at_cluster(cluster, "BOOT").unwrap();
+                    let (ftype, cluster, _) =
                         f.directory_find_at_cluster(cluster, "BOOTX64 EFI").unwrap();
                     if cluster > 0 {
                         serial_message("Found bootloader (BOOTX64.EFI)\n")
