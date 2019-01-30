@@ -11,11 +11,13 @@ bootloader from within a disk image.
 
 To compile:
 
-cargo xbuild --target target.json
+cargo xbuild --release --target target.json
 
 The result will be in:
 
-target/target/debug/kvm-fw
+target/target/release/kvm-fw
+
+Debug builds do not currently function.
 
 ## Running
 
@@ -24,15 +26,21 @@ not work with crosvm as crosvm has a hardcoded kernel function start address.
 
 ## Features
 
-* Outputs "hello world" on the serial port
-* Reboots
+* virtio (MMIO) block support
+* GPT parsing (to find EFI system partition)
+* FAT12/16/32 directory traversal and file reading
 
 ## TODO
 
-* virtio-{mmio/pci} support
-* virtio-blk
-* FAT filesystem
 * PE32 loader
 * EFI runtime services stub implmentations
 
+## Testing
 
+"cargo test" needs disk images from make-test-disks.sh
+
+super_grub2_disk_x86_64_efi_2.02s10.iso which you can download from:
+
+http://download2.nust.na/pub4/sourceforge/s/su/supergrub2/2.02s10/super_grub2_disk_2.02s10/super_grub2_disk_x86_64_efi_2.02s10.iso
+
+sha1sum: 2b6bec29fb696cce96c47895f2263d45e2dc822e
