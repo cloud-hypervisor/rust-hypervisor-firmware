@@ -89,18 +89,15 @@ pub extern "C" fn _start() -> ! {
             match f.init() {
                 Ok(()) => {
                     serial_message("Filesystem ready\n");
-                    let (ftype, cluster, _) = f.directory_find_at_root("EFI").unwrap();
-                    let (ftype, cluster, _) = f.directory_find_at_cluster(cluster, "BOOT").unwrap();
-                    let (ftype, cluster, _) =
-                        f.directory_find_at_cluster(cluster, "BOOTX64 EFI").unwrap();
-                    if cluster > 0 {
-                        serial_message("Found bootloader (BOOTX64.EFI)\n")
+                    match f.open("\\EFI\\BOOT\\BOOTX64 EFI") {
+                        Ok(_) => serial_message("Found bootloader (BOOTX64.EFI)\n"),
+                        Err(_) => serial_message("Failed to find bootloader\n"),
                     }
                 }
-                Err(e) => serial_message("Failed to create filesystem\n"),
+                Err(_) => serial_message("Failed to create filesystem\n"),
             }
         }
-        Err(e) => serial_message("Failed to find EFI partition\n"),
+        Err(_) => serial_message("Failed to find EFI partition\n"),
     }
 
     i8042_reset()
