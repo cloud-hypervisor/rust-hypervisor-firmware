@@ -374,7 +374,7 @@ mod tests {
     use crate::part::tests::FakeDisk;
     #[test]
     fn test_fat_init() {
-        let mut d = FakeDisk::new();
+        let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
         match crate::part::find_efi_partition(&mut d) {
             Ok((start, end)) => {
                 let mut f = crate::fat::Filesystem::new(&mut d, start);
@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_fat_directory() {
-        let mut d = FakeDisk::new();
+        let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
         match crate::part::find_efi_partition(&mut d) {
             Ok((start, end)) => {
                 let mut f = crate::fat::Filesystem::new(&mut d, start);

@@ -131,9 +131,8 @@ pub mod tests {
     }
 
     impl FakeDisk {
-        pub fn new() -> FakeDisk {
-            let file =
-                File::open("super_grub2_disk_x86_64_efi_2.02s10.iso").expect("missing disk image");
+        pub fn new(path: &str) -> FakeDisk {
+            let file = File::open(path).expect("missing disk image");
             return FakeDisk { file };
         }
     }
@@ -154,7 +153,7 @@ pub mod tests {
 
     #[test]
     fn test_find_efi_partition() {
-        let mut d = FakeDisk::new();
+        let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
 
         match super::find_efi_partition(&mut d) {
             Ok((start, end)) => {
