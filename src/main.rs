@@ -85,7 +85,7 @@ pub extern "C" fn _start() -> ! {
     match part::find_efi_partition(&mut device) {
         Ok((start, end)) => {
             serial_message("Found EFI partition\n");
-            let mut f = fat::Filesystem::new(&mut device, start);
+            let mut f = fat::Filesystem::new(&mut device, start, end);
             match f.init() {
                 Ok(()) => {
                     serial_message("Filesystem ready\n");

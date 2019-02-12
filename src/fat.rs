@@ -72,6 +72,7 @@ enum FatType {
 pub struct Filesystem<'a> {
     device: &'a mut SectorRead,
     start: u64,
+    last: u64,
     bytes_per_sector: u32,
     sectors: u32,
     fat_type: FatType,
@@ -158,15 +159,20 @@ impl<'a> Read for File<'a> {
 
 impl<'a> SectorRead for Filesystem<'a> {
     fn read(&mut self, sector: u64, data: &mut [u8]) -> Result<(), crate::block::Error> {
-        self.device.read(self.start + sector, data)
+        if self.start + sector > self.last {
+            Err(crate::block::Error::BlockIOError)
+        } else {
+            self.device.read(self.start + sector, data)
+        }
     }
 }
 
 impl<'a> Filesystem<'a> {
-    pub fn new(device: &'a mut SectorRead, start: u64) -> Filesystem {
+    pub fn new(device: &'a mut SectorRead, start: u64, last: u64) -> Filesystem {
         Filesystem {
             device,
             start,
+            last,
             bytes_per_sector: 0,
             sectors: 0,
             fat_type: FatType::Unknown,
@@ -479,7 +485,8 @@ mod tests {
             for n in 9..16 {
                 for o in 0..2 {
                     let v = 2u32.pow(n) - o;
-                    let mut fs = crate::fat::Filesystem::new(&mut d, 0);
+                    let len = d.len();
+                    let mut fs = crate::fat::Filesystem::new(&mut d, 0, len);
                     fs.init().expect("Error initialising filesystem");
                     let path = format!("\\A\\B\\C\\{}", v);
                     let mut f = fs.open(&path).expect("Error opening file");
@@ -511,7 +518,7 @@ mod tests {
         let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
         match crate::part::find_efi_partition(&mut d) {
             Ok((start, end)) => {
-                let mut f = crate::fat::Filesystem::new(&mut d, start);
+                let mut f = crate::fat::Filesystem::new(&mut d, start, end);
                 match f.init() {
                     Ok(()) => {
                         assert_eq!(f.sectors, 5760);
@@ -529,7 +536,7 @@ mod tests {
         let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
         match crate::part::find_efi_partition(&mut d) {
             Ok((start, end)) => {
-                let mut f = crate::fat::Filesystem::new(&mut d, start);
+                let mut f = crate::fat::Filesystem::new(&mut d, start, end);
                 match f.init() {
                     Ok(()) => {
                         let (ftype, cluster, _) = f.directory_find_at_root("EFI").unwrap();
@@ -556,7 +563,7 @@ mod tests {
         let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
         match crate::part::find_efi_partition(&mut d) {
             Ok((start, end)) => {
-                let mut f = crate::fat::Filesystem::new(&mut d, start);
+                let mut f = crate::fat::Filesystem::new(&mut d, start, end);
                 match f.init() {
                     Ok(()) => {
                         let file = f.open("\\EFI\\BOOT\\BOOTX64 EFI").unwrap();

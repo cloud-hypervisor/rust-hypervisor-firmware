@@ -119,6 +119,7 @@ pub mod tests {
     use std::env;
     use std::fs;
     use std::fs::File;
+    use std::fs::Metadata;
     use std::io::Read;
     use std::io::Seek;
     use std::io::SeekFrom;
@@ -128,12 +129,18 @@ pub mod tests {
 
     pub struct FakeDisk {
         file: File,
+        metadata: Metadata,
     }
 
     impl FakeDisk {
         pub fn new(path: &str) -> FakeDisk {
             let file = File::open(path).expect("missing disk image");
-            return FakeDisk { file };
+            let metadata = fs::metadata(path).expect("error getting file metadata");
+            return FakeDisk { file, metadata };
+        }
+
+        pub fn len(&self) -> u64 {
+            self.metadata.len()
         }
     }
 
