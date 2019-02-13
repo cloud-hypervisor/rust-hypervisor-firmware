@@ -94,6 +94,7 @@ pub enum Error {
     Unsupported,
     NotFound,
     EndOfFile,
+    InvalidOffset,
 }
 
 #[derive(Debug, PartialEq)]
@@ -104,6 +105,7 @@ enum FileType {
 
 pub struct File<'a> {
     filesystem: &'a mut Filesystem<'a>,
+    start_cluster: u32,
     active_cluster: u32,
     sector_offset: u64,
     size: u32,
@@ -112,6 +114,7 @@ pub struct File<'a> {
 
 pub trait Read {
     fn read(&mut self, data: &mut [u8]) -> Result<u32, Error>;
+    fn seek(&mut self, offset: u32) -> Result<(), Error>;
 }
 
 impl<'a> Read for File<'a> {
@@ -154,6 +157,43 @@ impl<'a> Read for File<'a> {
                 }
             }
         }
+    }
+
+    fn seek(&mut self, position: u32) -> Result<(), Error> {
+        if position % 512 != 0 {
+            return Err(Error::InvalidOffset);
+        }
+
+        if position >= self.size {
+            return Err(Error::EndOfFile);
+        }
+
+        // Beyond, reset to zero and come back
+        if position < self.position {
+            self.position = 0;
+            self.sector_offset = 0;
+            self.active_cluster = self.start_cluster;
+        }
+
+        // Like read but without reading, follow cluster chain if we reach end of cluster
+        while self.position != position {
+            if self.sector_offset == self.filesystem.sectors_per_cluster as u64 {
+                match self.filesystem.next_cluster(self.active_cluster) {
+                    Err(e) => {
+                        return Err(e);
+                    }
+                    Ok(cluster) => {
+                        self.active_cluster = cluster;
+                        self.sector_offset = 0;
+                    }
+                }
+            }
+
+            self.sector_offset += 1;
+            self.position += 512;
+        }
+
+        Ok(())
     }
 }
 
@@ -417,6 +457,7 @@ impl<'a> Filesystem<'a> {
     fn get_file(&'a mut self, cluster: u32, size: u32) -> Result<File, Error> {
         return Ok(File {
             filesystem: self,
+            start_cluster: cluster,
             active_cluster: cluster,
             sector_offset: 0,
             size,
@@ -508,6 +549,79 @@ mod tests {
                     }
 
                     assert_eq!(bytes_so_far, f.size);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_fat_file_seek() {
+        let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
+
+        for image in &images {
+            let mut d = FakeDisk::new(image);
+
+            for n in 9..16 {
+                for o in 0..2 {
+                    let v = 2u32.pow(n) - o;
+                    let len = d.len();
+                    let mut fs = crate::fat::Filesystem::new(&mut d, 0, len);
+                    fs.init().expect("Error initialising filesystem");
+                    let path = format!("\\A\\B\\C\\{}", v);
+                    let mut f = fs.open(&path).expect("Error opening file");
+
+                    assert_eq!(f.size, v);
+
+                    let mut bytes_so_far = 0;
+                    loop {
+                        let mut data: [u8; 512] = [0; 512];
+                        match f.read(&mut data) {
+                            Ok(bytes) => {
+                                bytes_so_far += bytes;
+                            }
+                            Err(super::Error::EndOfFile) => {
+                                break;
+                            }
+                            Err(e) => panic!(e),
+                        }
+                    }
+
+                    assert_eq!(bytes_so_far, f.size);
+
+                    f.seek(0).expect("expect seek to work");
+                    bytes_so_far = 0;
+                    loop {
+                        let mut data: [u8; 512] = [0; 512];
+                        match f.read(&mut data) {
+                            Ok(bytes) => {
+                                bytes_so_far += bytes;
+                            }
+                            Err(super::Error::EndOfFile) => {
+                                break;
+                            }
+                            Err(e) => panic!(e),
+                        }
+                    }
+
+                    assert_eq!(bytes_so_far, f.size);
+
+                    if f.size > 512 && f.size % 2 == 0 {
+                        f.seek(f.size / 2).expect("expect seek to work");
+                        bytes_so_far = f.size / 2;
+                        loop {
+                            let mut data: [u8; 512] = [0; 512];
+                            match f.read(&mut data) {
+                                Ok(bytes) => {
+                                    bytes_so_far += bytes;
+                                }
+                                Err(super::Error::EndOfFile) => {
+                                    break;
+                                }
+                                Err(e) => panic!(e),
+                            }
+                        }
+                        assert_eq!(bytes_so_far, f.size);
+                    }
                 }
             }
         }
