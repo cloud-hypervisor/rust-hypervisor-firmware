@@ -27,6 +27,20 @@ impl MemoryRegion {
         MemoryRegion { base, length }
     }
 
+    /// Take a slice and turn it into a region of memory
+    pub fn from_slice<T>(data: &[T]) -> MemoryRegion {
+        MemoryRegion {
+            base: data.as_ptr() as u64,
+            length: (data.len() * core::mem::size_of::<T>()) as u64,
+        }
+    }
+
+    /// Expose a section of the memory region as a slice
+    pub fn as_mut_slice<T>(&self, offset: u64, length: u64) -> &mut [T] {
+        assert!((offset + (length * core::mem::size_of::<T>() as u64)) <= self.length);
+        unsafe { core::slice::from_raw_parts_mut((self.base + offset) as *mut T, length as usize) }
+    }
+
     /// Read a single byte at a given offset
     pub fn read_u8(&self, offset: u64) -> u8 {
         assert!(offset < self.length);
