@@ -21,6 +21,7 @@ use core::panic::PanicInfo;
 use cpuio::Port;
 
 mod block;
+mod bzimage;
 mod fat;
 mod mem;
 mod part;
@@ -89,8 +90,25 @@ pub extern "C" fn _start() -> ! {
             match f.init() {
                 Ok(()) => {
                     serial_message("Filesystem ready\n");
-                    match f.open("\\EFI\\BOOT\\BOOTX64 EFI") {
-                        Ok(_) => serial_message("Found bootloader (BOOTX64.EFI)\n"),
+                    match f.open("\\EFI\\LINUX\\BZIMAGE") {
+                        Ok(mut file) => {
+                            serial_message("Found Linux kernel (bzImage)\n");
+                            match bzimage::load_kernel(&mut file) {
+                                Err(_) => serial_message("Error loading bzImage\n"),
+                                Ok(addr) => {
+                                    serial_message("Loaded bzimage\n");
+
+                                    // Rely on x86 C calling convention where second argument is put into %rsi register
+                                    let ptr = addr as *const ();
+                                    let code: extern "C" fn(u64, u64) =
+                                        unsafe { core::mem::transmute(ptr) };
+                                    (code)(
+                                        0, /* dummy value */
+                                        bzimage::ZERO_PAGE_START as u64,
+                                    );
+                                }
+                            }
+                        }
                         Err(_) => serial_message("Failed to find bootloader\n"),
                     }
                 }
