@@ -115,6 +115,7 @@ pub struct File<'a> {
 pub trait Read {
     fn read(&mut self, data: &mut [u8]) -> Result<u32, Error>;
     fn seek(&mut self, offset: u32) -> Result<(), Error>;
+    fn get_size(&self) -> u32;
 }
 
 impl<'a> Read for File<'a> {
@@ -194,6 +195,9 @@ impl<'a> Read for File<'a> {
         }
 
         Ok(())
+    }
+    fn get_size(&self) -> u32 {
+        return self.size;
     }
 }
 

@@ -139,6 +139,22 @@ pub extern "C" fn _start() -> ! {
         },
     }
 
+    match f.open("\\EFI\\LINUX\\INITRD") {
+        Err(fat::Error::NotFound) => {
+            serial_message("Skipping loading ramdisk. File not found (INITRD).\n")
+        }
+        Err(_) => serial_message("Error opening INITRD file\n"),
+        Ok(mut file) => match bzimage::load_initrd(&mut file) {
+            Ok(_) => {}
+            Err(_) => {
+                serial_message("Error loading ramdisk file\n");
+                i8042_reset();
+            }
+        },
+    }
+
+    serial_message("Jumping to kernel\n");
+
     // Rely on x86 C calling convention where second argument is put into %rsi register
     let ptr = jump_address as *const ();
     let code: extern "C" fn(u64, u64) = unsafe { core::mem::transmute(ptr) };
