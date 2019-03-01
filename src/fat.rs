@@ -70,7 +70,7 @@ enum FatType {
 }
 
 pub struct Filesystem<'a> {
-    device: &'a mut SectorRead,
+    device: &'a SectorRead,
     start: u64,
     last: u64,
     bytes_per_sector: u32,
@@ -198,7 +198,7 @@ impl<'a> Read for File<'a> {
 }
 
 impl<'a> SectorRead for Filesystem<'a> {
-    fn read(&mut self, sector: u64, data: &mut [u8]) -> Result<(), crate::block::Error> {
+    fn read(&self, sector: u64, data: &mut [u8]) -> Result<(), crate::block::Error> {
         if self.start + sector > self.last {
             Err(crate::block::Error::BlockIOError)
         } else {
@@ -208,7 +208,7 @@ impl<'a> SectorRead for Filesystem<'a> {
 }
 
 impl<'a> Filesystem<'a> {
-    pub fn new(device: &'a mut SectorRead, start: u64, last: u64) -> Filesystem {
+    pub fn new(device: &'a SectorRead, start: u64, last: u64) -> Filesystem {
         Filesystem {
             device,
             start,
