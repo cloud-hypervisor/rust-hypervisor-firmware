@@ -104,7 +104,7 @@ enum FileType {
 }
 
 pub struct File<'a> {
-    filesystem: &'a mut Filesystem<'a>,
+    filesystem: &'a Filesystem<'a>,
     start_cluster: u32,
     active_cluster: u32,
     sector_offset: u64,
@@ -283,7 +283,7 @@ impl<'a> Filesystem<'a> {
         Ok(())
     }
 
-    fn next_cluster(&mut self, cluster: u32) -> Result<u32, Error> {
+    fn next_cluster(&self, cluster: u32) -> Result<u32, Error> {
         match self.fat_type {
             FatType::FAT12 => {
                 let mut data: [u8; 512] = [0; 512];
@@ -363,7 +363,7 @@ impl<'a> Filesystem<'a> {
     }
 
     fn directory_find_at_sector(
-        &mut self,
+        &self,
         sector: u64,
         name: &str,
     ) -> Result<(FileType, u32, u32), Error> {
@@ -408,7 +408,7 @@ impl<'a> Filesystem<'a> {
     }
 
     fn directory_find_at_cluster(
-        &mut self,
+        &self,
         cluster: u32,
         name: &str,
     ) -> Result<(FileType, u32, u32), Error> {
@@ -431,7 +431,7 @@ impl<'a> Filesystem<'a> {
         }
     }
 
-    fn directory_find_at_root(&mut self, name: &str) -> Result<(FileType, u32, u32), Error> {
+    fn directory_find_at_root(&self, name: &str) -> Result<(FileType, u32, u32), Error> {
         match self.fat_type {
             FatType::FAT12 | FatType::FAT16 => {
                 let root_directory_start = self.first_data_sector - self.root_dir_sectors;
@@ -454,7 +454,7 @@ impl<'a> Filesystem<'a> {
         }
     }
 
-    fn get_file(&'a mut self, cluster: u32, size: u32) -> Result<File, Error> {
+    fn get_file(&self, cluster: u32, size: u32) -> Result<File, Error> {
         return Ok(File {
             filesystem: self,
             start_cluster: cluster,
@@ -465,7 +465,7 @@ impl<'a> Filesystem<'a> {
         });
     }
 
-    pub fn open(&'a mut self, path: &str) -> Result<File, Error> {
+    pub fn open(&self, path: &str) -> Result<File, Error> {
         assert_eq!(path.find('\\'), Some(0));
 
         let mut residual = path;
