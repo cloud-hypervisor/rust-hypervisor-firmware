@@ -37,6 +37,81 @@ pub const ZERO_PAGE_START: usize = 0x7000;
 const KERNEL_LOCATION: u32 = 0x200000;
 
 #[cfg(not(test))]
+const E820_RAM: u32 = 1;
+
+#[cfg(not(test))]
+#[repr(C, packed)]
+struct E820Entry {
+    addr: u64,
+    size: u64,
+    entry_type: u32,
+}
+
+#[cfg(not(test))]
+pub fn load_initrd(f: &mut Read) -> Result<(), Error> {
+    let zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
+
+    let mut max_load_address = zero_page.read_u32(0x22c) as u64;
+    if max_load_address == 0 {
+        max_load_address = 0x37ffffff;
+    }
+
+    let e820_count = zero_page.read_u8(0x1e8);
+    let e820_table = zero_page.as_mut_slice::<E820Entry>(0x2d0, e820_count as u64);
+
+    // Search E820 table for highest usable ram location that is below the limit.
+    let mut top_of_usable_ram = 0;
+    for entry in e820_table {
+        if entry.entry_type == E820_RAM {
+            let m = entry.addr + entry.size - 1;
+            if m > top_of_usable_ram && m < max_load_address {
+                top_of_usable_ram = m;
+            }
+        }
+    }
+
+    if top_of_usable_ram > max_load_address {
+        top_of_usable_ram = max_load_address;
+    }
+
+    let initrd_address = top_of_usable_ram - f.get_size() as u64;
+    let initrd_region = crate::mem::MemoryRegion::new(initrd_address, f.get_size() as u64);
+
+    let mut offset = 0;
+    while offset < f.get_size() {
+        let bytes_remaining = f.get_size() - offset;
+
+        // Use intermediata buffer for last, partial sector
+        if bytes_remaining < 512 {
+            let mut data: [u8; 512] = [0; 512];
+            match f.read(&mut data) {
+                Err(crate::fat::Error::EndOfFile) => break,
+                Err(_) => return Err(Error::FileError),
+                Ok(_) => {}
+            }
+            let dst = initrd_region.as_mut_slice(offset as u64, bytes_remaining as u64);
+            dst.copy_from_slice(&data[0..bytes_remaining as usize]);
+            break;
+        }
+
+        let dst = initrd_region.as_mut_slice(offset as u64, 512);
+
+        match f.read(dst) {
+            Err(crate::fat::Error::EndOfFile) => break,
+            Err(_) => return Err(Error::FileError),
+            Ok(_) => {}
+        }
+
+        offset += 512;
+    }
+
+    // initrd pointer/size
+    zero_page.write_u32(0x218, initrd_address as u32);
+    zero_page.write_u32(0x21c, f.get_size());
+    Ok(())
+}
+
+#[cfg(not(test))]
 pub fn load_commandline(f: &mut Read) -> Result<(), Error> {
     let cmdline_region =
         crate::mem::MemoryRegion::new(CMDLINE_START as u64, CMDLINE_MAX_SIZE as u64);
