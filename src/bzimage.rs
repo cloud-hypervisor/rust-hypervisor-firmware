@@ -37,6 +37,43 @@ pub const ZERO_PAGE_START: usize = 0x7000;
 const KERNEL_LOCATION: u32 = 0x200000;
 
 #[cfg(not(test))]
+pub fn load_commandline(f: &mut Read) -> Result<(), Error> {
+    let cmdline_region =
+        crate::mem::MemoryRegion::new(CMDLINE_START as u64, CMDLINE_MAX_SIZE as u64);
+
+    let dst = cmdline_region.as_mut_slice::<u8>(0, CMDLINE_MAX_SIZE as u64);
+    for x in 0..dst.len() {
+        dst[x] = 0;
+    }
+
+    let mut offset = 0;
+    while offset < CMDLINE_MAX_SIZE {
+        // There is no need to worry about partial sectors here as the mapped range
+        // is a multiple of the sector size.
+        let dst = cmdline_region.as_mut_slice(offset as u64, 512);
+
+        match f.read(dst) {
+            Err(crate::fat::Error::EndOfFile) => break,
+            Err(_) => return Err(Error::FileError),
+            Ok(_) => {}
+        }
+
+        offset += 512;
+    }
+
+    // We can do this safely and (the .len()) later as we zero all the range.
+    let cmdline = unsafe { core::str::from_utf8_unchecked(dst) };
+
+    let zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
+
+    // Commandline pointer/size
+    zero_page.write_u32(0x228, CMDLINE_START as u32);
+    zero_page.write_u32(0x238, cmdline.len() as u32);
+
+    Ok(())
+}
+
+#[cfg(not(test))]
 pub fn load_kernel(f: &mut Read) -> Result<(u64), Error> {
     match f.seek(0) {
         Err(_) => return Err(Error::FileError),

@@ -79,44 +79,70 @@ pub extern "C" fn _start() -> ! {
 
     let mut device = block::VirtioMMIOBlockDevice::new(0xd0000000u64);
     match device.init() {
-        Err(_) => serial_message("Error configuring block device\n"),
+        Err(_) => {
+            serial_message("Error configuring block device\n");
+            i8042_reset();
+        }
         Ok(_) => serial_message("Virtio block device configured\n"),
     }
 
+    let mut f;
     match part::find_efi_partition(&mut device) {
         Ok((start, end)) => {
             serial_message("Found EFI partition\n");
-            let mut f = fat::Filesystem::new(&mut device, start, end);
-            match f.init() {
-                Ok(()) => {
-                    serial_message("Filesystem ready\n");
-                    match f.open("\\EFI\\LINUX\\BZIMAGE") {
-                        Ok(mut file) => {
-                            serial_message("Found Linux kernel (bzImage)\n");
-                            match bzimage::load_kernel(&mut file) {
-                                Err(_) => serial_message("Error loading bzImage\n"),
-                                Ok(addr) => {
-                                    serial_message("Loaded bzimage\n");
-
-                                    // Rely on x86 C calling convention where second argument is put into %rsi register
-                                    let ptr = addr as *const ();
-                                    let code: extern "C" fn(u64, u64) =
-                                        unsafe { core::mem::transmute(ptr) };
-                                    (code)(
-                                        0, /* dummy value */
-                                        bzimage::ZERO_PAGE_START as u64,
-                                    );
-                                }
-                            }
-                        }
-                        Err(_) => serial_message("Failed to find bootloader\n"),
-                    }
-                }
-                Err(_) => serial_message("Failed to create filesystem\n"),
+            f = fat::Filesystem::new(&mut device, start, end);
+            if let Err(_) = f.init() {
+                serial_message("Failed to create filesystem\n");
+                i8042_reset();
             }
         }
-        Err(_) => serial_message("Failed to find EFI partition\n"),
+        Err(_) => {
+            serial_message("Failed to find EFI partition\n");
+            i8042_reset();
+        }
     }
+
+    serial_message("Filesystem ready\n");
+    let jump_address;
+
+    match f.open("\\EFI\\LINUX\\BZIMAGE") {
+        Ok(mut file) => {
+            serial_message("Found Linux kernel (bzImage)\n");
+            match bzimage::load_kernel(&mut file) {
+                Err(_) => {
+                    serial_message("Error loading bzImage\n");
+                    i8042_reset();
+                }
+                Ok(addr) => {
+                    jump_address = addr;
+                    serial_message("Loaded bzimage\n");
+                }
+            }
+        }
+        Err(_) => {
+            serial_message("Failed to find bzImage\n");
+            i8042_reset();
+        }
+    }
+
+    match f.open("\\EFI\\LINUX\\CMDLINE") {
+        Err(fat::Error::NotFound) => {
+            serial_message("Skipping loading command line. File not found (CMDLINE).\n")
+        }
+        Err(_) => serial_message("Error opening CMDLINE file\n"),
+        Ok(mut file) => match bzimage::load_commandline(&mut file) {
+            Ok(_) => {}
+            Err(_) => {
+                serial_message("Error loading command line\n");
+                i8042_reset();
+            }
+        },
+    }
+
+    // Rely on x86 C calling convention where second argument is put into %rsi register
+    let ptr = jump_address as *const ();
+    let code: extern "C" fn(u64, u64) = unsafe { core::mem::transmute(ptr) };
+    (code)(0 /* dummy value */, bzimage::ZERO_PAGE_START as u64);
 
     i8042_reset()
 }
