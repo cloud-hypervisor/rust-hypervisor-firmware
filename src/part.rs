@@ -116,6 +116,7 @@ pub fn find_efi_partition(r: &mut SectorRead) -> Result<(u64, u64), Error> {
 
 #[cfg(test)]
 pub mod tests {
+    use std::cell::RefCell;
     use std::env;
     use std::fs;
     use std::fs::File;
@@ -128,7 +129,7 @@ pub mod tests {
     use crate::block::SectorRead;
 
     pub struct FakeDisk {
-        file: File,
+        file: RefCell<File>,
         metadata: Metadata,
     }
 
@@ -136,7 +137,10 @@ pub mod tests {
         pub fn new(path: &str) -> FakeDisk {
             let file = File::open(path).expect("missing disk image");
             let metadata = fs::metadata(path).expect("error getting file metadata");
-            return FakeDisk { file, metadata };
+            return FakeDisk {
+                file: RefCell::new(file),
+                metadata,
+            };
         }
 
         pub fn len(&self) -> u64 {
@@ -145,12 +149,13 @@ pub mod tests {
     }
 
     impl SectorRead for FakeDisk {
-        fn read(&mut self, sector: u64, data: &mut [u8]) -> Result<(), block::Error> {
-            match self.file.seek(SeekFrom::Start(sector * 512)) {
+        fn read(&self, sector: u64, data: &mut [u8]) -> Result<(), block::Error> {
+            let mut file = self.file.borrow_mut();
+            match file.seek(SeekFrom::Start(sector * 512)) {
                 Ok(_) => {}
                 Err(_) => return Err(block::Error::BlockIOError),
             }
-            match self.file.read(data) {
+            match file.read(data) {
                 Ok(_) => {}
                 Err(_) => return Err(block::Error::BlockIOError),
             }

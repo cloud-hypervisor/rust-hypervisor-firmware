@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use super::mem;
+use core::cell::RefCell;
 
 #[cfg(not(test))]
 const QUEUE_SIZE: usize = 16;
@@ -66,10 +67,16 @@ struct UsedElem {
 #[cfg(not(test))]
 /// Device driver for virtio block over MMIO
 pub struct VirtioMMIOBlockDevice {
-    descriptors: [Desc; QUEUE_SIZE],
-
     region: mem::MemoryRegion,
+    state: RefCell<DriverState>,
+}
 
+#[repr(C)]
+#[repr(align(64))]
+#[derive(Default)]
+#[cfg(not(test))]
+struct DriverState {
+    descriptors: [Desc; QUEUE_SIZE],
     avail: AvailRing,
     used: UsedRing,
     next_head: usize,
@@ -119,7 +126,7 @@ struct BlockRequestFooter {
 pub trait SectorRead {
     /// Read a single sector (512 bytes) from the block device. `data` must be
     /// exactly 512 bytes long.
-    fn read(&mut self, sector: u64, data: &mut [u8]) -> Result<(), Error>;
+    fn read(&self, sector: u64, data: &mut [u8]) -> Result<(), Error>;
 }
 
 #[cfg(not(test))]
@@ -214,15 +221,16 @@ impl VirtioMMIOBlockDevice {
         self.region.io_write_u32(0x038, QUEUE_SIZE as u32);
 
         // Update all queue parts
-        let addr = self.descriptors.as_ptr() as u64;
+        let state = self.state.borrow_mut();
+        let addr = state.descriptors.as_ptr() as u64;
         self.region.io_write_u32(0x080, addr as u32);
         self.region.io_write_u32(0x084, (addr >> 32) as u32);
 
-        let addr = (&self.avail as *const _) as u64;
+        let addr = (&state.avail as *const _) as u64;
         self.region.io_write_u32(0x090, addr as u32);
         self.region.io_write_u32(0x094, (addr >> 32) as u32);
 
-        let addr = (&self.used as *const _) as u64;
+        let addr = (&state.used as *const _) as u64;
         self.region.io_write_u32(0x0a0, addr as u32);
         self.region.io_write_u32(0x0a4, (addr >> 32) as u32);
 
@@ -238,7 +246,7 @@ impl VirtioMMIOBlockDevice {
 
 #[cfg(not(test))]
 impl SectorRead for VirtioMMIOBlockDevice {
-    fn read(&mut self, sector: u64, data: &mut [u8]) -> Result<(), Error> {
+    fn read(&self, sector: u64, data: &mut [u8]) -> Result<(), Error> {
         assert_eq!(512, data.len());
 
         const VIRTQ_DESC_F_NEXT: u16 = 1;
@@ -256,40 +264,44 @@ impl SectorRead for VirtioMMIOBlockDevice {
 
         let footer = BlockRequestFooter { status: 0 };
 
-        let mut d = &mut self.descriptors[self.next_head];
-        let next_desc = (self.next_head + 1) % QUEUE_SIZE;
+        let mut state = self.state.borrow_mut();
+
+        let next_head = state.next_head;
+        let mut d = &mut state.descriptors[next_head];
+        let next_desc = (next_head + 1) % QUEUE_SIZE;
         d.addr = (&header as *const _) as u64;
         d.length = core::mem::size_of::<BlockRequestHeader>() as u32;
         d.flags = VIRTQ_DESC_F_NEXT;
         d.next = next_desc as u16;
 
-        let mut d = &mut self.descriptors[next_desc];
+        let mut d = &mut state.descriptors[next_desc];
         let next_desc = (next_desc + 1) % QUEUE_SIZE;
         d.addr = data.as_ptr() as u64;
         d.length = core::mem::size_of::<[u8; 512]>() as u32;
         d.flags = VIRTQ_DESC_F_NEXT | VIRTQ_DESC_F_WRITE;
         d.next = next_desc as u16;
 
-        let mut d = &mut self.descriptors[next_desc];
+        let mut d = &mut state.descriptors[next_desc];
         d.addr = (&footer as *const _) as u64;
         d.length = core::mem::size_of::<BlockRequestFooter>() as u32;
         d.flags = VIRTQ_DESC_F_WRITE;
         d.next = 0;
 
         // Update ring to point to head of chain. Fence. Then update idx
-        self.avail.ring[(self.avail.idx % QUEUE_SIZE as u16) as usize] = self.next_head as u16;
+        let avail_index = state.avail.idx;
+        state.avail.ring[(avail_index % QUEUE_SIZE as u16) as usize] = state.next_head as u16;
         core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
 
-        self.avail.idx = self.avail.idx.wrapping_add(1);
+        state.avail.idx = state.avail.idx.wrapping_add(1);
 
         // Next free descriptor to use
-        self.next_head = (next_desc + 1) % QUEUE_SIZE;
+        state.next_head = (next_desc + 1) % QUEUE_SIZE;
 
         // Notify queue has been updated
         self.region.io_write_u32(0x50, 0);
 
         // Check for the completion of the request
-        while self.used.idx != self.avail.idx {
+        while state.used.idx != state.avail.idx {
             core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
         }
 
