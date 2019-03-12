@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(test)]
 use crate::mem::MemoryRegion;
 
-#[cfg(test)]
 pub struct Loader<'a> {
     file: &'a mut crate::fat::Read,
     num_sections: u16,
@@ -23,14 +21,12 @@ pub struct Loader<'a> {
     image_size: u32,
 }
 
-#[cfg(test)]
 #[derive(Debug)]
 pub enum Error {
     FileError,
     InvalidExecutable,
 }
 
-#[cfg(test)]
 #[repr(packed)]
 struct Section {
     _name: [u8; 8],
@@ -41,7 +37,6 @@ struct Section {
     _unused: [u8; 16],
 }
 
-#[cfg(test)]
 impl<'a> Loader<'a> {
     pub fn new(file: &'a mut crate::fat::Read) -> Loader {
         Loader {

@@ -26,6 +26,7 @@ use cpuio::Port;
 
 mod block;
 mod bzimage;
+mod efi;
 mod fat;
 mod loader;
 mod mem;
@@ -143,6 +144,7 @@ pub extern "C" fn _start() -> ! {
     }
 
     log!("Filesystem ready\n");
+
     let jump_address;
 
     match loader::load_default_entry(&f) {
@@ -151,6 +153,24 @@ pub extern "C" fn _start() -> ! {
         }
         Err(_) => {
             log!("Error loading default entry\n");
+            match f.open("/EFI/BOOT/BOOTX64 EFI") {
+                Ok(mut file) => {
+                    log!("Found bootloader (BOOTX64.EFI)\n");
+                    let mut l = pe::Loader::new(&mut file);
+                    match l.load(0x20_0000) {
+                        Ok(a) => {
+                            log!("Executable loaded\n");
+                            efi::efi_exec(a);
+                            i8042_reset();
+                        }
+                        Err(e) => match e {
+                            pe::Error::FileError => log!("File error\n"),
+                            pe::Error::InvalidExecutable => log!("Invalid executable\n"),
+                        },
+                    }
+                }
+                Err(_) => log!("Failed to find bootloader\n"),
+            }
             i8042_reset();
         }
     }
