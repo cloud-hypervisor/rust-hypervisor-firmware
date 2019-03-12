@@ -56,6 +56,19 @@ fn i8042_reset() -> ! {
 }
 
 #[cfg(not(test))]
+/// Enable SSE2 for XMM registers (needed for EFI calling)
+fn enable_sse2() {
+    unsafe {
+        asm!("movq %cr0, %rax");
+        asm!("or $$0x2, %ax");
+        asm!("movq %rax, %cr0");
+        asm!("movq %cr4, %rax");
+        asm!("or $$0x600, %ax");
+        asm!("movq %rax, %cr4");
+    }
+}
+
+#[cfg(not(test))]
 /// Setup page tables to provide an identity mapping over the full 4GiB range
 fn setup_pagetables() {
     const ADDRESS_SPACE_GIB: u64 = 64;
@@ -86,6 +99,7 @@ pub extern "C" fn _start() -> ! {
 
     log!("Starting..\n");
 
+    enable_sse2();
     setup_pagetables();
 
     pci::print_bus();
