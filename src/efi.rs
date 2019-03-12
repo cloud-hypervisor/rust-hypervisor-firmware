@@ -50,10 +50,27 @@ pub extern "win64" fn stdout_reset(_: *mut SimpleTextOutputProtocol, _: Boolean)
 #[cfg(not(test))]
 pub extern "win64" fn stdout_output_string(
     _: *mut SimpleTextOutputProtocol,
-    _: *mut Char16,
+    message: *mut Char16,
 ) -> Status {
-    crate::log!("EFI_STUB: stdout_output_string\n");
-    Status::UNSUPPORTED
+    let mut string_end = false;
+
+    loop {
+        let mut output: [u8; 128] = [0; 128];
+        let mut i: usize = 0;
+        while i < output.len() {
+            output[i] = (unsafe { *message.add(i) } & 0xffu16) as u8;
+            if output[i] == 0 {
+                string_end = true;
+                break;
+            }
+            i += 1;
+        }
+        crate::log!("{}", unsafe { core::str::from_utf8_unchecked(&output) });
+        if string_end {
+            break;
+        }
+    }
+    Status::SUCCESS
 }
 
 #[cfg(not(test))]
