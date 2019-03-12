@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![feature(asm)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(unused_imports))]
@@ -81,6 +82,10 @@ fn setup_pagetables() {
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    unsafe {
+        asm!("movq $$0x180000, %rsp");
+    }
+
     serial_message("Starting..\n");
 
     setup_pagetables();
