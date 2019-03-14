@@ -587,6 +587,13 @@ pub extern "win64" fn create_event_ex(
 }
 
 #[cfg(not(test))]
+const STDIN_HANDLE: Handle = 0 as Handle;
+#[cfg(not(test))]
+const STDOUT_HANDLE: Handle = 1 as Handle;
+#[cfg(not(test))]
+const STDERR_HANDLE: Handle = 2 as Handle;
+
+#[cfg(not(test))]
 pub fn efi_exec(address: u64, _loaded_address: u64, _loaded_size: u64) {
     let mut stdin = SimpleTextInputProtocol {
         reset: stdin_reset,
@@ -709,11 +716,11 @@ pub fn efi_exec(address: u64, _loaded_address: u64, _loaded_size: u64) {
         },
         firmware_vendor: core::ptr::null_mut(), // TODO,
         firmware_revision: 0,
-        console_in_handle: 0 as Handle,
+        console_in_handle: STDIN_HANDLE,
         con_in: &mut stdin,
-        console_out_handle: 1 as Handle, // TODO
+        console_out_handle: STDOUT_HANDLE,
         con_out: &mut stdout,
-        standard_error_handle: 2 as Handle, // TODO
+        standard_error_handle: STDERR_HANDLE,
         std_err: &mut stdout,
         runtime_services: &mut rs,
         boot_services: &mut bs,
