@@ -23,6 +23,10 @@ use r_efi::protocols::simple_text_input::InputKey;
 use r_efi::protocols::simple_text_input::Protocol as SimpleTextInputProtocol;
 use r_efi::protocols::simple_text_output::Mode as SimpleTextOutputMode;
 use r_efi::protocols::simple_text_output::Protocol as SimpleTextOutputProtocol;
+//use r_efi::protocols::loaded_image::Protocol as LoadedImageProtocol;
+use r_efi::protocols::device_path::Protocol as DevicePathProtocol;
+
+use r_efi::{eficall, eficall_abi};
 
 use core::ffi::c_void;
 
@@ -367,8 +371,20 @@ pub extern "win64" fn uninstall_protocol_interface(
 }
 
 #[cfg(not(test))]
-pub extern "win64" fn handle_protocol(_: Handle, _: *mut Guid, _: *mut *mut c_void) -> Status {
+pub extern "win64" fn handle_protocol(
+    handle: Handle,
+    guid: *mut Guid,
+    out: *mut *mut c_void,
+) -> Status {
     crate::log!("EFI_STUB: handle_protocol\n");
+
+    if unsafe { *guid } == r_efi::protocols::loaded_image::PROTOCOL_GUID {
+        unsafe {
+            *out = handle;
+        }
+        return Status::SUCCESS;
+    }
+
     Status::UNSUPPORTED
 }
 
@@ -587,14 +603,59 @@ pub extern "win64" fn create_event_ex(
 }
 
 #[cfg(not(test))]
+extern "win64" fn image_unload(_: Handle) -> Status {
+    efi::Status::UNSUPPORTED
+}
+
+#[cfg(not(test))]
 const STDIN_HANDLE: Handle = 0 as Handle;
 #[cfg(not(test))]
 const STDOUT_HANDLE: Handle = 1 as Handle;
 #[cfg(not(test))]
 const STDERR_HANDLE: Handle = 2 as Handle;
 
+// HACK: Until r-util/r-efi#11 gets merged
 #[cfg(not(test))]
-pub fn efi_exec(address: u64, _loaded_address: u64, _loaded_size: u64) {
+#[repr(C)]
+pub struct LoadedImageProtocol {
+    pub revision: u32,
+    pub parent_handle: Handle,
+    pub system_table: *mut efi::SystemTable,
+
+    pub device_handle: Handle,
+    pub file_path: *mut r_efi::protocols::device_path::Protocol,
+    pub reserved: *mut core::ffi::c_void,
+
+    pub load_options_size: u32,
+    pub load_options: *mut core::ffi::c_void,
+
+    pub image_base: *mut core::ffi::c_void,
+    pub image_size: u64,
+    pub image_code_type: efi::MemoryType,
+    pub image_data_type: efi::MemoryType,
+    pub unload: eficall! {fn(
+        Handle,
+    ) -> Status},
+}
+
+#[cfg(not(test))]
+#[repr(C)]
+struct FileDevicePathProtocol {
+    device_path: DevicePathProtocol,
+    filename: [u16; 64],
+}
+
+#[cfg(not(test))]
+fn ascii_to_utf16(input: &str, output: &mut [u16]) {
+    assert!(output.len() > input.len() * 2);
+
+    for (i, c) in input.bytes().enumerate() {
+        output[i] = u16::from(c);
+    }
+}
+
+#[cfg(not(test))]
+pub fn efi_exec(address: u64, loaded_address: u64, loaded_size: u64) {
     let mut stdin = SimpleTextInputProtocol {
         reset: stdin_reset,
         read_key_stroke: stdin_read_key_stroke,
@@ -728,9 +789,35 @@ pub fn efi_exec(address: u64, _loaded_address: u64, _loaded_size: u64) {
         configuration_table: &mut ct,
     };
 
+    let mut file_path = FileDevicePathProtocol {
+        device_path: DevicePathProtocol {
+            r#type: r_efi::protocols::device_path::TYPE_MEDIA,
+            sub_type: 4, // Media Path type file
+            length: [0, 132],
+        },
+        filename: [0; 64],
+    };
+
+    ascii_to_utf16("\\EFI\\BOOT\\BOOTX64 EFI", &mut file_path.filename);
+
+    let image = LoadedImageProtocol {
+        revision: r_efi::protocols::loaded_image::REVISION,
+        parent_handle: 0 as Handle,
+        system_table: &mut st,
+        device_handle: 0 as Handle, // TODO: Add a filesystem device
+        file_path: &mut file_path.device_path,
+        load_options_size: 0,
+        load_options: core::ptr::null_mut(),
+        image_base: loaded_address as *mut _,
+        image_size: loaded_size,
+        image_code_type: efi::MemoryType::LoaderCode,
+        image_data_type: efi::MemoryType::LoaderData,
+        unload: image_unload,
+        reserved: core::ptr::null_mut(),
+    };
+
     let ptr = address as *const ();
     let code: extern "win64" fn(Handle, *mut efi::SystemTable) -> Status =
         unsafe { core::mem::transmute(ptr) };
-    // TODO: use something better for the handle
-    (code)(3 as Handle, &mut st);
+    (code)((&image as *const _) as Handle, &mut st);
 }
