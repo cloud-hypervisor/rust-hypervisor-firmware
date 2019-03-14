@@ -47,7 +47,7 @@ impl<'a> Loader<'a> {
         }
     }
 
-    pub fn load(&mut self, address: u64) -> Result<u64, Error> {
+    pub fn load(&mut self, address: u64) -> Result<(u64, u64), Error> {
         let mut data: [u8; 1024] = [0; 1024];
 
         match self.file.read(&mut data[0..512]) {
@@ -149,7 +149,7 @@ impl<'a> Loader<'a> {
                 section_offset += remaining_bytes;
             }
         }
-        Ok(address + u64::from(entry_point))
+        Ok((address + u64::from(entry_point), u64::from(self.image_size)))
     }
 }
 
@@ -174,8 +174,9 @@ mod tests {
             alloc::alloc(layout)
         };
 
-        let a = l.load(fake_mem as u64).expect("expect loading success");
+        let (a, size) = l.load(fake_mem as u64).expect("expect loading success");
         assert_eq!(a, fake_mem as u64 + 0x4000);
+        assert_eq!(size, 110_592);
     }
 
 }
