@@ -158,9 +158,9 @@ pub extern "C" fn _start() -> ! {
                     log!("Found bootloader (BOOTX64.EFI)\n");
                     let mut l = pe::Loader::new(&mut file);
                     match l.load(0x20_0000) {
-                        Ok(a) => {
+                        Ok((a, size)) => {
                             log!("Executable loaded\n");
-                            efi::efi_exec(a);
+                            efi::efi_exec(a, 0x20_0000, size);
                             i8042_reset();
                         }
                         Err(e) => match e {

@@ -587,7 +587,7 @@ pub extern "win64" fn create_event_ex(
 }
 
 #[cfg(not(test))]
-pub fn efi_exec(address: u64) {
+pub fn efi_exec(address: u64, _loaded_address: u64, _loaded_size: u64) {
     let mut stdin = SimpleTextInputProtocol {
         reset: stdin_reset,
         read_key_stroke: stdin_read_key_stroke,
