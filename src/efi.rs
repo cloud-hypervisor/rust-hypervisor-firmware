@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use lazy_static::lazy_static;
+use spin::Mutex;
+
 use r_efi::efi;
 use r_efi::efi::{
     AllocateType, Boolean, CapsuleHeader, Char16, Event, EventNotify, Guid, Handle, InterfaceType,
@@ -29,6 +32,12 @@ use r_efi::protocols::device_path::Protocol as DevicePathProtocol;
 use r_efi::{eficall, eficall_abi};
 
 use core::ffi::c_void;
+
+use crate::alloc::Allocator;
+
+lazy_static! {
+    pub static ref ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator::new());
+}
 
 #[cfg(not(test))]
 pub extern "win64" fn stdin_reset(_: *mut SimpleTextInputProtocol, _: Boolean) -> Status {
@@ -257,43 +266,90 @@ pub extern "win64" fn restore_tpl(_: Tpl) {
 
 #[cfg(not(test))]
 pub extern "win64" fn allocate_pages(
-    _: AllocateType,
-    _: MemoryType,
-    _: usize,
-    _: *mut PhysicalAddress,
+    allocate_type: AllocateType,
+    memory_type: MemoryType,
+    pages: usize,
+    address: *mut PhysicalAddress,
 ) -> Status {
-    crate::log!("EFI_STUB: allocate_pages\n");
-    Status::UNSUPPORTED
+    let (status, new_address) =
+        ALLOCATOR
+            .lock()
+            .allocate_pages(
+                allocate_type,
+                memory_type,
+                pages as u64,
+                unsafe { *address } as u64,
+            );
+    if status == Status::SUCCESS {
+        unsafe {
+            *address = new_address;
+        }
+    }
+    status
 }
 
 #[cfg(not(test))]
-pub extern "win64" fn free_pages(_: PhysicalAddress, _: usize) -> Status {
-    crate::log!("EFI_STUB: free_pages\n");
-    Status::UNSUPPORTED
+pub extern "win64" fn free_pages(address: PhysicalAddress, _: usize) -> Status {
+    ALLOCATOR.lock().free_pages(address)
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn get_memory_map(
-    _: *mut usize,
-    _: *mut MemoryDescriptor,
-    _: *mut usize,
-    _: *mut usize,
-    _: *mut u32,
+    memory_map_size: *mut usize,
+    out: *mut MemoryDescriptor,
+    key: *mut usize,
+    descriptor_size: *mut usize,
+    descriptor_version: *mut u32,
 ) -> Status {
-    crate::log!("EFI_STUB: get_memory_map\n");
-    Status::UNSUPPORTED
+    let count = ALLOCATOR.lock().get_descriptor_count();
+    let map_size = core::mem::size_of::<MemoryDescriptor>() * count;
+    if unsafe { *memory_map_size } < map_size {
+        unsafe {
+            *memory_map_size = map_size;
+        }
+        return Status::BUFFER_TOO_SMALL;
+    }
+
+    let out = unsafe {
+        core::slice::from_raw_parts_mut(out as *mut crate::alloc::MemoryDescriptor, count)
+    };
+    let count = ALLOCATOR.lock().get_descriptors(out);
+    let map_size = core::mem::size_of::<MemoryDescriptor>() * count;
+    unsafe {
+        *memory_map_size = map_size;
+        *descriptor_version = efi::MEMORY_DESCRIPTOR_VERSION;
+        *descriptor_size = core::mem::size_of::<MemoryDescriptor>();
+        *key = ALLOCATOR.lock().get_map_key();
+    }
+
+    Status::SUCCESS
 }
 
 #[cfg(not(test))]
-pub extern "win64" fn allocate_pool(_: MemoryType, _: usize, _: *mut *mut c_void) -> Status {
-    crate::log!("EFI_STUB: allocate_pool\n");
-    Status::UNSUPPORTED
+pub extern "win64" fn allocate_pool(
+    memory_type: MemoryType,
+    size: usize,
+    address: *mut *mut c_void,
+) -> Status {
+    let (status, new_address) = ALLOCATOR.lock().allocate_pages(
+        AllocateType::AllocateAnyPages,
+        memory_type,
+        (size / PAGE_SIZE as usize) as u64,
+        address as u64,
+    );
+
+    if status == Status::SUCCESS {
+        unsafe {
+            *address = new_address as *mut c_void;
+        }
+    }
+
+    status
 }
 
 #[cfg(not(test))]
-pub extern "win64" fn free_pool(_: *mut c_void) -> Status {
-    crate::log!("EFI_STUB: free_pool\n");
-    Status::UNSUPPORTED
+pub extern "win64" fn free_pool(ptr: *mut c_void) -> Status {
+    ALLOCATOR.lock().free_pages(ptr as u64)
 }
 
 #[cfg(not(test))]
@@ -376,14 +432,14 @@ pub extern "win64" fn handle_protocol(
     guid: *mut Guid,
     out: *mut *mut c_void,
 ) -> Status {
-    crate::log!("EFI_STUB: handle_protocol\n");
-
     if unsafe { *guid } == r_efi::protocols::loaded_image::PROTOCOL_GUID {
         unsafe {
             *out = handle;
         }
         return Status::SUCCESS;
     }
+
+    crate::log!("EFI_STUB: unsupported handle_protocol\n");
 
     Status::UNSUPPORTED
 }
@@ -608,6 +664,60 @@ extern "win64" fn image_unload(_: Handle) -> Status {
 }
 
 #[cfg(not(test))]
+/// The 'zero page', a.k.a linux kernel bootparams.
+pub const ZERO_PAGE_START: usize = 0x7000;
+
+#[cfg(not(test))]
+const E820_RAM: u32 = 1;
+
+#[cfg(not(test))]
+#[repr(C, packed)]
+struct E820Entry {
+    addr: u64,
+    size: u64,
+    entry_type: u32,
+}
+
+#[cfg(not(test))]
+const PAGE_SIZE: u64 = 4096;
+
+#[cfg(not(test))]
+// Populate allocator from E820, fixed ranges for the firmware and the loaded binary.
+fn populate_allocator(image_address: u64, image_size: u64) {
+    let mut zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
+
+    let e820_count = zero_page.read_u8(0x1e8);
+    let e820_table = zero_page.as_mut_slice::<E820Entry>(0x2d0, u64::from(e820_count));
+
+    for entry in e820_table {
+        if entry.entry_type == E820_RAM {
+            ALLOCATOR.lock().add_initial_allocation(
+                MemoryType::ConventionalMemory,
+                entry.size / PAGE_SIZE,
+                entry.addr,
+                efi::MEMORY_WB,
+            );
+        }
+    }
+
+    // Add ourselves
+    ALLOCATOR.lock().allocate_pages(
+        AllocateType::AllocateAddress,
+        MemoryType::RuntimeServicesCode,
+        1024 * 1024 / PAGE_SIZE,
+        1024 * 1024,
+    );
+
+    // Add the loaded binary
+    ALLOCATOR.lock().allocate_pages(
+        AllocateType::AllocateAddress,
+        MemoryType::RuntimeServicesCode,
+        image_size / PAGE_SIZE,
+        image_address,
+    );
+}
+
+#[cfg(not(test))]
 const STDIN_HANDLE: Handle = 0 as Handle;
 #[cfg(not(test))]
 const STDOUT_HANDLE: Handle = 1 as Handle;
@@ -815,6 +925,8 @@ pub fn efi_exec(address: u64, loaded_address: u64, loaded_size: u64) {
         unload: image_unload,
         reserved: core::ptr::null_mut(),
     };
+
+    populate_allocator(loaded_address, loaded_size);
 
     let ptr = address as *const ();
     let code: extern "win64" fn(Handle, *mut efi::SystemTable) -> Status =
