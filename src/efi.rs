@@ -512,8 +512,7 @@ pub extern "win64" fn unload_image(_: Handle) -> Status {
 
 #[cfg(not(test))]
 pub extern "win64" fn exit_boot_services(_: Handle, _: usize) -> Status {
-    crate::log!("EFI_STUB: exit_boot_services\n");
-    Status::UNSUPPORTED
+    Status::SUCCESS
 }
 
 #[cfg(not(test))]
