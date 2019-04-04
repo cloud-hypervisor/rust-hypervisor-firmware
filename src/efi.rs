@@ -334,7 +334,7 @@ pub extern "win64" fn allocate_pool(
     let (status, new_address) = ALLOCATOR.lock().allocate_pages(
         AllocateType::AllocateAnyPages,
         memory_type,
-        (size / PAGE_SIZE as usize) as u64,
+        ((size + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize) as u64,
         address as u64,
     );
 
