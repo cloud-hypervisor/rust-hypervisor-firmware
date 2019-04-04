@@ -710,7 +710,7 @@ fn populate_allocator(image_address: u64, image_size: u64) {
     // Add the loaded binary
     ALLOCATOR.lock().allocate_pages(
         AllocateType::AllocateAddress,
-        MemoryType::RuntimeServicesCode,
+        MemoryType::LoaderCode,
         image_size / PAGE_SIZE,
         image_address,
     );
