@@ -166,13 +166,22 @@ pub extern "win64" fn set_wakeup_time(_: Boolean, _: *mut Time) -> Status {
 
 #[cfg(not(test))]
 pub extern "win64" fn set_virtual_address_map(
-    _: usize,
-    _: usize,
-    _: u32,
-    _: *mut MemoryDescriptor,
+    map_size: usize,
+    descriptor_size: usize,
+    version: u32,
+    descriptors: *mut MemoryDescriptor,
 ) -> Status {
-    crate::log!("EFI_STUB: set_virtual_address_map\n");
-    Status::UNSUPPORTED
+    let count = map_size / descriptor_size;
+
+    if version != efi::MEMORY_DESCRIPTOR_VERSION {
+        return Status::INVALID_PARAMETER;
+    }
+
+    let descriptors = unsafe {
+        core::slice::from_raw_parts_mut(descriptors as *mut crate::alloc::MemoryDescriptor, count)
+    };
+
+    ALLOCATOR.lock().update_virtual_addresses(descriptors)
 }
 
 #[cfg(not(test))]

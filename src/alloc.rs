@@ -350,6 +350,31 @@ impl Allocator {
     }
 
     #[cfg(not(test))]
+    pub fn update_virtual_addresses(&mut self, descriptors: &[MemoryDescriptor]) -> Status {
+        let mut i = 0;
+
+        'outer: while i < descriptors.len() {
+            let mut cur = self.first_allocation;
+            while cur != None {
+                if self.allocations[cur.unwrap()].descriptor.physical_start
+                    == descriptors[i].physical_start
+                {
+                    self.allocations[cur.unwrap()].descriptor.virtual_start =
+                        descriptors[i].virtual_start;
+                    i += 1;
+                    continue 'outer;
+                }
+
+                cur = self.allocations[cur.unwrap()].next_allocation;
+            }
+
+            return Status::NOT_FOUND;
+        }
+
+        Status::SUCCESS
+    }
+
+    #[cfg(not(test))]
     pub fn get_map_key(&self) -> usize {
         self.key
     }
