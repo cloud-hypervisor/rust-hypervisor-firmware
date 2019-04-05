@@ -562,13 +562,19 @@ pub extern "win64" fn disconnect_controller(_: Handle, _: Handle, _: Handle) -> 
 
 #[cfg(not(test))]
 pub extern "win64" fn open_protocol(
-    _: Handle,
-    _: *mut Guid,
-    _: *mut *mut c_void,
+    handle: Handle,
+    guid: *mut Guid,
+    out: *mut *mut c_void,
     _: Handle,
     _: Handle,
     _: u32,
 ) -> Status {
+    if unsafe { *guid } == r_efi::protocols::loaded_image::PROTOCOL_GUID {
+        unsafe {
+            *out = handle;
+        }
+        return Status::SUCCESS;
+    }
     crate::log!("EFI_STUB: open_protocol\n");
     Status::UNSUPPORTED
 }
