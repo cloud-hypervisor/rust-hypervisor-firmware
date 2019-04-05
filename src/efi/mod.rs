@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod alloc;
+
 use lazy_static::lazy_static;
 use spin::Mutex;
 
@@ -33,7 +35,7 @@ use r_efi::{eficall, eficall_abi};
 
 use core::ffi::c_void;
 
-use crate::alloc::Allocator;
+use alloc::Allocator;
 
 lazy_static! {
     pub static ref ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator::new());
@@ -178,7 +180,7 @@ pub extern "win64" fn set_virtual_address_map(
     }
 
     let descriptors = unsafe {
-        core::slice::from_raw_parts_mut(descriptors as *mut crate::alloc::MemoryDescriptor, count)
+        core::slice::from_raw_parts_mut(descriptors as *mut alloc::MemoryDescriptor, count)
     };
 
     ALLOCATOR.lock().update_virtual_addresses(descriptors)
@@ -319,9 +321,8 @@ pub extern "win64" fn get_memory_map(
         return Status::BUFFER_TOO_SMALL;
     }
 
-    let out = unsafe {
-        core::slice::from_raw_parts_mut(out as *mut crate::alloc::MemoryDescriptor, count)
-    };
+    let out =
+        unsafe { core::slice::from_raw_parts_mut(out as *mut alloc::MemoryDescriptor, count) };
     let count = ALLOCATOR.lock().get_descriptors(out);
     let map_size = core::mem::size_of::<MemoryDescriptor>() * count;
     unsafe {

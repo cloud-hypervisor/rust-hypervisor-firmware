@@ -24,7 +24,6 @@ use core::panic::PanicInfo;
 
 use cpuio::Port;
 
-mod alloc;
 mod block;
 mod bzimage;
 mod efi;
