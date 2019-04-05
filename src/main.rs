@@ -19,12 +19,20 @@
 use core::panic::PanicInfo;
 
 use cpuio::Port;
+use lazy_static::lazy_static;
+use spin::Mutex;
 
 mod block;
 mod bzimage;
 mod fat;
 mod mem;
 mod part;
+
+#[cfg(not(test))]
+lazy_static! {
+    pub static ref BLOCK: Mutex<block::VirtioMMIOBlockDevice> =
+        Mutex::new(block::VirtioMMIOBlockDevice::new(0xd0000000u64));
+}
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -77,8 +85,7 @@ pub extern "C" fn _start() -> ! {
 
     setup_pagetables();
 
-    let mut device = block::VirtioMMIOBlockDevice::new(0xd0000000u64);
-    match device.init() {
+    match BLOCK.lock().init() {
         Err(_) => {
             serial_message("Error configuring block device\n");
             i8042_reset();
@@ -87,10 +94,12 @@ pub extern "C" fn _start() -> ! {
     }
 
     let mut f;
-    match part::find_efi_partition(&mut device) {
+
+    let mut device = BLOCK.lock();
+    match part::find_efi_partition(&mut *device) {
         Ok((start, end)) => {
             serial_message("Found EFI partition\n");
-            f = fat::Filesystem::new(&mut device, start, end);
+            f = fat::Filesystem::new(&mut *device, start, end);
             if let Err(_) = f.init() {
                 serial_message("Failed to create filesystem\n");
                 i8042_reset();
