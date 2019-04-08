@@ -138,8 +138,7 @@ impl<'a> Read for File<'a> {
             }
         }
 
-        let cluster_start = ((self.active_cluster - 2) * self.filesystem.sectors_per_cluster)
-            + self.filesystem.first_data_sector;
+        let cluster_start = self.filesystem.first_sector_of_cluster(self.active_cluster);
 
         match self
             .filesystem
@@ -411,12 +410,16 @@ impl<'a> Filesystem<'a> {
         Err(Error::NotFound)
     }
 
+    fn first_sector_of_cluster(&self, cluster: u32) -> u32 {
+        ((cluster - 2) * self.sectors_per_cluster) + self.first_data_sector
+    }
+
     fn directory_find_at_cluster(
         &self,
         cluster: u32,
         name: &str,
     ) -> Result<(FileType, u32, u32), Error> {
-        let cluster_start = ((cluster - 2) * self.sectors_per_cluster) + self.first_data_sector;
+        let cluster_start = self.first_sector_of_cluster(cluster);
         for s in 0..self.sectors_per_cluster {
             match self.directory_find_at_sector((s + cluster_start) as u64, name) {
                 Ok(r) => return Ok(r),
