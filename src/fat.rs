@@ -61,6 +61,13 @@ struct FatDirectory {
     size: u32,
 }
 
+pub struct DirectoryEntry {
+    name: [u8; 11],
+    file_type: FileType,
+    size: u32,
+    cluster: u32,
+}
+
 #[derive(Debug, PartialEq)]
 enum FatType {
     Unknown,
@@ -88,7 +95,7 @@ pub struct Filesystem<'a> {
     root_cluster: u32, // FAT32 only
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     BlockError,
     Unsupported,
@@ -110,6 +117,79 @@ pub struct File<'a> {
     sector_offset: u64,
     size: u32,
     position: u32,
+}
+
+pub struct Directory<'a> {
+    filesystem: &'a Filesystem<'a>,
+    cluster: Option<u32>,
+    sector: u32,
+    offset: usize,
+}
+
+impl<'a> Directory<'a> {
+    // Returns and then increments to point to the next one, may return EndOfFile if this is the last entry
+    pub fn next_entry(&mut self) -> Result<DirectoryEntry, Error> {
+        loop {
+            let mut sector = self.sector;
+
+            if self.cluster.is_some() {
+                if self.sector > self.filesystem.sectors_per_cluster {
+                    match self.filesystem.next_cluster(self.cluster.unwrap()) {
+                        Ok(new_cluster) => {
+                            self.cluster = Some(new_cluster);
+                            self.sector = 0;
+                        }
+                        Err(e) => return Err(e),
+                    }
+                }
+                sector = self.sector
+                    + self
+                        .filesystem
+                        .first_sector_of_cluster(self.cluster.unwrap());
+            }
+
+            let mut data: [u8; 512] = [0; 512];
+            match self.filesystem.read(sector as u64, &mut data) {
+                Ok(_) => {}
+                Err(_) => return Err(Error::BlockError),
+            };
+
+            let dirs: &[FatDirectory] = unsafe {
+                core::slice::from_raw_parts(data.as_ptr() as *const FatDirectory, 512 / 32)
+            };
+
+            for i in self.offset..dirs.len() {
+                let d = &dirs[i];
+                // Last entry
+                if d.name[0] == 0x0 {
+                    return Err(Error::EndOfFile);
+                }
+                // Directory unused
+                if d.name[0] == 0xe5 {
+                    continue;
+                }
+                // LFN entry
+                if d.flags == 0x0f {
+                    continue;
+                }
+
+                let entry = DirectoryEntry {
+                    name: d.name,
+                    file_type: if d.flags & 0x10 == 0x10 {
+                        FileType::Directory
+                    } else {
+                        FileType::File
+                    },
+                    cluster: (d.cluster_high as u32) << 16 | d.cluster_low as u32,
+                    size: d.size,
+                };
+
+                self.offset = i + 1;
+                return Ok(entry);
+            }
+            self.sector += 1;
+        }
+    }
 }
 
 pub trait Read {
@@ -438,6 +518,29 @@ impl<'a> Filesystem<'a> {
         }
     }
 
+    fn root(&self) -> Result<Directory, Error> {
+        match self.fat_type {
+            FatType::FAT12 | FatType::FAT16 => {
+                let root_directory_start = self.first_data_sector - self.root_dir_sectors;
+                return Ok(Directory {
+                    filesystem: self,
+                    cluster: None,
+                    sector: root_directory_start,
+                    offset: 0,
+                });
+            }
+            FatType::FAT32 => {
+                return Ok(Directory {
+                    filesystem: self,
+                    cluster: Some(self.root_cluster),
+                    sector: 0,
+                    offset: 0,
+                })
+            }
+            _ => Err(Error::Unsupported),
+        }
+    }
+
     fn directory_find_at_root(&self, name: &str) -> Result<(FileType, u32, u32), Error> {
         match self.fat_type {
             FatType::FAT12 | FatType::FAT16 => {
@@ -469,6 +572,15 @@ impl<'a> Filesystem<'a> {
             sector_offset: 0,
             size,
             position: 0,
+        });
+    }
+
+    fn get_directory(&self, cluster: u32) -> Result<Directory, Error> {
+        return Ok(Directory {
+            filesystem: self,
+            cluster: Some(cluster),
+            sector: 0,
+            offset: 0,
         });
     }
 
@@ -697,4 +809,54 @@ mod tests {
             Err(e) => panic!(e),
         }
     }
+
+    #[test]
+    fn test_fat_list_root() {
+        let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
+
+        for image in &images {
+            let mut disk = FakeDisk::new(image);
+            let len = disk.len();
+            let mut fs = crate::fat::Filesystem::new(&mut disk, 0, len);
+            fs.init().expect("Error initialising filesystem");
+            let mut d = fs.root().unwrap();
+            let de = d.next_entry().unwrap();
+            assert_eq!(de.name, "A          ".as_bytes());
+            assert!(d.next_entry().is_err());
+        }
+    }
+    #[test]
+    fn test_fat_list_recurse() {
+        let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
+
+        for image in &images {
+            let mut disk = FakeDisk::new(image);
+            let len = disk.len();
+            let mut fs = crate::fat::Filesystem::new(&mut disk, 0, len);
+            fs.init().expect("Error initialising filesystem");
+
+            let mut d = fs.root().unwrap();
+            let de = d.next_entry().unwrap();
+            assert_eq!(de.name, "A          ".as_bytes());
+
+            let mut d = fs.get_directory(de.cluster).unwrap();
+            let de = d.next_entry().unwrap();
+            assert_eq!(de.name, ".          ".as_bytes());
+            let de = d.next_entry().unwrap();
+            assert_eq!(de.name, "..         ".as_bytes());
+            let de = d.next_entry().unwrap();
+            assert_eq!(de.name, "B          ".as_bytes());
+            assert!(d.next_entry().is_err());
+
+            let mut d = fs.get_directory(de.cluster).unwrap();
+            let de = d.next_entry().unwrap();
+            assert_eq!(de.name, ".          ".as_bytes());
+            let de = d.next_entry().unwrap();
+            assert_eq!(de.name, "..         ".as_bytes());
+            let de = d.next_entry().unwrap();
+            assert_eq!(de.name, "C          ".as_bytes());
+            assert!(d.next_entry().is_err());
+        }
+    }
+
 }

@@ -58,6 +58,7 @@ impl Partition {
     }
 }
 
+#[derive(Debug)]
 pub enum Error {
     BlockError,
     HeaderNotFound,
