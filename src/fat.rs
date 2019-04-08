@@ -51,7 +51,7 @@ struct Fat32Header {
 }
 
 #[repr(packed)]
-struct Directory {
+struct FatDirectory {
     name: [u8; 11],
     flags: u8,
     _unused1: [u8; 8],
@@ -377,8 +377,8 @@ impl<'a> Filesystem<'a> {
             Err(_) => return Err(Error::BlockError),
         };
 
-        let dirs: &[Directory] =
-            unsafe { core::slice::from_raw_parts(data.as_ptr() as *const Directory, 512 / 32) };
+        let dirs: &[FatDirectory] =
+            unsafe { core::slice::from_raw_parts(data.as_ptr() as *const FatDirectory, 512 / 32) };
 
         for d in dirs {
             // Last entry
