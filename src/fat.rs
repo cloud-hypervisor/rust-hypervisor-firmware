@@ -131,15 +131,17 @@ impl<'a> Directory<'a> {
     pub fn next_entry(&mut self) -> Result<DirectoryEntry, Error> {
         loop {
             let mut sector = self.sector;
-
             if self.cluster.is_some() {
                 if self.sector > self.filesystem.sectors_per_cluster {
                     match self.filesystem.next_cluster(self.cluster.unwrap()) {
                         Ok(new_cluster) => {
                             self.cluster = Some(new_cluster);
                             self.sector = 0;
+                            self.offset = 0;
                         }
-                        Err(e) => return Err(e),
+                        Err(e) => {
+                            return Err(e);
+                        }
                     }
                 }
                 sector = self.sector
@@ -188,6 +190,7 @@ impl<'a> Directory<'a> {
                 return Ok(entry);
             }
             self.sector += 1;
+            self.offset = 0;
         }
     }
 }
@@ -445,78 +448,11 @@ impl<'a> Filesystem<'a> {
         }
     }
 
-    fn directory_find_at_sector(
-        &self,
-        sector: u64,
-        name: &str,
-    ) -> Result<(FileType, u32, u32), Error> {
-        let mut data: [u8; 512] = [0; 512];
-        match self.read(sector, &mut data) {
-            Ok(_) => {}
-            Err(_) => return Err(Error::BlockError),
-        };
-
-        let dirs: &[FatDirectory] =
-            unsafe { core::slice::from_raw_parts(data.as_ptr() as *const FatDirectory, 512 / 32) };
-
-        for d in dirs {
-            // Last entry
-            if d.name[0] == 0x0 {
-                return Err(Error::EndOfFile);
-            }
-            // Directory unused
-            if d.name[0] == 0xe5 {
-                continue;
-            }
-            // LFN entry
-            if d.flags == 0x0f {
-                continue;
-            }
-
-            let name = name.as_bytes();
-            if &d.name[0..name.len()] == name {
-                return Ok((
-                    if d.flags & 0x10 == 0x10 {
-                        FileType::Directory
-                    } else {
-                        FileType::File
-                    },
-                    (d.cluster_high as u32) << 16 | d.cluster_low as u32,
-                    d.size,
-                ));
-            }
-        }
-
-        Err(Error::NotFound)
-    }
-
     fn first_sector_of_cluster(&self, cluster: u32) -> u32 {
         ((cluster - 2) * self.sectors_per_cluster) + self.first_data_sector
     }
 
-    fn directory_find_at_cluster(
-        &self,
-        cluster: u32,
-        name: &str,
-    ) -> Result<(FileType, u32, u32), Error> {
-        let cluster_start = self.first_sector_of_cluster(cluster);
-        for s in 0..self.sectors_per_cluster {
-            match self.directory_find_at_sector((s + cluster_start) as u64, name) {
-                Ok(r) => return Ok(r),
-                Err(Error::NotFound) => {
-                    continue;
-                }
-                Err(Error::EndOfFile) => return Err(Error::NotFound),
-                Err(e) => return Err(e),
-            }
-        }
 
-        match self.next_cluster(cluster) {
-            Ok(next_cluster) => self.directory_find_at_cluster(next_cluster, name),
-            Err(Error::EndOfFile) => Err(Error::NotFound),
-            Err(e) => Err(e),
-        }
-    }
 
     fn root(&self) -> Result<Directory, Error> {
         match self.fat_type {
@@ -541,28 +477,6 @@ impl<'a> Filesystem<'a> {
         }
     }
 
-    fn directory_find_at_root(&self, name: &str) -> Result<(FileType, u32, u32), Error> {
-        match self.fat_type {
-            FatType::FAT12 | FatType::FAT16 => {
-                let root_directory_start = self.first_data_sector - self.root_dir_sectors;
-                for sector in 0..self.root_dir_sectors {
-                    let s = (sector + root_directory_start) as u64;
-                    match self.directory_find_at_sector(s, name) {
-                        Ok(res) => {
-                            return Ok(res);
-                        }
-                        Err(Error::NotFound) => continue,
-                        Err(e) => {
-                            return Err(e);
-                        }
-                    }
-                }
-                Err(Error::NotFound)
-            }
-            FatType::FAT32 => self.directory_find_at_cluster(self.root_cluster, name),
-            _ => Err(Error::Unsupported),
-        }
-    }
 
     fn get_file(&self, cluster: u32, size: u32) -> Result<File, Error> {
         return Ok(File {
@@ -588,8 +502,8 @@ impl<'a> Filesystem<'a> {
         assert_eq!(path.find('\\'), Some(0));
 
         let mut residual = path;
-        let mut next_cluster = 0;
-        let mut root = true;
+
+        let mut current_dir = self.root().unwrap();
         loop {
             // sub is the directory or file name
             // residual is what is left
@@ -607,25 +521,23 @@ impl<'a> Filesystem<'a> {
                 return Err(Error::NotFound);
             }
 
-            match if root {
-                self.directory_find_at_root(sub)
-            } else {
-                self.directory_find_at_cluster(next_cluster, sub)
-            } {
-                Ok((ft, cluster, size)) => match ft {
-                    FileType::Directory => {
-                        next_cluster = cluster;
+            loop {
+                match current_dir.next_entry() {
+                    Err(Error::EndOfFile) => return Err(Error::NotFound),
+                    Err(e) => return Err(e),
+                    Ok(de) => {
+                        if &de.name[0..sub.len()] == sub.as_bytes() {
+                            match de.file_type {
+                                FileType::Directory => {
+                                    current_dir = self.get_directory(de.cluster).unwrap();
+                                    break;
+                                }
+                                FileType::File => return self.get_file(de.cluster, de.size),
+                            }
+                        }
                     }
-                    FileType::File => return self.get_file(cluster, size),
-                },
-                Err(e) => {
-                    return Err(match e {
-                        Error::EndOfFile => Error::NotFound,
-                        _ => e,
-                    });
                 }
             }
-            root = false;
         }
     }
 }
@@ -756,33 +668,6 @@ mod tests {
                     Ok(()) => {
                         assert_eq!(f.sectors, 5760);
                         assert_eq!(f.fat_type, super::FatType::FAT12);
-                    }
-                    Err(e) => panic!(e),
-                }
-            }
-            Err(e) => panic!(e),
-        }
-    }
-
-    #[test]
-    fn test_fat_directory() {
-        let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
-        match crate::part::find_efi_partition(&mut d) {
-            Ok((start, end)) => {
-                let mut f = crate::fat::Filesystem::new(&mut d, start, end);
-                match f.init() {
-                    Ok(()) => {
-                        let (ftype, cluster, _) = f.directory_find_at_root("EFI").unwrap();
-
-                        assert_eq!(ftype, super::FileType::Directory);
-                        let (ftype, cluster, _) =
-                            f.directory_find_at_cluster(cluster, "BOOT").unwrap();
-                        assert_eq!(ftype, super::FileType::Directory);
-                        let (ftype, cluster, size) =
-                            f.directory_find_at_cluster(cluster, "BOOTX64 EFI").unwrap();
-                        assert_eq!(ftype, super::FileType::File);
-                        assert_eq!(cluster, 4);
-                        assert_eq!(size, 133120);
                     }
                     Err(e) => panic!(e),
                 }
