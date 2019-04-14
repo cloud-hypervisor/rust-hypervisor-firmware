@@ -23,6 +23,8 @@ for x in `seq 9 15`; do
 	dd if=test_data/a/b/c/d of=test_data/a/b/c/$n count=$n bs=1
 done
 
+touch test_data/longfilenametest
+
 export MTOOLS_SKIP_CHECK=1
 mcopy -oi fat12.img  -s test_data/* ::
 mcopy -oi fat16.img  -s test_data/* ::
