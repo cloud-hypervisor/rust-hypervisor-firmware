@@ -26,6 +26,7 @@ use spin::Mutex;
 mod block;
 mod bzimage;
 mod fat;
+mod loader;
 mod mem;
 mod part;
 
@@ -119,52 +120,14 @@ pub extern "C" fn _start() -> ! {
     serial_message("Filesystem ready\n");
     let jump_address;
 
-    match f.open("/EFI/LINUX/BZIMAGE") {
-        Ok(mut file) => {
-            serial_message("Found Linux kernel (bzImage)\n");
-            match bzimage::load_kernel(&mut file) {
-                Err(_) => {
-                    serial_message("Error loading bzImage\n");
-                    i8042_reset();
-                }
-                Ok(addr) => {
-                    jump_address = addr;
-                    serial_message("Loaded bzimage\n");
-                }
-            }
+    match loader::load_default_entry(&f) {
+        Ok(addr) => {
+            jump_address = addr;
         }
         Err(_) => {
-            serial_message("Failed to find bzImage\n");
+            serial_message("Error loading default entry\n");
             i8042_reset();
         }
-    }
-
-    match f.open("/EFI/LINUX/CMDLINE") {
-        Err(fat::Error::NotFound) => {
-            serial_message("Skipping loading command line. File not found (CMDLINE).\n")
-        }
-        Err(_) => serial_message("Error opening CMDLINE file\n"),
-        Ok(mut file) => match bzimage::load_commandline(&mut file) {
-            Ok(_) => {}
-            Err(_) => {
-                serial_message("Error loading command line\n");
-                i8042_reset();
-            }
-        },
-    }
-
-    match f.open("/EFI/LINUX/INITRD") {
-        Err(fat::Error::NotFound) => {
-            serial_message("Skipping loading ramdisk. File not found (INITRD).\n")
-        }
-        Err(_) => serial_message("Error opening INITRD file\n"),
-        Ok(mut file) => match bzimage::load_initrd(&mut file) {
-            Ok(_) => {}
-            Err(_) => {
-                serial_message("Error loading ramdisk file\n");
-                i8042_reset();
-            }
-        },
     }
 
     serial_message("Jumping to kernel\n");
