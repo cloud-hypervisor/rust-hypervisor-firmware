@@ -540,7 +540,7 @@ impl<'a> Filesystem<'a> {
     }
 
     pub fn open(&self, path: &str) -> Result<File, Error> {
-        assert_eq!(path.find('\\'), Some(0));
+        assert_eq!(path.find('/'), Some(0));
 
         let mut residual = path;
 
@@ -548,7 +548,7 @@ impl<'a> Filesystem<'a> {
         loop {
             // sub is the directory or file name
             // residual is what is left
-            let sub = match &residual[1..].find('\\') {
+            let sub = match &residual[1..].find('/') {
                 None => &residual[1..],
                 Some(x) => {
                     // +1 due to above find working on substring
@@ -603,7 +603,7 @@ mod tests {
                     let len = d.len();
                     let mut fs = crate::fat::Filesystem::new(&mut d, 0, len);
                     fs.init().expect("Error initialising filesystem");
-                    let path = format!("\\A\\B\\C\\{}", v);
+                    let path = format!("/A/B/C/{}", v);
                     let mut f = fs.open(&path).expect("Error opening file");
 
                     assert_eq!(f.size, v);
@@ -641,7 +641,7 @@ mod tests {
                     let len = d.len();
                     let mut fs = crate::fat::Filesystem::new(&mut d, 0, len);
                     fs.init().expect("Error initialising filesystem");
-                    let path = format!("\\A\\B\\C\\{}", v);
+                    let path = format!("/A/B/C/{}", v);
                     let mut f = fs.open(&path).expect("Error opening file");
 
                     assert_eq!(f.size, v);
@@ -727,7 +727,7 @@ mod tests {
                 let mut f = crate::fat::Filesystem::new(&mut d, start, end);
                 match f.init() {
                     Ok(()) => {
-                        let file = f.open("\\EFI\\BOOT\\BOOTX64 EFI").unwrap();
+                        let file = f.open("/EFI/BOOT/BOOTX64 EFI").unwrap();
                         assert_eq!(file.active_cluster, 4);
                         assert_eq!(file.size, 133120);
                     }
@@ -796,7 +796,7 @@ mod tests {
             let mut fs = crate::fat::Filesystem::new(&mut d, 0, len);
             fs.init().expect("Error initialising filesystem");
 
-            assert!(fs.open("\\longfilenametest").is_ok());
+            assert!(fs.open("/longfilenametest").is_ok());
         }
     }
 }
