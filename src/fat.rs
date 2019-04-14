@@ -61,8 +61,21 @@ struct FatDirectory {
     size: u32,
 }
 
+#[repr(packed)]
+struct FatLongNameEntry {
+    seq: u8,
+    name: [u16; 5],
+    _attr: u8,
+    r#_type: u8,
+    _checksum: u8,
+    name2: [u16; 6],
+    _cluster: u16,
+    name3: [u16; 2],
+}
+
 pub struct DirectoryEntry {
     name: [u8; 11],
+    long_name: [u8; 255],
     file_type: FileType,
     size: u32,
     cluster: u32,
@@ -126,9 +139,23 @@ pub struct Directory<'a> {
     offset: usize,
 }
 
+fn ucs2_to_ascii(input: &[u16]) -> [u8; 255] {
+    let mut output: [u8; 255] = [0; 255];
+    let mut i: usize = 0;
+    while i < output.len() {
+        output[i] = (input[i] & 0xffu16) as u8;
+        if output[i] == 0 {
+            break;
+        }
+        i += 1;
+    }
+    output
+}
+
 impl<'a> Directory<'a> {
     // Returns and then increments to point to the next one, may return EndOfFile if this is the last entry
     pub fn next_entry(&mut self) -> Result<DirectoryEntry, Error> {
+        let mut long_entry = [0u16; 260];
         loop {
             let mut sector = self.sector;
             if self.cluster.is_some() {
@@ -160,6 +187,10 @@ impl<'a> Directory<'a> {
                 core::slice::from_raw_parts(data.as_ptr() as *const FatDirectory, 512 / 32)
             };
 
+            let lfns: &[FatLongNameEntry] = unsafe {
+                core::slice::from_raw_parts(data.as_ptr() as *const FatLongNameEntry, 512 / 32)
+            };
+
             for i in self.offset..dirs.len() {
                 let d = &dirs[i];
                 // Last entry
@@ -172,6 +203,18 @@ impl<'a> Directory<'a> {
                 }
                 // LFN entry
                 if d.flags == 0x0f {
+                    // DOS starts sequences as 1. LFN entries come in reverse order before
+                    // actual entry so populate the slice using the sequence.
+                    let lfn_seq = ((lfns[i].seq & 0x1f) as usize) - 1;
+                    let lfn_block = &mut long_entry[lfn_seq * 13..(lfn_seq + 1) * 13];
+
+                    let s = &mut lfn_block[0..5];
+                    s.copy_from_slice(unsafe { &lfns[i].name[..] });
+                    let s = &mut lfn_block[5..11];
+                    s.copy_from_slice(unsafe { &lfns[i].name2[..] });
+                    let s = &mut lfn_block[11..13];
+                    s.copy_from_slice(unsafe { &lfns[i].name3[..] });
+
                     continue;
                 }
 
@@ -184,6 +227,7 @@ impl<'a> Directory<'a> {
                     },
                     cluster: (d.cluster_high as u32) << 16 | d.cluster_low as u32,
                     size: d.size,
+                    long_name: ucs2_to_ascii(&long_entry[..]),
                 };
 
                 self.offset = i + 1;
@@ -452,8 +496,6 @@ impl<'a> Filesystem<'a> {
         ((cluster - 2) * self.sectors_per_cluster) + self.first_data_sector
     }
 
-
-
     fn root(&self) -> Result<Directory, Error> {
         match self.fat_type {
             FatType::FAT12 | FatType::FAT16 => {
@@ -476,7 +518,6 @@ impl<'a> Filesystem<'a> {
             _ => Err(Error::Unsupported),
         }
     }
-
 
     fn get_file(&self, cluster: u32, size: u32) -> Result<File, Error> {
         return Ok(File {
@@ -526,7 +567,9 @@ impl<'a> Filesystem<'a> {
                     Err(Error::EndOfFile) => return Err(Error::NotFound),
                     Err(e) => return Err(e),
                     Ok(de) => {
-                        if &de.name[0..sub.len()] == sub.as_bytes() {
+                        if (sub.len() <= 11 && &de.name[0..sub.len()] == sub.as_bytes())
+                            || &de.long_name[0..sub.len()] == sub.as_bytes()
+                        {
                             match de.file_type {
                                 FileType::Directory => {
                                     current_dir = self.get_directory(de.cluster).unwrap();
@@ -707,7 +750,6 @@ mod tests {
             let mut d = fs.root().unwrap();
             let de = d.next_entry().unwrap();
             assert_eq!(de.name, "A          ".as_bytes());
-            assert!(d.next_entry().is_err());
         }
     }
     #[test]
@@ -744,4 +786,17 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_fat_long_file_name() {
+        let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
+
+        for image in &images {
+            let mut d = FakeDisk::new(image);
+            let len = d.len();
+            let mut fs = crate::fat::Filesystem::new(&mut d, 0, len);
+            fs.init().expect("Error initialising filesystem");
+
+            assert!(fs.open("\\longfilenametest").is_ok());
+        }
+    }
 }
