@@ -114,7 +114,7 @@ pub extern "C" fn _start() -> ! {
     serial_message("Filesystem ready\n");
     let jump_address;
 
-    match f.open("\\EFI\\LINUX\\BZIMAGE") {
+    match f.open("/EFI/LINUX/BZIMAGE") {
         Ok(mut file) => {
             serial_message("Found Linux kernel (bzImage)\n");
             match bzimage::load_kernel(&mut file) {
@@ -134,7 +134,7 @@ pub extern "C" fn _start() -> ! {
         }
     }
 
-    match f.open("\\EFI\\LINUX\\CMDLINE") {
+    match f.open("/EFI/LINUX/CMDLINE") {
         Err(fat::Error::NotFound) => {
             serial_message("Skipping loading command line. File not found (CMDLINE).\n")
         }
@@ -148,7 +148,7 @@ pub extern "C" fn _start() -> ! {
         },
     }
 
-    match f.open("\\EFI\\LINUX\\INITRD") {
+    match f.open("/EFI/LINUX/INITRD") {
         Err(fat::Error::NotFound) => {
             serial_message("Skipping loading ramdisk. File not found (INITRD).\n")
         }
