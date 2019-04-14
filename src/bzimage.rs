@@ -112,38 +112,28 @@ pub fn load_initrd(f: &mut Read) -> Result<(), Error> {
 }
 
 #[cfg(not(test))]
-pub fn load_commandline(f: &mut Read) -> Result<(), Error> {
+pub fn append_commandline(addition: &str) -> Result<(), Error> {
     let cmdline_region =
         crate::mem::MemoryRegion::new(CMDLINE_START as u64, CMDLINE_MAX_SIZE as u64);
-
-    let dst = cmdline_region.as_mut_slice::<u8>(0, CMDLINE_MAX_SIZE as u64);
-    for x in 0..dst.len() {
-        dst[x] = 0;
-    }
-
-    let mut offset = 0;
-    while offset < CMDLINE_MAX_SIZE {
-        // There is no need to worry about partial sectors here as the mapped range
-        // is a multiple of the sector size.
-        let dst = cmdline_region.as_mut_slice(offset as u64, 512);
-
-        match f.read(dst) {
-            Err(crate::fat::Error::EndOfFile) => break,
-            Err(_) => return Err(Error::FileError),
-            Ok(_) => {}
-        }
-
-        offset += 512;
-    }
-
-    // We can do this safely and (the .len()) later as we zero all the range.
-    let cmdline = unsafe { core::str::from_utf8_unchecked(dst) };
-
     let zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
+
+    let cmdline = cmdline_region.as_mut_slice::<u8>(0, CMDLINE_MAX_SIZE as u64);
+
+    // Use the actual string length but limit to the orgiginal incoming size
+    let orig_len = zero_page.read_u32(0x238) as usize;
+
+    let orig_cmdline = unsafe {
+        core::str::from_utf8_unchecked(&cmdline[0..orig_len]).trim_matches(char::from(0))
+    };
+    let orig_len = orig_cmdline.len();
+
+    cmdline[orig_len] = b' ';
+    &mut cmdline[orig_len + 1..orig_len + 1 + addition.len()].copy_from_slice(addition.as_bytes());
+    cmdline[orig_len + 1 + addition.len()] = 0;
 
     // Commandline pointer/size
     zero_page.write_u32(0x228, CMDLINE_START as u32);
-    zero_page.write_u32(0x238, cmdline.len() as u32);
+    zero_page.write_u32(0x238, (orig_len + addition.len() + 1) as u32);
 
     Ok(())
 }
@@ -197,25 +187,8 @@ pub fn load_kernel(f: &mut Read) -> Result<(u64), Error> {
     let dst = zero_page.as_mut_slice(header_start as u64, (header_end - header_start) as u64);
     dst.copy_from_slice(&buf[header_start..header_end]);
 
-    // Populate command line memory
-    let cmdline = "console=ttyS0";
-    let cmdline_region =
-        crate::mem::MemoryRegion::new(CMDLINE_START as u64, CMDLINE_MAX_SIZE as u64);
-
-    let dst = cmdline_region.as_mut_slice(0, CMDLINE_MAX_SIZE as u64);
-    for x in 0..dst.len() {
-        dst[x] = 0;
-    }
-
-    let dst = &mut dst[0..cmdline.len()];
-    dst.copy_from_slice(cmdline.as_bytes());
-
     // Unknown loader
     zero_page.write_u8(0x210, 0xff);
-
-    // Commandline pointer/size
-    zero_page.write_u32(0x228, CMDLINE_START as u32);
-    zero_page.write_u32(0x238, cmdline.len() as u32);
 
     // Where we will load the kernel into
     zero_page.write_u32(0x214, KERNEL_LOCATION);
