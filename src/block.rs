@@ -186,9 +186,9 @@ impl VirtioMMIOBlockDevice {
 
         // Request device features
         self.region.io_write_u32(0x014, 0);
-        let mut device_features: u64 = self.region.io_read_u32(0x010) as u64;
+        let mut device_features: u64 = u64::from(self.region.io_read_u32(0x010));
         self.region.io_write_u32(0x014, 1);
-        device_features |= (self.region.io_read_u32(0x010) as u64) << 32;
+        device_features |= u64::from(self.region.io_read_u32(0x010)) << 32;
 
         if device_features & VIRTIO_F_VERSION_1 != VIRTIO_F_VERSION_1 {
             self.add_status(VIRTIO_STATUS_FAILED);

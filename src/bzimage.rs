@@ -51,13 +51,13 @@ struct E820Entry {
 pub fn load_initrd(f: &mut Read) -> Result<(), Error> {
     let zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
 
-    let mut max_load_address = zero_page.read_u32(0x22c) as u64;
+    let mut max_load_address = u64::from(zero_page.read_u32(0x22c));
     if max_load_address == 0 {
         max_load_address = 0x37ff_ffff;
     }
 
     let e820_count = zero_page.read_u8(0x1e8);
-    let e820_table = zero_page.as_mut_slice::<E820Entry>(0x2d0, e820_count as u64);
+    let e820_table = zero_page.as_mut_slice::<E820Entry>(0x2d0, u64::from(e820_count));
 
     // Search E820 table for highest usable ram location that is below the limit.
     let mut top_of_usable_ram = 0;
@@ -74,8 +74,8 @@ pub fn load_initrd(f: &mut Read) -> Result<(), Error> {
         top_of_usable_ram = max_load_address;
     }
 
-    let initrd_address = top_of_usable_ram - f.get_size() as u64;
-    let initrd_region = crate::mem::MemoryRegion::new(initrd_address, f.get_size() as u64);
+    let initrd_address = top_of_usable_ram - u64::from(f.get_size());
+    let initrd_region = crate::mem::MemoryRegion::new(initrd_address, u64::from(f.get_size()));
 
     let mut offset = 0;
     while offset < f.get_size() {
@@ -89,12 +89,12 @@ pub fn load_initrd(f: &mut Read) -> Result<(), Error> {
                 Err(_) => return Err(Error::FileError),
                 Ok(_) => {}
             }
-            let dst = initrd_region.as_mut_slice(offset as u64, bytes_remaining as u64);
+            let dst = initrd_region.as_mut_slice(u64::from(offset), u64::from(bytes_remaining));
             dst.copy_from_slice(&data[0..bytes_remaining as usize]);
             break;
         }
 
-        let dst = initrd_region.as_mut_slice(offset as u64, 512);
+        let dst = initrd_region.as_mut_slice(u64::from(offset), 512);
 
         match f.read(dst) {
             Err(crate::fat::Error::EndOfFile) => break,
@@ -203,7 +203,7 @@ pub fn load_kernel(f: &mut Read) -> Result<(u64), Error> {
 
     let setup_bytes = setup_sects * 512; // Use to start reading the main image
 
-    let mut load_offset = KERNEL_LOCATION as u64;
+    let mut load_offset = u64::from(KERNEL_LOCATION);;
 
     match f.seek(setup_bytes as u32) {
         Err(_) => return Err(Error::FileError),
@@ -217,7 +217,7 @@ pub fn load_kernel(f: &mut Read) -> Result<(u64), Error> {
         match f.read(dst) {
             Err(crate::fat::Error::EndOfFile) => {
                 // 0x200 is the startup_64 offset
-                return Ok(KERNEL_LOCATION as u64 + 0x200);
+                return Ok(u64::from(KERNEL_LOCATION) + 0x200);
             }
             Err(_) => return Err(Error::FileError),
             Ok(_) => {}
