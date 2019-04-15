@@ -128,7 +128,7 @@ pub fn append_commandline(addition: &str) -> Result<(), Error> {
     let orig_len = orig_cmdline.len();
 
     cmdline[orig_len] = b' ';
-    &mut cmdline[orig_len + 1..orig_len + 1 + addition.len()].copy_from_slice(addition.as_bytes());
+    cmdline[orig_len + 1..orig_len + 1 + addition.len()].copy_from_slice(addition.as_bytes());
     cmdline[orig_len + 1 + addition.len()] = 0;
 
     // Commandline pointer/size

@@ -259,7 +259,7 @@ impl SectorRead for VirtioMMIOBlockDevice {
         let header = BlockRequestHeader {
             request: 0,
             reserved: 0,
-            sector: sector,
+            sector,
         };
 
         let footer = BlockRequestFooter { status: 0 };

@@ -106,7 +106,7 @@ pub extern "C" fn _start() -> ! {
         Ok((start, end)) => {
             serial_message("Found EFI partition\n");
             f = fat::Filesystem::new(&mut *device, start, end);
-            if let Err(_) = f.init() {
+            if f.init().is_err() {
                 serial_message("Failed to create filesystem\n");
                 i8042_reset();
             }

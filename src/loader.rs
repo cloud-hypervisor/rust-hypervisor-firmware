@@ -62,7 +62,7 @@ fn default_entry_file(f: &mut fat::File) -> Result<[u8; 260], fat::Error> {
     for line in conf.lines() {
         if line.starts_with("default") {
             let entry = line["default".len()..].trim();
-            &mut entry_file_name[0..entry.len()].copy_from_slice(entry.as_bytes());
+            entry_file_name[0..entry.len()].copy_from_slice(entry.as_bytes());
         }
     }
 
@@ -90,15 +90,15 @@ fn parse_entry(f: &mut fat::File) -> Result<LoaderConfig, fat::Error> {
     for line in conf.lines() {
         if line.starts_with("linux") {
             let entry = line["linux".len()..].trim();
-            &mut loader_config.bzimage_path[0..entry.len()].copy_from_slice(entry.as_bytes());
+            loader_config.bzimage_path[0..entry.len()].copy_from_slice(entry.as_bytes());
         }
         if line.starts_with("options") {
             let entry = line["options".len()..].trim();
-            &mut loader_config.cmdline[0..entry.len()].copy_from_slice(entry.as_bytes());
+            loader_config.cmdline[0..entry.len()].copy_from_slice(entry.as_bytes());
         }
         if line.starts_with("initrd") {
             let entry = line["initrd".len()..].trim();
-            &mut loader_config.initrd_path[0..entry.len()].copy_from_slice(entry.as_bytes());
+            loader_config.initrd_path[0..entry.len()].copy_from_slice(entry.as_bytes());
         }
     }
 
@@ -106,12 +106,10 @@ fn parse_entry(f: &mut fat::File) -> Result<LoaderConfig, fat::Error> {
 }
 
 fn ascii_strip(s: &[u8]) -> &str {
-    let s = unsafe { core::str::from_utf8_unchecked(&s) };
-    let s = s.trim_matches(char::from(0));
-    s
+    unsafe { core::str::from_utf8_unchecked(&s) }.trim_matches(char::from(0))
 }
 
-const ENTRY_DIRECTORY: &'static str = "/loader/entries/";
+const ENTRY_DIRECTORY: &str = "/loader/entries/";
 
 fn default_entry_path(fs: &fat::Filesystem) -> Result<[u8; 260], fat::Error> {
     let mut f = fs.open("/loader/loader.conf")?;
@@ -120,9 +118,9 @@ fn default_entry_path(fs: &fat::Filesystem) -> Result<[u8; 260], fat::Error> {
     let default_entry = ascii_strip(&default_entry);
 
     let mut entry_path = [0u8; 260];
-    &mut entry_path[0..ENTRY_DIRECTORY.len()].copy_from_slice(ENTRY_DIRECTORY.as_bytes());
+    entry_path[0..ENTRY_DIRECTORY.len()].copy_from_slice(ENTRY_DIRECTORY.as_bytes());
 
-    &mut entry_path[ENTRY_DIRECTORY.len()..ENTRY_DIRECTORY.len() + default_entry.len()]
+    entry_path[ENTRY_DIRECTORY.len()..ENTRY_DIRECTORY.len() + default_entry.len()]
         .copy_from_slice(default_entry.as_bytes());
     Ok(entry_path)
 }

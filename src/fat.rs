@@ -323,7 +323,7 @@ impl<'a> Read for File<'a> {
         Ok(())
     }
     fn get_size(&self) -> u32 {
-        return self.size;
+        self.size
     }
 }
 
@@ -485,7 +485,7 @@ impl<'a> Filesystem<'a> {
                 if next_cluster >= 0x0fff_fff8 {
                     Err(Error::EndOfFile)
                 } else {
-                    Ok(u32::from(next_cluster))
+                    Ok(next_cluster)
                 }
             }
 
@@ -501,43 +501,41 @@ impl<'a> Filesystem<'a> {
         match self.fat_type {
             FatType::FAT12 | FatType::FAT16 => {
                 let root_directory_start = self.first_data_sector - self.root_dir_sectors;
-                return Ok(Directory {
+                Ok(Directory {
                     filesystem: self,
                     cluster: None,
                     sector: root_directory_start,
                     offset: 0,
-                });
-            }
-            FatType::FAT32 => {
-                return Ok(Directory {
-                    filesystem: self,
-                    cluster: Some(self.root_cluster),
-                    sector: 0,
-                    offset: 0,
                 })
             }
+            FatType::FAT32 => Ok(Directory {
+                filesystem: self,
+                cluster: Some(self.root_cluster),
+                sector: 0,
+                offset: 0,
+            }),
             _ => Err(Error::Unsupported),
         }
     }
 
     fn get_file(&self, cluster: u32, size: u32) -> Result<File, Error> {
-        return Ok(File {
+        Ok(File {
             filesystem: self,
             start_cluster: cluster,
             active_cluster: cluster,
             sector_offset: 0,
             size,
             position: 0,
-        });
+        })
     }
 
     fn get_directory(&self, cluster: u32) -> Result<Directory, Error> {
-        return Ok(Directory {
+        Ok(Directory {
             filesystem: self,
             cluster: Some(cluster),
             sector: 0,
             offset: 0,
-        });
+        })
     }
 
     pub fn open(&self, path: &str) -> Result<File, Error> {
@@ -553,13 +551,13 @@ impl<'a> Filesystem<'a> {
                 None => &residual[1..],
                 Some(x) => {
                     // +1 due to above find working on substring
-                    let sub = &residual[1..(*x + 1)];
+                    let sub = &residual[1..=*x];
                     residual = &residual[(*x + 1)..];
                     sub
                 }
             };
 
-            if sub.len() == 0 {
+            if sub.is_empty() {
                 return Err(Error::NotFound);
             }
 
