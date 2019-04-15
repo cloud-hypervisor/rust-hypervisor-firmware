@@ -33,7 +33,7 @@ mod part;
 #[cfg(not(test))]
 lazy_static! {
     pub static ref BLOCK: Mutex<block::VirtioMMIOBlockDevice> =
-        Mutex::new(block::VirtioMMIOBlockDevice::new(0xd0000000u64));
+        Mutex::new(block::VirtioMMIOBlockDevice::new(0xd000_0000u64));
 }
 
 #[cfg(not(test))]

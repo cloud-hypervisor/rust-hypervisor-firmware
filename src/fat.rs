@@ -480,8 +480,8 @@ impl<'a> Filesystem<'a> {
                     unsafe { core::slice::from_raw_parts(data.as_ptr() as *const u32, 512 / 4) };
 
                 let next_cluster_raw = fat[(offset / 4) as usize];
-                let next_cluster = next_cluster_raw & 0x0fffffff;
-                if next_cluster >= 0x0ffffff8 {
+                let next_cluster = next_cluster_raw & 0x0fff_ffff;
+                if next_cluster >= 0x0fff_fff8 {
                     Err(Error::EndOfFile)
                 } else {
                     Ok(next_cluster as u32)

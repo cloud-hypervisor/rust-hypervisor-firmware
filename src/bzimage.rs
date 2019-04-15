@@ -34,7 +34,7 @@ const CMDLINE_MAX_SIZE: usize = 0x10000;
 pub const ZERO_PAGE_START: usize = 0x7000;
 
 #[cfg(not(test))]
-const KERNEL_LOCATION: u32 = 0x200000;
+const KERNEL_LOCATION: u32 = 0x20_0000;
 
 #[cfg(not(test))]
 const E820_RAM: u32 = 1;
@@ -53,7 +53,7 @@ pub fn load_initrd(f: &mut Read) -> Result<(), Error> {
 
     let mut max_load_address = zero_page.read_u32(0x22c) as u64;
     if max_load_address == 0 {
-        max_load_address = 0x37ffffff;
+        max_load_address = 0x37ff_ffff;
     }
 
     let e820_count = zero_page.read_u8(0x1e8);
@@ -163,7 +163,7 @@ pub fn load_kernel(f: &mut Read) -> Result<(u64), Error> {
         return Err(Error::MagicMissing);
     }
 
-    if setup.read_u32(0x202) != 0x53726448 {
+    if setup.read_u32(0x202) != 0x5372_6448 {
         return Err(Error::MagicMissing);
     }
 
