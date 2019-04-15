@@ -79,7 +79,7 @@ pub fn find_efi_partition(r: &mut SectorRead) -> Result<(u64, u64), Error> {
     let h = unsafe { &*(data.as_ptr() as *const Header) };
 
     // GPT magic constant
-    if h.signature != 0x5452415020494645u64 {
+    if h.signature != 0x5452_4150_2049_4645u64 {
         return Err(Error::HeaderNotFound);
     }
 

@@ -151,7 +151,7 @@ impl VirtioMMIOBlockDevice {
     }
 
     pub fn init(&self) -> Result<(), Error> {
-        const VIRTIO_MAGIC: u32 = 0x74726976;
+        const VIRTIO_MAGIC: u32 = 0x7472_6976;
         const VIRTIO_VERSION: u32 = 0x2;
         const VIRTIO_SUBSYSTEM_BLOCK: u32 = 0x2;
         const VIRTIO_F_VERSION_1: u64 = 1 << 32;
