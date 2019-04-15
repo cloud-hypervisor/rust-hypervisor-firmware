@@ -49,7 +49,7 @@ struct E820Entry {
 
 #[cfg(not(test))]
 pub fn load_initrd(f: &mut Read) -> Result<(), Error> {
-    let zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
+    let mut zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
 
     let mut max_load_address = u64::from(zero_page.read_u32(0x22c));
     if max_load_address == 0 {
@@ -75,7 +75,7 @@ pub fn load_initrd(f: &mut Read) -> Result<(), Error> {
     }
 
     let initrd_address = top_of_usable_ram - u64::from(f.get_size());
-    let initrd_region = crate::mem::MemoryRegion::new(initrd_address, u64::from(f.get_size()));
+    let mut initrd_region = crate::mem::MemoryRegion::new(initrd_address, u64::from(f.get_size()));
 
     let mut offset = 0;
     while offset < f.get_size() {
@@ -113,7 +113,7 @@ pub fn load_initrd(f: &mut Read) -> Result<(), Error> {
 
 #[cfg(not(test))]
 pub fn append_commandline(addition: &str) -> Result<(), Error> {
-    let cmdline_region =
+    let mut cmdline_region =
         crate::mem::MemoryRegion::new(CMDLINE_START as u64, CMDLINE_MAX_SIZE as u64);
     let zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
 
@@ -182,7 +182,7 @@ pub fn load_kernel(f: &mut Read) -> Result<(u64), Error> {
 
     // Reuse the zero page that we were originally given
     // TODO: Zero and fill it ourself but will need to save E820 details
-    let zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
+    let mut zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
 
     let dst = zero_page.as_mut_slice(header_start as u64, (header_end - header_start) as u64);
     dst.copy_from_slice(&buf[header_start..header_end]);
@@ -211,7 +211,7 @@ pub fn load_kernel(f: &mut Read) -> Result<(u64), Error> {
     };
 
     loop {
-        let dst = crate::mem::MemoryRegion::new(load_offset, 512);
+        let mut dst = crate::mem::MemoryRegion::new(load_offset, 512);
         let dst = dst.as_mut_slice(0, 512);
 
         match f.read(dst) {

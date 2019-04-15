@@ -36,7 +36,7 @@ impl MemoryRegion {
     }
 
     /// Expose a section of the memory region as a slice
-    pub fn as_mut_slice<T>(&self, offset: u64, length: u64) -> &mut [T] {
+    pub fn as_mut_slice<T>(&mut self, offset: u64, length: u64) -> &mut [T] {
         assert!((offset + (length * core::mem::size_of::<T>() as u64)) <= self.length);
         unsafe { core::slice::from_raw_parts_mut((self.base + offset) as *mut T, length as usize) }
     }
