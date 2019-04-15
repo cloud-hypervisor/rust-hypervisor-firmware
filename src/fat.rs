@@ -178,7 +178,7 @@ impl<'a> Directory<'a> {
             }
 
             let mut data: [u8; 512] = [0; 512];
-            match self.filesystem.read(sector as u64, &mut data) {
+            match self.filesystem.read(u64::from(sector), &mut data) {
                 Ok(_) => {}
                 Err(_) => return Err(Error::BlockError),
             };
@@ -225,7 +225,7 @@ impl<'a> Directory<'a> {
                     } else {
                         FileType::File
                     },
-                    cluster: (d.cluster_high as u32) << 16 | d.cluster_low as u32,
+                    cluster: (u32::from(d.cluster_high)) << 16 | u32::from(d.cluster_low),
                     size: d.size,
                     long_name: ucs2_to_ascii(&long_entry[..]),
                 };
@@ -253,7 +253,7 @@ impl<'a> Read for File<'a> {
             return Err(Error::EndOfFile);
         }
 
-        if self.sector_offset == self.filesystem.sectors_per_cluster as u64 {
+        if self.sector_offset == u64::from(self.filesystem.sectors_per_cluster) {
             match self.filesystem.next_cluster(self.active_cluster) {
                 Err(e) => {
                     return Err(e);
@@ -269,7 +269,7 @@ impl<'a> Read for File<'a> {
 
         match self
             .filesystem
-            .read(cluster_start as u64 + self.sector_offset, data)
+            .read(u64::from(cluster_start) + self.sector_offset, data)
         {
             Err(_) => Err(Error::BlockError),
             Ok(()) => {
@@ -304,7 +304,7 @@ impl<'a> Read for File<'a> {
 
         // Like read but without reading, follow cluster chain if we reach end of cluster
         while self.position != position {
-            if self.sector_offset == self.filesystem.sectors_per_cluster as u64 {
+            if self.sector_offset == u64::from(self.filesystem.sectors_per_cluster) {
                 match self.filesystem.next_cluster(self.active_cluster) {
                     Err(e) => {
                         return Err(e);
@@ -371,17 +371,17 @@ impl<'a> Filesystem<'a> {
 
         let h = unsafe { &*(data.as_ptr() as *const Header) };
 
-        self.bytes_per_sector = h.bytes_per_sector as u32;
-        self.fat_count = h.fat_count as u32;
-        self.sectors_per_cluster = h.sectors_per_cluster as u32;
+        self.bytes_per_sector = u32::from(h.bytes_per_sector);
+        self.fat_count = u32::from(h.fat_count);
+        self.sectors_per_cluster = u32::from(h.sectors_per_cluster);
 
         self.sectors = if h.legacy_sectors == 0 {
             h.sectors
         } else {
-            h.legacy_sectors as u32
+            u32::from(h.legacy_sectors)
         };
 
-        self.clusters = self.sectors / h.sectors_per_cluster as u32;
+        self.clusters = self.sectors / u32::from(h.sectors_per_cluster);
 
         self.fat_type = if self.clusters < FAT12_MAX {
             FatType::FAT12
@@ -396,15 +396,16 @@ impl<'a> Filesystem<'a> {
             self.sectors_per_fat = h32.sectors_per_fat;
             self.root_cluster = h32.root_cluster;
         } else {
-            self.sectors_per_fat = h.legacy_sectors_per_fat as u32;
+            self.sectors_per_fat = u32::from(h.legacy_sectors_per_fat);
         }
 
         if self.fat_type == FatType::FAT12 || self.fat_type == FatType::FAT16 {
-            self.root_dir_sectors = ((h.root_dir_count as u32 * 32) + self.bytes_per_sector - 1)
+            self.root_dir_sectors = ((u32::from(h.root_dir_count * 32)) + self.bytes_per_sector
+                - 1)
                 / self.bytes_per_sector;
         }
 
-        self.first_fat_sector = h.reserved_sectors as u32;
+        self.first_fat_sector = u32::from(h.reserved_sectors);
         self.first_data_sector =
             self.first_fat_sector + (self.fat_count * self.sectors_per_fat) + self.root_dir_sectors;
         self.data_sector_count = self.sectors - self.first_data_sector;
@@ -422,13 +423,13 @@ impl<'a> Filesystem<'a> {
                 let fat_sector = self.first_fat_sector + (fat_offset / self.bytes_per_sector);
                 let offset = fat_offset % self.bytes_per_sector;
 
-                match self.read(fat_sector as u64, &mut data) {
+                match self.read(u64::from(fat_sector), &mut data) {
                     Ok(_) => {}
                     Err(_) => return Err(Error::BlockError),
                 };
 
                 let next_cluster_raw =
-                    unsafe { *((data.as_ptr() as u64 + offset as u64) as *const u16) };
+                    unsafe { *((data.as_ptr() as u64 + u64::from(offset)) as *const u16) };
 
                 let next_cluster = if cluster % 2 == 0 {
                     next_cluster_raw & 0xfff
@@ -438,7 +439,7 @@ impl<'a> Filesystem<'a> {
                 if next_cluster >= 0xff8 {
                     Err(Error::EndOfFile)
                 } else {
-                    Ok(next_cluster as u32)
+                    Ok(u32::from(next_cluster))
                 }
             }
             FatType::FAT16 => {
@@ -448,7 +449,7 @@ impl<'a> Filesystem<'a> {
                 let fat_sector = self.first_fat_sector + (fat_offset / self.bytes_per_sector);
                 let offset = fat_offset % self.bytes_per_sector;
 
-                match self.read(fat_sector as u64, &mut data) {
+                match self.read(u64::from(fat_sector), &mut data) {
                     Ok(_) => {}
                     Err(_) => return Err(Error::BlockError),
                 };
@@ -461,7 +462,7 @@ impl<'a> Filesystem<'a> {
                 if next_cluster >= 0xfff8 {
                     Err(Error::EndOfFile)
                 } else {
-                    Ok(next_cluster as u32)
+                    Ok(u32::from(next_cluster))
                 }
             }
             FatType::FAT32 => {
@@ -471,7 +472,7 @@ impl<'a> Filesystem<'a> {
                 let fat_sector = self.first_fat_sector + (fat_offset / self.bytes_per_sector);
                 let offset = fat_offset % self.bytes_per_sector;
 
-                match self.read(fat_sector as u64, &mut data) {
+                match self.read(u64::from(fat_sector), &mut data) {
                     Ok(_) => {}
                     Err(_) => return Err(Error::BlockError),
                 };
@@ -484,7 +485,7 @@ impl<'a> Filesystem<'a> {
                 if next_cluster >= 0x0fff_fff8 {
                     Err(Error::EndOfFile)
                 } else {
-                    Ok(next_cluster as u32)
+                    Ok(u32::from(next_cluster))
                 }
             }
 
