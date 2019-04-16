@@ -301,7 +301,7 @@ impl SectorRead for VirtioMMIOBlockDevice {
         self.region.io_write_u32(0x50, 0);
 
         // Check for the completion of the request
-        while state.used.idx != state.avail.idx {
+        while unsafe { core::ptr::read_volatile(&state.used.idx) } != state.avail.idx {
             core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
         }
 
