@@ -157,8 +157,7 @@ impl<'a> Directory<'a> {
     pub fn next_entry(&mut self) -> Result<DirectoryEntry, Error> {
         let mut long_entry = [0u16; 260];
         loop {
-            let mut sector = self.sector;
-            if self.cluster.is_some() {
+            let sector = if self.cluster.is_some() {
                 if self.sector > self.filesystem.sectors_per_cluster {
                     match self.filesystem.next_cluster(self.cluster.unwrap()) {
                         Ok(new_cluster) => {
@@ -171,11 +170,13 @@ impl<'a> Directory<'a> {
                         }
                     }
                 }
-                sector = self.sector
+                self.sector
                     + self
                         .filesystem
-                        .first_sector_of_cluster(self.cluster.unwrap());
-            }
+                        .first_sector_of_cluster(self.cluster.unwrap())
+            } else {
+                self.sector
+            };
 
             let mut data: [u8; 512] = [0; 512];
             match self.filesystem.read(u64::from(sector), &mut data) {
