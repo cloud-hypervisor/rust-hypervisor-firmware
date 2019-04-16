@@ -443,19 +443,17 @@ impl<'a> Filesystem<'a> {
                 }
             }
             FatType::FAT16 => {
-                let mut data: [u8; 512] = [0; 512];
+                let fat: [u16; 512 / 2] = [0; 512 / 2];
 
                 let fat_offset = cluster * 2;
                 let fat_sector = self.first_fat_sector + (fat_offset / self.bytes_per_sector);
                 let offset = fat_offset % self.bytes_per_sector;
 
-                match self.read(u64::from(fat_sector), &mut data) {
+                let data = unsafe { core::slice::from_raw_parts_mut(fat.as_ptr() as *mut u8, 512) };
+                match self.read(u64::from(fat_sector), data) {
                     Ok(_) => {}
                     Err(_) => return Err(Error::BlockError),
                 };
-
-                let fat: &[u16] =
-                    unsafe { core::slice::from_raw_parts(data.as_ptr() as *const u16, 512 / 2) };
 
                 let next_cluster = fat[(offset / 2) as usize];
 
@@ -466,19 +464,18 @@ impl<'a> Filesystem<'a> {
                 }
             }
             FatType::FAT32 => {
-                let mut data: [u8; 512] = [0; 512];
+                let fat: [u32; 512 / 4] = [0; 512 / 4];
 
                 let fat_offset = cluster * 4;
                 let fat_sector = self.first_fat_sector + (fat_offset / self.bytes_per_sector);
                 let offset = fat_offset % self.bytes_per_sector;
 
-                match self.read(u64::from(fat_sector), &mut data) {
+                let data = unsafe { core::slice::from_raw_parts_mut(fat.as_ptr() as *mut u8, 512) };
+
+                match self.read(u64::from(fat_sector), data) {
                     Ok(_) => {}
                     Err(_) => return Err(Error::BlockError),
                 };
-
-                let fat: &[u32] =
-                    unsafe { core::slice::from_raw_parts(data.as_ptr() as *const u32, 512 / 4) };
 
                 let next_cluster_raw = fat[(offset / 4) as usize];
                 let next_cluster = next_cluster_raw & 0x0fff_ffff;
