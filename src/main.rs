@@ -38,6 +38,7 @@ lazy_static! {
 
 #[cfg(not(test))]
 #[panic_handler]
+#[allow(clippy::empty_loop)]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
