@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::fat::Read;
+use crate::fat;
+use fat::Read;
 
 #[cfg(not(test))]
 pub enum Error {
@@ -20,6 +21,13 @@ pub enum Error {
     KernelOld,
     MagicMissing,
     NotRelocatable,
+}
+
+#[cfg(not(test))]
+impl From<fat::Error> for Error {
+    fn from(_: fat::Error) -> Error {
+        Error::FileError
+    }
 }
 
 // From firecracker
@@ -140,22 +148,12 @@ pub fn append_commandline(addition: &str) -> Result<(), Error> {
 
 #[cfg(not(test))]
 pub fn load_kernel(f: &mut Read) -> Result<(u64), Error> {
-    match f.seek(0) {
-        Err(_) => return Err(Error::FileError),
-        Ok(_) => {}
-    };
+    f.seek(0)?;
 
     let mut buf: [u8; 1024] = [0; 1024];
 
-    match f.read(&mut buf[0..512]) {
-        Err(_) => return Err(Error::FileError),
-        Ok(_) => {}
-    };
-
-    match f.read(&mut buf[512..]) {
-        Err(_) => return Err(Error::FileError),
-        Ok(_) => {}
-    };
+    f.read(&mut buf[0..512])?;
+    f.read(&mut buf[512..])?;
 
     let setup = crate::mem::MemoryRegion::from_slice(&buf[..]);
 
@@ -205,10 +203,7 @@ pub fn load_kernel(f: &mut Read) -> Result<(u64), Error> {
 
     let mut load_offset = u64::from(KERNEL_LOCATION);;
 
-    match f.seek(setup_bytes as u32) {
-        Err(_) => return Err(Error::FileError),
-        Ok(_) => {}
-    };
+    f.seek(setup_bytes as u32)?;
 
     loop {
         let mut dst = crate::mem::MemoryRegion::new(load_offset, 512);
