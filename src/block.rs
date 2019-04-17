@@ -150,6 +150,10 @@ impl VirtioMMIOBlockDevice {
         self.set_status(self.get_status() | value);
     }
 
+    pub fn reset(&self) {
+        self.set_status(0);
+    }
+
     pub fn init(&self) -> Result<(), Error> {
         const VIRTIO_MAGIC: u32 = 0x7472_6976;
         const VIRTIO_VERSION: u32 = 0x2;

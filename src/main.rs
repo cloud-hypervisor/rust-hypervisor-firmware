@@ -131,6 +131,8 @@ pub extern "C" fn _start() -> ! {
         }
     }
 
+    device.reset();
+
     serial_message("Jumping to kernel\n");
 
     // Rely on x86 C calling convention where second argument is put into %rsi register
