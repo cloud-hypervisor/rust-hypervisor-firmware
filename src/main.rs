@@ -17,6 +17,9 @@
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(unused_imports))]
 
+#[macro_use]
+mod logger;
+
 use core::panic::PanicInfo;
 
 use cpuio::Port;
