@@ -47,15 +47,6 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 #[cfg(not(test))]
-/// Output the message provided in `message` over the serial port
-fn serial_message(message: &str) {
-    let mut serial: Port<u8> = unsafe { Port::new(0x3f8) };
-    for c in message.chars() {
-        serial.write(c as u8);
-    }
-}
-
-#[cfg(not(test))]
 /// Reset the VM via the keyboard controller
 fn i8042_reset() -> ! {
     loop {
@@ -81,7 +72,7 @@ fn setup_pagetables() {
         pde.io_write_u64(i * 8, (0xb000u64 + (0x1000u64 * i)) | 0x03);
     }
 
-    serial_message("Page tables setup\n");
+    log!("Page tables setup\n");
 }
 
 #[cfg(not(test))]
@@ -91,16 +82,16 @@ pub extern "C" fn _start() -> ! {
         asm!("movq $$0x180000, %rsp");
     }
 
-    serial_message("Starting..\n");
+    log!("Starting..\n");
 
     setup_pagetables();
 
     match BLOCK.lock().init() {
         Err(_) => {
-            serial_message("Error configuring block device\n");
+            log!("Error configuring block device\n");
             i8042_reset();
         }
-        Ok(_) => serial_message("Virtio block device configured\n"),
+        Ok(_) => log!("Virtio block device configured\n"),
     }
 
     let mut f;
@@ -108,20 +99,20 @@ pub extern "C" fn _start() -> ! {
     let mut device = BLOCK.lock();
     match part::find_efi_partition(&mut *device) {
         Ok((start, end)) => {
-            serial_message("Found EFI partition\n");
+            log!("Found EFI partition\n");
             f = fat::Filesystem::new(&*device, start, end);
             if f.init().is_err() {
-                serial_message("Failed to create filesystem\n");
+                log!("Failed to create filesystem\n");
                 i8042_reset();
             }
         }
         Err(_) => {
-            serial_message("Failed to find EFI partition\n");
+            log!("Failed to find EFI partition\n");
             i8042_reset();
         }
     }
 
-    serial_message("Filesystem ready\n");
+    log!("Filesystem ready\n");
     let jump_address;
 
     match loader::load_default_entry(&f) {
@@ -129,14 +120,14 @@ pub extern "C" fn _start() -> ! {
             jump_address = addr;
         }
         Err(_) => {
-            serial_message("Error loading default entry\n");
+            log!("Error loading default entry\n");
             i8042_reset();
         }
     }
 
     device.reset();
 
-    serial_message("Jumping to kernel\n");
+    log!("Jumping to kernel\n");
 
     // Rely on x86 C calling convention where second argument is put into %rsi register
     let ptr = jump_address as *const ();
