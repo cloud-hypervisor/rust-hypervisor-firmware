@@ -31,6 +31,7 @@ mod loader;
 mod mem;
 mod mmio;
 mod part;
+mod pci;
 mod virtio;
 
 #[cfg(not(test))]
@@ -80,6 +81,8 @@ pub extern "C" fn _start() -> ! {
     log!("Starting..\n");
 
     setup_pagetables();
+
+    pci::print_bus();
 
     let mut transport = mmio::VirtioMMIOTransport::new(0xd000_0000u64);
     let mut device = block::VirtioBlockDevice::new(&mut transport);
