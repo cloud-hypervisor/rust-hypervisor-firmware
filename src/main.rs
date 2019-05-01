@@ -29,7 +29,9 @@ mod bzimage;
 mod fat;
 mod loader;
 mod mem;
+mod mmio;
 mod part;
+mod virtio;
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -78,7 +80,9 @@ pub extern "C" fn _start() -> ! {
 
     setup_pagetables();
 
-    let mut device = block::VirtioMMIOBlockDevice::new(0xd000_0000u64);
+    let mut transport = mmio::VirtioMMIOTransport::new(0xd000_0000u64);
+    let mut device = block::VirtioBlockDevice::new(&mut transport);
+
     match device.init() {
         Err(_) => {
             log!("Error configuring block device\n");

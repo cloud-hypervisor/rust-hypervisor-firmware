@@ -12,8 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::mem;
 use core::cell::RefCell;
+
+#[cfg(not(test))]
+use crate::virtio::Error as VirtioError;
+#[cfg(not(test))]
+use crate::virtio::VirtioTransport;
 
 #[cfg(not(test))]
 const QUEUE_SIZE: usize = 16;
@@ -64,9 +68,9 @@ struct UsedElem {
 #[repr(C)]
 #[repr(align(64))]
 #[cfg(not(test))]
-/// Device driver for virtio block over MMIO
-pub struct VirtioMMIOBlockDevice {
-    transport: VirtioMMIOTransport,
+/// Device driver for virtio block over any transport
+pub struct VirtioBlockDevice<'a> {
+    transport: &'a mut VirtioTransport,
     state: RefCell<DriverState>,
 }
 
@@ -82,24 +86,6 @@ struct DriverState {
 }
 
 pub enum Error {
-    #[cfg(not(test))]
-    VirtioMagicInvalid,
-
-    #[cfg(not(test))]
-    VirtioVersionInvalid,
-
-    #[cfg(not(test))]
-    VirtioUnsupportedDevice,
-
-    #[cfg(not(test))]
-    VirtioLegacyOnly,
-
-    #[cfg(not(test))]
-    VirtioFeatureNegotiationFailed,
-
-    #[cfg(not(test))]
-    VirtioQueueTooSmall,
-
     BlockIOError,
 
     #[cfg(not(test))]
@@ -128,120 +114,11 @@ pub trait SectorRead {
     fn read(&self, sector: u64, data: &mut [u8]) -> Result<(), Error>;
 }
 
-pub trait VirtioTransport {
-    fn check_device(&self, device_type: u32) -> Result<(), Error>;
-    fn get_status(&self) -> u32;
-    fn set_status(&self, status: u32);
-    fn add_status(&self, status: u32);
-    fn reset(&self);
-    fn get_features(&self) -> u64;
-    fn set_features(&self, features: u64);
-    fn set_queue(&self, queue: u16);
-    fn get_queue_max_size(&self) -> u16;
-    fn set_queue_size(&self, queue_size: u16);
-    fn set_descriptors_address(&self, address: u64);
-    fn set_avail_ring(&self, address: u64);
-    fn set_used_ring(&self, address: u64);
-    fn set_queue_enable(&self);
-    fn notify_queue(&self, queue: u16);
-}
-
 #[cfg(not(test))]
-struct VirtioMMIOTransport {
-    region: mem::MemoryRegion,
-}
-
-#[cfg(not(test))]
-impl VirtioTransport for VirtioMMIOTransport {
-    fn check_device(&self, device_type: u32) -> Result<(), Error> {
-        const VIRTIO_MAGIC: u32 = 0x7472_6976;
-        const VIRTIO_VERSION: u32 = 0x2;
-        if self.region.io_read_u32(0x000) != VIRTIO_MAGIC {
-            return Err(Error::VirtioMagicInvalid);
-        }
-
-        if self.region.io_read_u32(0x004) != VIRTIO_VERSION {
-            return Err(Error::VirtioVersionInvalid);
-        }
-
-        if self.region.io_read_u32(0x008) != device_type {
-            return Err(Error::VirtioUnsupportedDevice);
-        }
-        Ok(())
-    }
-
-    fn get_status(&self) -> u32 {
-        self.region.io_read_u32(0x70)
-    }
-
-    fn set_status(&self, value: u32) {
-        self.region.io_write_u32(0x70, value);
-    }
-
-    fn add_status(&self, value: u32) {
-        self.set_status(self.get_status() | value);
-    }
-
-    fn reset(&self) {
-        self.set_status(0);
-    }
-
-    fn get_features(&self) -> u64 {
-        self.region.io_write_u32(0x014, 0);
-        let mut device_features: u64 = u64::from(self.region.io_read_u32(0x010));
-        self.region.io_write_u32(0x014, 1);
-        device_features |= u64::from(self.region.io_read_u32(0x010)) << 32;
-
-        device_features
-    }
-
-    fn set_features(&self, features: u64) {
-        self.region.io_write_u32(0x024, 0);
-        self.region.io_write_u32(0x020, features as u32);
-        self.region.io_write_u32(0x024, 1);
-        self.region.io_write_u32(0x020, (features >> 32) as u32);
-    }
-
-    fn set_queue(&self, queue: u16) {
-        self.region.io_write_u32(0x030, u32::from(queue));
-    }
-
-    fn get_queue_max_size(&self) -> u16 {
-        self.region.io_read_u32(0x034) as u16
-    }
-
-    fn set_queue_size(&self, queue_size: u16) {
-        self.region.io_write_u32(0x038, u32::from(queue_size));
-    }
-    fn set_descriptors_address(&self, addr: u64) {
-        self.region.io_write_u32(0x080, addr as u32);
-        self.region.io_write_u32(0x084, (addr >> 32) as u32);
-    }
-
-    fn set_avail_ring(&self, addr: u64) {
-        self.region.io_write_u32(0x090, addr as u32);
-        self.region.io_write_u32(0x094, (addr >> 32) as u32);
-    }
-
-    fn set_used_ring(&self, addr: u64) {
-        self.region.io_write_u32(0x0a0, addr as u32);
-        self.region.io_write_u32(0x0a4, (addr >> 32) as u32);
-    }
-    fn set_queue_enable(&self) {
-        self.region.io_write_u32(0x044, 0x1);
-    }
-    fn notify_queue(&self, queue: u16) {
-        self.region.io_write_u32(0x50, u32::from(queue));
-    }
-}
-
-#[cfg(not(test))]
-impl VirtioMMIOBlockDevice {
-    pub fn new(base: u64) -> VirtioMMIOBlockDevice {
-        VirtioMMIOBlockDevice {
-            transport: VirtioMMIOTransport {
-                region: mem::MemoryRegion::new(base, 4096),
-            },
+impl<'a> VirtioBlockDevice<'a> {
+    pub fn new(transport: &'a mut VirtioTransport) -> VirtioBlockDevice<'a> {
+        VirtioBlockDevice {
+            transport,
             state: RefCell::new(DriverState::default()),
         }
     }
@@ -250,7 +127,7 @@ impl VirtioMMIOBlockDevice {
         self.transport.reset()
     }
 
-    pub fn init(&self) -> Result<(), Error> {
+    pub fn init(&mut self) -> Result<(), VirtioError> {
         const VIRTIO_SUBSYSTEM_BLOCK: u32 = 0x2;
         const VIRTIO_F_VERSION_1: u64 = 1 << 32;
 
@@ -261,8 +138,8 @@ impl VirtioMMIOBlockDevice {
         const VIRTIO_STATUS_DRIVER_OK: u32 = 4;
         const VIRTIO_STATUS_FAILED: u32 = 128;
 
-        // Check is a valid virtio block device
-        self.transport.check_device(VIRTIO_SUBSYSTEM_BLOCK)?;
+        // Initialise the transport
+        self.transport.init(VIRTIO_SUBSYSTEM_BLOCK)?;
 
         // Reset device
         self.transport.set_status(VIRTIO_STATUS_RESET);
@@ -278,7 +155,7 @@ impl VirtioMMIOBlockDevice {
 
         if device_features & VIRTIO_F_VERSION_1 != VIRTIO_F_VERSION_1 {
             self.transport.add_status(VIRTIO_STATUS_FAILED);
-            return Err(Error::VirtioLegacyOnly);
+            return Err(VirtioError::VirtioLegacyOnly);
         }
 
         // Report driver features
@@ -287,7 +164,7 @@ impl VirtioMMIOBlockDevice {
         self.transport.add_status(VIRTIO_STATUS_FEATURES_OK);
         if self.transport.get_status() & VIRTIO_STATUS_FEATURES_OK != VIRTIO_STATUS_FEATURES_OK {
             self.transport.add_status(VIRTIO_STATUS_FAILED);
-            return Err(Error::VirtioFeatureNegotiationFailed);
+            return Err(VirtioError::VirtioFeatureNegotiationFailed);
         }
 
         // Program queues
@@ -298,7 +175,7 @@ impl VirtioMMIOBlockDevice {
         // Hardcoded queue size to QUEUE_SIZE at the moment
         if max_queue < QUEUE_SIZE as u16 {
             self.transport.add_status(VIRTIO_STATUS_FAILED);
-            return Err(Error::VirtioQueueTooSmall);
+            return Err(VirtioError::VirtioQueueTooSmall);
         }
         self.transport.set_queue_size(QUEUE_SIZE as u16);
 
@@ -324,7 +201,7 @@ impl VirtioMMIOBlockDevice {
 }
 
 #[cfg(not(test))]
-impl SectorRead for VirtioMMIOBlockDevice {
+impl<'a> SectorRead for VirtioBlockDevice<'a> {
     fn read(&self, sector: u64, data: &mut [u8]) -> Result<(), Error> {
         assert_eq!(512, data.len());
 
