@@ -72,6 +72,11 @@ fn setup_pagetables() {
 }
 
 #[cfg(not(test))]
+const VIRTIO_PCI_VENDOR_ID: u16 = 0x1af4;
+#[cfg(not(test))]
+const VIRTIO_PCI_BLOCK_DEVICE_ID: u16 = 0x1042;
+
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     unsafe {
@@ -84,8 +89,18 @@ pub extern "C" fn _start() -> ! {
 
     pci::print_bus();
 
-    let mut transport = mmio::VirtioMMIOTransport::new(0xd000_0000u64);
-    let mut device = block::VirtioBlockDevice::new(&mut transport);
+    let mut pci_transport;
+    let mut mmio_transport;
+
+    let mut device = if let Some(pci_device) =
+        pci::search_bus(VIRTIO_PCI_VENDOR_ID, VIRTIO_PCI_BLOCK_DEVICE_ID)
+    {
+        pci_transport = pci::VirtioPciTransport::new(pci_device);
+        block::VirtioBlockDevice::new(&mut pci_transport)
+    } else {
+        mmio_transport = mmio::VirtioMMIOTransport::new(0xd000_0000u64);
+        block::VirtioBlockDevice::new(&mut mmio_transport)
+    };
 
     match device.init() {
         Err(_) => {
