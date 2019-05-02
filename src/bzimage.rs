@@ -33,7 +33,7 @@ impl From<fat::Error> for Error {
 // From firecracker
 #[cfg(not(test))]
 /// Kernel command line start address.
-const CMDLINE_START: usize = 0x20000;
+const CMDLINE_START: usize = 0x4b000;
 #[cfg(not(test))]
 /// Kernel command line start address maximum size.
 const CMDLINE_MAX_SIZE: usize = 0x10000;
