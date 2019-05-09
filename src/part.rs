@@ -68,7 +68,7 @@ pub enum Error {
 }
 
 /// Find EFI partition
-pub fn find_efi_partition(r: &mut SectorRead) -> Result<(u64, u64), Error> {
+pub fn find_efi_partition(r: &SectorRead) -> Result<(u64, u64), Error> {
     let mut data: [u8; 512] = [0; 512];
     match r.read(1, &mut data) {
         Ok(_) => {}
@@ -138,10 +138,10 @@ pub mod tests {
         pub fn new(path: &str) -> FakeDisk {
             let file = File::open(path).expect("missing disk image");
             let metadata = fs::metadata(path).expect("error getting file metadata");
-            return FakeDisk {
+            FakeDisk {
                 file: RefCell::new(file),
                 metadata,
-            };
+            }
         }
 
         pub fn len(&self) -> u64 {
@@ -166,12 +166,12 @@ pub mod tests {
 
     #[test]
     fn test_find_efi_partition() {
-        let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
+        let d = FakeDisk::new("clear-28660-kvm.img");
 
-        match super::find_efi_partition(&mut d) {
+        match super::find_efi_partition(&d) {
             Ok((start, end)) => {
-                assert_eq!(start, 220);
-                assert_eq!(end, 5979);
+                assert_eq!(start, 2048);
+                assert_eq!(end, 1_048_575);
             }
             Err(e) => panic!(e),
         }

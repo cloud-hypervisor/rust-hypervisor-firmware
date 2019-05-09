@@ -112,7 +112,7 @@ pub extern "C" fn _start() -> ! {
 
     let mut f;
 
-    match part::find_efi_partition(&mut device) {
+    match part::find_efi_partition(&device) {
         Ok((start, end)) => {
             log!("Found EFI partition\n");
             f = fat::Filesystem::new(&device, start, end);

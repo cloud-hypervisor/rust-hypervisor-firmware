@@ -592,13 +592,13 @@ mod tests {
         let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
 
         for image in &images {
-            let mut d = FakeDisk::new(image);
+            let d = FakeDisk::new(image);
 
             for n in 9..16 {
                 for o in 0..2 {
                     let v = 2u32.pow(n) - o;
                     let len = d.len();
-                    let mut fs = crate::fat::Filesystem::new(&mut d, 0, len);
+                    let mut fs = crate::fat::Filesystem::new(&d, 0, len);
                     fs.init().expect("Error initialising filesystem");
                     let path = format!("/A/B/C/{}", v);
                     let mut f = fs.open(&path).expect("Error opening file");
@@ -630,13 +630,13 @@ mod tests {
         let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
 
         for image in &images {
-            let mut d = FakeDisk::new(image);
+            let d = FakeDisk::new(image);
 
             for n in 9..16 {
                 for o in 0..2 {
                     let v = 2u32.pow(n) - o;
                     let len = d.len();
-                    let mut fs = crate::fat::Filesystem::new(&mut d, 0, len);
+                    let mut fs = crate::fat::Filesystem::new(&d, 0, len);
                     fs.init().expect("Error initialising filesystem");
                     let path = format!("/A/B/C/{}", v);
                     let mut f = fs.open(&path).expect("Error opening file");
@@ -700,10 +700,10 @@ mod tests {
 
     #[test]
     fn test_fat_init() {
-        let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
-        match crate::part::find_efi_partition(&mut d) {
+        let d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
+        match crate::part::find_efi_partition(&d) {
             Ok((start, end)) => {
-                let mut f = crate::fat::Filesystem::new(&mut d, start, end);
+                let mut f = crate::fat::Filesystem::new(&d, start, end);
                 match f.init() {
                     Ok(()) => {
                         assert_eq!(f.sectors, 5760);
@@ -718,15 +718,15 @@ mod tests {
 
     #[test]
     fn test_fat_open() {
-        let mut d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
-        match crate::part::find_efi_partition(&mut d) {
+        let d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
+        match crate::part::find_efi_partition(&d) {
             Ok((start, end)) => {
-                let mut f = crate::fat::Filesystem::new(&mut d, start, end);
+                let mut f = crate::fat::Filesystem::new(&d, start, end);
                 match f.init() {
                     Ok(()) => {
                         let file = f.open("/EFI/BOOT/BOOTX64 EFI").unwrap();
                         assert_eq!(file.active_cluster, 4);
-                        assert_eq!(file.size, 133120);
+                        assert_eq!(file.size, 133_120);
                     }
                     Err(e) => panic!(e),
                 }
@@ -740,13 +740,13 @@ mod tests {
         let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
 
         for image in &images {
-            let mut disk = FakeDisk::new(image);
+            let disk = FakeDisk::new(image);
             let len = disk.len();
-            let mut fs = crate::fat::Filesystem::new(&mut disk, 0, len);
+            let mut fs = crate::fat::Filesystem::new(&disk, 0, len);
             fs.init().expect("Error initialising filesystem");
             let mut d = fs.root().unwrap();
             let de = d.next_entry().unwrap();
-            assert_eq!(de.name, "A          ".as_bytes());
+            assert_eq!(&de.name, b"A          ");
         }
     }
     #[test]
@@ -754,31 +754,31 @@ mod tests {
         let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
 
         for image in &images {
-            let mut disk = FakeDisk::new(image);
+            let disk = FakeDisk::new(image);
             let len = disk.len();
-            let mut fs = crate::fat::Filesystem::new(&mut disk, 0, len);
+            let mut fs = crate::fat::Filesystem::new(&disk, 0, len);
             fs.init().expect("Error initialising filesystem");
 
             let mut d = fs.root().unwrap();
             let de = d.next_entry().unwrap();
-            assert_eq!(de.name, "A          ".as_bytes());
+            assert_eq!(&de.name, b"A          ");
 
             let mut d = fs.get_directory(de.cluster).unwrap();
             let de = d.next_entry().unwrap();
-            assert_eq!(de.name, ".          ".as_bytes());
+            assert_eq!(&de.name, b".          ");
             let de = d.next_entry().unwrap();
-            assert_eq!(de.name, "..         ".as_bytes());
+            assert_eq!(&de.name, b"..         ");
             let de = d.next_entry().unwrap();
-            assert_eq!(de.name, "B          ".as_bytes());
+            assert_eq!(&de.name, b"B          ");
             assert!(d.next_entry().is_err());
 
             let mut d = fs.get_directory(de.cluster).unwrap();
             let de = d.next_entry().unwrap();
-            assert_eq!(de.name, ".          ".as_bytes());
+            assert_eq!(&de.name, b".          ");
             let de = d.next_entry().unwrap();
-            assert_eq!(de.name, "..         ".as_bytes());
+            assert_eq!(&de.name, b"..         ");
             let de = d.next_entry().unwrap();
-            assert_eq!(de.name, "C          ".as_bytes());
+            assert_eq!(&de.name, b"C          ");
             assert!(d.next_entry().is_err());
         }
     }
@@ -788,9 +788,9 @@ mod tests {
         let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
 
         for image in &images {
-            let mut d = FakeDisk::new(image);
+            let d = FakeDisk::new(image);
             let len = d.len();
-            let mut fs = crate::fat::Filesystem::new(&mut d, 0, len);
+            let mut fs = crate::fat::Filesystem::new(&d, 0, len);
             fs.init().expect("Error initialising filesystem");
 
             assert!(fs.open("/longfilenametest").is_ok());
