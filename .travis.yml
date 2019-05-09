@@ -1,0 +1,35 @@
+dist: xenial
+language: rust
+
+rust:
+  - nightly
+
+before_script:
+  - rustup component add clippy
+  - rustup component add rustfmt
+  - rustup component add rust-src
+  - cargo install cargo-xbuild
+  - sudo apt-get install -y mtools
+
+addons:
+  apt:
+    update: true
+
+script:
+  - cargo xbuild --release --target target.json
+  - cargo xclippy -- -D warnings
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo fmt --all -- --check
+  - wget https://download.clearlinux.org/releases/28660/clear/clear-28660-kvm.img.xz
+  - unxz clear-28660-kvm.img.xz
+  - ./make-test-disks.sh
+  - cargo test
+
+deploy:
+  provider: releases
+  api_key: $GITHUB_OAUTH_TOKEN
+  file: target/target/release/hypervisor-fw
+  skip_cleanup: true
+  on:
+    tags: true
+
