@@ -1,5 +1,5 @@
 [package]
-name = "kvm-fw"
+name = "hypervisor-fw"
 version = "0.1.0"
 authors = ["Rob Bradford <robert.bradford@intel.com>"]
 edition = "2018"

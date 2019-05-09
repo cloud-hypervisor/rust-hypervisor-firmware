@@ -25,7 +25,7 @@ cargo xbuild --release --target target.json
 
 The result will be in:
 
-target/target/release/kvm-fw
+target/target/release/hypervisor-fw
 
 Debug builds do not currently function.
 
