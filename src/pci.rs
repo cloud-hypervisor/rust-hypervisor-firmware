@@ -216,6 +216,7 @@ impl PciDevice {
 }
 
 #[cfg(not(test))]
+#[allow(clippy::enum_variant_names)]
 enum VirtioPciCapabilityType {
     CommonConfig = 1,
     NotifyConfig = 2,
