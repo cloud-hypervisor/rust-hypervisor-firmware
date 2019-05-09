@@ -1,13 +1,12 @@
 #!/bin/bash
 
-dd if=/dev/zero of=fat12.img count=4 bs=1M
-mkdosfs fat12.img
+rm -f fat12.img fat16.img fat32.img
+
+mkdosfs -F 12 -C fat12.img 8192
 file fat12.img
-dd if=/dev/zero of=fat16.img count=16 bs=1M
-mkdosfs fat16.img
+mkdosfs -F 16 -C fat16.img 32768
 file fat16.img
-dd if=/dev/zero of=fat32.img count=512 bs=1M
-mkdosfs fat32.img
+mkdosfs -F 32 -C fat32.img 1048576
 file fat32.img
 
 rm -rf test_data
