@@ -52,12 +52,6 @@ not work with crosvm as crosvm has a hardcoded kernel function start address.
 
 "cargo test" needs disk images from make-test-disks.sh
 
-It also requires super_grub2_disk_x86_64_efi_2.02s10.iso which you can download from:
-
-http://download2.nust.na/pub4/sourceforge/s/su/supergrub2/2.02s10/super_grub2_disk_2.02s10/super_grub2_disk_x86_64_efi_2.02s10.iso
-
-sha1sum: 2b6bec29fb696cce96c47895f2263d45e2dc822e
-
 And clear-28660-kvm.img:
 
 https://download.clearlinux.org/releases/28660/clear/clear-28660-kvm.img.xz

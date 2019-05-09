@@ -700,14 +700,14 @@ mod tests {
 
     #[test]
     fn test_fat_init() {
-        let d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
+        let d = FakeDisk::new("clear-28660-kvm.img");
         match crate::part::find_efi_partition(&d) {
             Ok((start, end)) => {
                 let mut f = crate::fat::Filesystem::new(&d, start, end);
                 match f.init() {
                     Ok(()) => {
-                        assert_eq!(f.sectors, 5760);
-                        assert_eq!(f.fat_type, super::FatType::FAT12);
+                        assert_eq!(f.sectors, 1_046_528);
+                        assert_eq!(f.fat_type, super::FatType::FAT16);
                     }
                     Err(e) => panic!(e),
                 }
@@ -718,15 +718,15 @@ mod tests {
 
     #[test]
     fn test_fat_open() {
-        let d = FakeDisk::new("super_grub2_disk_x86_64_efi_2.02s10.iso");
+        let d = FakeDisk::new("clear-28660-kvm.img");
         match crate::part::find_efi_partition(&d) {
             Ok((start, end)) => {
                 let mut f = crate::fat::Filesystem::new(&d, start, end);
                 match f.init() {
                     Ok(()) => {
                         let file = f.open("/EFI/BOOT/BOOTX64 EFI").unwrap();
-                        assert_eq!(file.active_cluster, 4);
-                        assert_eq!(file.size, 133_120);
+                        assert_eq!(file.active_cluster, 166);
+                        assert_eq!(file.size, 92789);
                     }
                     Err(e) => panic!(e),
                 }
