@@ -29,24 +29,60 @@ target/target/release/hypervisor-fw
 
 Debug builds do not currently function.
 
-## Running
-
-Works with Firecracker as a drop in replacement for the Linux kernel. It does
-not work with crosvm as crosvm has a hardcoded kernel function start address.
-
 ## Features
 
-* virtio (MMIO) block support
+* virtio (MMIO & PCI) block support
 * GPT parsing (to find EFI system partition)
 * FAT12/16/32 directory traversal and file reading
 * bzImage loader
 * "Boot Loader Specification" parser
 
-## TODO
+## Running
 
-* PCI support
-* PE32 loader
-* EFI runtime services stub implmentations
+Works with Firecracker as a drop in replacement for the Linux kernel. It does
+not work with crosvm as crosvm has a hardcoded kernel function start address.
+
+### Firecracker
+
+As per [quick start](https://github.com/firecracker-microvm/firecracker/blob/master/docs/getting-started.md)
+
+Replacing the kernel and rootfs to point at the firmware and the full disk
+image instead.
+
+```
+curl --unix-socket /tmp/firecracker.socket -i \
+    -X PUT 'http://localhost/boot-source'   \
+    -H 'Accept: application/json'           \
+    -H 'Content-Type: application/json'     \
+    -d '{
+        "kernel_image_path": "target/target/release/hypervisor-fw",
+        "boot_args": ""
+    }'
+
+curl --unix-socket /tmp/firecracker.socket -i \
+    -X PUT 'http://localhost/drives/rootfs' \
+    -H 'Accept: application/json'           \
+    -H 'Content-Type: application/json'     \
+    -d '{
+        "drive_id": "rootfs",
+        "path_on_host": "clear-28660-kvm.img",
+        "is_root_device": true,
+        "is_read_only": false
+    }'
+
+curl --unix-socket /tmp/firecracker.socket -i \
+    -X PUT 'http://localhost/actions'       \
+    -H  'Accept: application/json'          \
+    -H  'Content-Type: application/json'    \
+    -d '{
+        "action_type": "InstanceStart"
+     }'
+
+```
+
+**Currently Firecracker's virtio block device does not support resetting the
+device and as such it is not possible for the booted Linux kernel to take over
+the device from the firmware.**
 
 ## Testing
 
@@ -57,6 +93,11 @@ And clear-28660-kvm.img:
 https://download.clearlinux.org/releases/28660/clear/clear-28660-kvm.img.xz
 
 sha1sum: 5fc086643dea4b20c59a795a262e0d2400fab15f
+
+## TODO
+
+* PE32 loader
+* EFI runtime services required for booting
 
 ## Security
 
