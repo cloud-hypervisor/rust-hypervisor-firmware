@@ -23,13 +23,13 @@ pub struct MemoryRegion {
 }
 
 impl MemoryRegion {
-    pub fn new(base: u64, length: u64) -> MemoryRegion {
-        MemoryRegion { base, length }
+    pub fn new(base: u64, length: u64) -> Self {
+        Self { base, length }
     }
 
     /// Take a slice and turn it into a region of memory
-    pub fn from_slice<T>(data: &[T]) -> MemoryRegion {
-        MemoryRegion {
+    pub fn from_slice<T>(data: &[T]) -> Self {
+        Self {
             base: data.as_ptr() as u64,
             length: (data.len() * core::mem::size_of::<T>()) as u64,
         }

@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::bzimage;
-use crate::fat;
+use crate::{bzimage, fat};
 use fat::Read;
 
 pub struct LoaderConfig {

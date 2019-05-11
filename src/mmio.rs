@@ -15,9 +15,7 @@
 use crate::mem;
 
 #[cfg(not(test))]
-use crate::virtio::Error as VirtioError;
-#[cfg(not(test))]
-use crate::virtio::VirtioTransport;
+use crate::virtio::{Error as VirtioError, VirtioTransport};
 
 #[cfg(not(test))]
 pub struct VirtioMMIOTransport {
@@ -26,8 +24,8 @@ pub struct VirtioMMIOTransport {
 
 #[cfg(not(test))]
 impl VirtioMMIOTransport {
-    pub fn new(base: u64) -> VirtioMMIOTransport {
-        VirtioMMIOTransport {
+    pub fn new(base: u64) -> Self {
+        Self {
             region: crate::mem::MemoryRegion::new(base, 4096),
         }
     }

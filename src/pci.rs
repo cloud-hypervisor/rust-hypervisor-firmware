@@ -15,9 +15,7 @@
 use cpuio::Port;
 
 #[cfg(not(test))]
-use crate::virtio::Error as VirtioError;
-#[cfg(not(test))]
-use crate::virtio::VirtioTransport;
+use crate::virtio::{Error as VirtioError, VirtioTransport};
 
 use crate::mem;
 
@@ -136,8 +134,8 @@ struct PciBar {
 
 #[cfg(not(test))]
 impl PciDevice {
-    fn new(bus: u8, device: u8, func: u8) -> PciDevice {
-        PciDevice {
+    fn new(bus: u8, device: u8, func: u8) -> Self {
+        Self {
             bus,
             device,
             func,
@@ -239,8 +237,8 @@ pub struct VirtioPciTransport {
 
 #[cfg(not(test))]
 impl VirtioPciTransport {
-    pub fn new(device: PciDevice) -> VirtioPciTransport {
-        VirtioPciTransport {
+    pub fn new(device: PciDevice) -> Self {
+        Self {
             device,
             ..Default::default()
         }
