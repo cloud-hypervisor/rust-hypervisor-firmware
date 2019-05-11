@@ -76,8 +76,8 @@ const VIRTIO_PCI_VENDOR_ID: u16 = 0x1af4;
 #[cfg(not(test))]
 const VIRTIO_PCI_BLOCK_DEVICE_ID: u16 = 0x1042;
 
-#[cfg(not(test))]
 #[no_mangle]
+#[cfg(not(test))]
 pub extern "C" fn _start() -> ! {
     unsafe {
         asm!("movq $$0x180000, %rsp");
