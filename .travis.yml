@@ -2,7 +2,7 @@ dist: xenial
 language: rust
 
 rust:
-  - nightly
+  - nightly-2019-05-10
 
 before_script:
   - rustup component add clippy
