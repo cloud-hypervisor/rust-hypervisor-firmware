@@ -4,27 +4,27 @@ SECTIONS
 {
 	. = 1M;
 	start_of_text = . ;
-	.text BLOCK(4K) : ALIGN(4K)
+	.text : ALIGN(4K)
 	{
-		*(.text)
+		*(.text .text.*)
 	}
 	end_of_text = . ;
 
 	start_of_data = . ;
-	.rodata BLOCK(4K) : ALIGN(4K)
+	.rodata : ALIGN(4K)
 	{
-		*(.rodata)
+		*(.rodata .rodata.*)
 	}
  
-	.data BLOCK(4K) : ALIGN(4K)
+	.data : ALIGN(4K)
 	{
-		*(.data)
+		*(.data .data.*)
 	}
 	end_of_data = . ;
  
-	.bss BLOCK(4K) : ALIGN(4K)
+	.bss : ALIGN(4K)
 	{
 		*(COMMON)
-		*(.bss)
+		*(.bss .bss.*)
 	}
 }
