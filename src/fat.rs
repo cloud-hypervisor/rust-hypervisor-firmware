@@ -158,7 +158,7 @@ impl<'a> Directory<'a> {
         let mut long_entry = [0u16; 260];
         loop {
             let sector = if self.cluster.is_some() {
-                if self.sector > self.filesystem.sectors_per_cluster {
+                if self.sector >= self.filesystem.sectors_per_cluster {
                     match self.filesystem.next_cluster(self.cluster.unwrap()) {
                         Ok(new_cluster) => {
                             self.cluster = Some(new_cluster);
