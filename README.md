@@ -3,8 +3,8 @@
 **This project is an experiment and should not be used production workloads.**
 
 This repository contains a simple KVM firmware that is designed to be launched
-from anything that supports loading ELF binaries and running them with the Linux
-kernel loading standard.
+from anything that supports loading ELF binaries and running them with the
+Linux kernel loading standard.
 
 The ultimate goal is to be able to use this "firmware" to be able to load a
 bootloader from within a disk image.
@@ -12,10 +12,13 @@ bootloader from within a disk image.
 Currently it will directly load a kernel from a disk image that follows the
 [Boot Loader Specification](https://systemd.io/BOOT_LOADER_SPECIFICATION)
 
-Although this project has been developed using
-[Firecracker](https://github.com/firecracker-microvm) as it does not currently
-support resetting the virtio block device it is not possible to boot all the
-way into the OS.
+The firmware is primarily developed against [Cloud
+Hypervisor](https://github.com/intel/cloud-hypervisor).
+
+This project was orginally developed using
+[Firecracker](https://github.com/firecracker-microvm) however as it does not
+currently support resetting the virtio block device it is not possible to boot
+all the way into the OS.
 
 ## Building
 
@@ -27,8 +30,6 @@ The result will be in:
 
 target/target/release/hypervisor-fw
 
-Debug builds do not currently function.
-
 ## Features
 
 * virtio (MMIO & PCI) block support
@@ -39,12 +40,38 @@ Debug builds do not currently function.
 
 ## Running
 
-Works with Firecracker as a drop in replacement for the Linux kernel. It does
-not work with crosvm as crosvm has a hardcoded kernel function start address.
+Works with Cloud Hypervisor and Firecracker as a drop in replacement for the
+Linux kernel. It does not work with crosvm as crosvm has a hardcoded kernel
+function start address.
+
+Cloud Hypervisor is currently the primary development target for the firmware
+although support for other VMMs will be considered.
+
+### Cloud Hypervisor
+
+As per [getting
+started](https://github.com/intel/cloud-hypervisor/blob/master/README.md#2-getting-started)
+
+However instead of using the binary firmware for the parameter to `--kernel`
+instead use the binary you build above.
+
+```
+$ pushd $CLOUDH
+$ sudo setcap cap_net_admin+ep ./cloud-hypervisor/target/release/cloud-hypervisor
+$ ./cloud-hypervisor/target/release/cloud-hypervisor \
+	--kernel ./target/target/release/hypervisor-fw \
+	--disk ./clear-29160-kvm.img \
+	--cpus 4 \
+	--memory 512 \
+	--net "tap=,mac=,ip=,mask=" \
+	--rng
+$ popd
+```
 
 ### Firecracker
 
-As per [quick start](https://github.com/firecracker-microvm/firecracker/blob/master/docs/getting-started.md)
+As per [quick
+start](https://github.com/firecracker-microvm/firecracker/blob/master/docs/getting-started.md)
 
 Replacing the kernel and rootfs to point at the firmware and the full disk
 image instead.
