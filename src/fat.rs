@@ -338,6 +338,41 @@ impl<'a> SectorRead for Filesystem<'a> {
     }
 }
 
+// Do a case-insensitive match on the name with the 8.3 format that you get from FAT.
+// In the FAT directory entry the "." isn't stored and any gaps are padded with " ".
+fn compare_short_name(name: &str, de: &DirectoryEntry) -> bool {
+    // 8.3 (plus 1 for the separator)
+    if name.len() > 12 {
+        return false;
+    }
+
+    let mut i = 0;
+    for (_, a) in name.as_bytes().iter().enumerate() {
+        // Handle cases which are 11 long but not 8.3 (e.g "loader.conf")
+        if i == 11 {
+            return false;
+        }
+
+        // Jump to the extension
+        if *a == b'.' {
+            i = 8;
+            continue;
+        }
+
+        let b = de.name[i];
+        if a.to_ascii_uppercase() != b.to_ascii_uppercase() {
+            return false;
+        }
+
+        i += 1;
+    }
+    true
+}
+
+fn compare_name(name: &str, de: &DirectoryEntry) -> bool {
+    compare_short_name(name, de) || &de.long_name[0..name.len()] == name.as_bytes()
+}
+
 impl<'a> Filesystem<'a> {
     pub fn new(device: &'a SectorRead, start: u64, last: u64) -> Filesystem {
         Filesystem {
@@ -537,7 +572,7 @@ impl<'a> Filesystem<'a> {
     }
 
     pub fn open(&self, path: &str) -> Result<File, Error> {
-        assert_eq!(path.find('/'), Some(0));
+        assert_eq!(path.find('/').or_else(|| path.find('\\')), Some(0));
 
         let mut residual = path;
 
@@ -545,7 +580,10 @@ impl<'a> Filesystem<'a> {
         loop {
             // sub is the directory or file name
             // residual is what is left
-            let sub = match &residual[1..].find('/') {
+            let sub = match &residual[1..]
+                .find('/')
+                .or_else(|| (&residual[1..]).find('\\'))
+            {
                 None => &residual[1..],
                 Some(x) => {
                     // +1 due to above find working on substring
@@ -564,9 +602,7 @@ impl<'a> Filesystem<'a> {
                     Err(Error::EndOfFile) => return Err(Error::NotFound),
                     Err(e) => return Err(e),
                     Ok(de) => {
-                        if (sub.len() <= 11 && &de.name[0..sub.len()] == sub.as_bytes())
-                            || &de.long_name[0..sub.len()] == sub.as_bytes()
-                        {
+                        if compare_name(sub, &de) {
                             match de.file_type {
                                 FileType::Directory => {
                                     current_dir = self.get_directory(de.cluster).unwrap();
@@ -724,7 +760,7 @@ mod tests {
                 let mut f = crate::fat::Filesystem::new(&d, start, end);
                 match f.init() {
                     Ok(()) => {
-                        let file = f.open("/EFI/BOOT/BOOTX64 EFI").unwrap();
+                        let file = f.open("\\EFI\\BOOT\\BOOTX64.EFI").unwrap();
                         assert_eq!(file.active_cluster, 166);
                         assert_eq!(file.size, 92789);
                     }
@@ -795,5 +831,14 @@ mod tests {
 
             assert!(fs.open("/longfilenametest").is_ok());
         }
+    }
+
+    #[test]
+    fn test_compare_short_name() {
+        let mut de: super::DirectoryEntry = unsafe { std::mem::zeroed() };
+        de.name.copy_from_slice(b"X       ABC");
+        assert!(super::compare_short_name("X.abc", &de));
+        de.name.copy_from_slice(b"ABCDEFGHIJK");
+        assert!(super::compare_short_name("abcdefgh.ijk", &de));
     }
 }
