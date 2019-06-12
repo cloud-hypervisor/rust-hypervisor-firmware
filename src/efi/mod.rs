@@ -914,23 +914,43 @@ pub fn efi_exec(address: u64, loaded_address: u64, loaded_size: u64) {
         configuration_table: &mut ct,
     };
 
-    let mut file_path = FileDevicePathProtocol {
-        device_path: DevicePathProtocol {
-            r#type: r_efi::protocols::device_path::TYPE_MEDIA,
-            sub_type: 4, // Media Path type file
-            length: [0, 132],
+    let mut file_paths = [
+        FileDevicePathProtocol {
+            device_path: DevicePathProtocol {
+                r#type: r_efi::protocols::device_path::TYPE_MEDIA,
+                sub_type: 4, // Media Path type file
+                length: [132, 0],
+            },
+            filename: [0; 64],
         },
-        filename: [0; 64],
-    };
+        FileDevicePathProtocol {
+            device_path: DevicePathProtocol {
+                r#type: r_efi::protocols::device_path::TYPE_MEDIA,
+                sub_type: 4, // Media Path type file
+                length: [132, 0],
+            },
+            filename: [0; 64],
+        },
+        FileDevicePathProtocol {
+            device_path: DevicePathProtocol {
+                r#type: r_efi::protocols::device_path::TYPE_END,
+                sub_type: 0xff, // End of full path
+                length: [4, 0],
+            },
+            filename: [0; 64],
+        },
+    ];
 
-    ascii_to_utf16("\\EFI\\BOOT\\BOOTX64 EFI", &mut file_path.filename);
+    ascii_to_utf16("\\EFI\\BOOT", &mut file_paths[0].filename);
+    ascii_to_utf16("BOOTX64.EFI", &mut file_paths[1].filename);
+
 
     let image = LoadedImageProtocol {
         revision: r_efi::protocols::loaded_image::REVISION,
         parent_handle: 0 as Handle,
         system_table: &mut st,
         device_handle: 0 as Handle, // TODO: Add a filesystem device
-        file_path: &mut file_path.device_path,
+        file_path: &mut file_paths[0].device_path, // Pointer to first path entry
         load_options_size: 0,
         load_options: core::ptr::null_mut(),
         image_base: loaded_address as *mut _,
