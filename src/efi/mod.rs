@@ -772,7 +772,7 @@ struct FileDevicePathProtocol {
 
 #[cfg(not(test))]
 fn ascii_to_utf16(input: &str, output: &mut [u16]) {
-    assert!(output.len() > input.len() * 2);
+    assert!(output.len() >= input.len() * 2);
 
     for (i, c) in input.bytes().enumerate() {
         output[i] = u16::from(c);
