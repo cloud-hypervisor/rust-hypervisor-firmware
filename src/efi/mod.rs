@@ -771,15 +771,6 @@ struct FileDevicePathProtocol {
 }
 
 #[cfg(not(test))]
-fn ascii_to_utf16(input: &str, output: &mut [u16]) {
-    assert!(output.len() >= input.len() * 2);
-
-    for (i, c) in input.bytes().enumerate() {
-        output[i] = u16::from(c);
-    }
-}
-
-#[cfg(not(test))]
 pub fn efi_exec(address: u64, loaded_address: u64, loaded_size: u64) {
     let mut stdin = SimpleTextInputProtocol {
         reset: stdin_reset,
@@ -941,9 +932,8 @@ pub fn efi_exec(address: u64, loaded_address: u64, loaded_size: u64) {
         },
     ];
 
-    ascii_to_utf16("\\EFI\\BOOT", &mut file_paths[0].filename);
-    ascii_to_utf16("BOOTX64.EFI", &mut file_paths[1].filename);
-
+    crate::common::ascii_to_ucs2("\\EFI\\BOOT", &mut file_paths[0].filename);
+    crate::common::ascii_to_ucs2("BOOTX64.EFI", &mut file_paths[1].filename);
 
     let image = LoadedImageProtocol {
         revision: r_efi::protocols::loaded_image::REVISION,
