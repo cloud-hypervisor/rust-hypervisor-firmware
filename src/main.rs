@@ -20,6 +20,9 @@
 #[macro_use]
 mod logger;
 
+#[macro_use]
+mod common;
+
 use core::panic::PanicInfo;
 
 use cpuio::Port;
