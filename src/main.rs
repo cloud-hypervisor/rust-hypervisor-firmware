@@ -123,7 +123,10 @@ pub extern "C" fn _start() -> ! {
             log!("Error configuring block device\n");
             i8042_reset();
         }
-        Ok(_) => log!("Virtio block device configured\n"),
+        Ok(_) => log!(
+            "Virtio block device configured. Capacity: {} sectors\n",
+            device.get_capacity()
+        ),
     }
 
     let mut f;

@@ -198,6 +198,12 @@ impl<'a> VirtioBlockDevice<'a> {
 
         Ok(())
     }
+
+    // Number of sectors that this device holds
+    pub fn get_capacity(&self) -> u64 {
+        u64::from(self.transport.read_device_config(0))
+            | u64::from(self.transport.read_device_config(4)) << 32
+    }
 }
 
 #[cfg(not(test))]
