@@ -13,6 +13,7 @@
 // limitations under the License.
 
 mod alloc;
+mod file;
 
 use lazy_static::lazy_static;
 use spin::Mutex;
@@ -448,6 +449,12 @@ pub extern "win64" fn handle_protocol(
         }
         return Status::SUCCESS;
     }
+    if unsafe { *guid } == r_efi::protocols::simple_file_system::PROTOCOL_GUID {
+        unsafe {
+            *out = handle;
+        }
+        return Status::SUCCESS;
+    }
 
     crate::log!("EFI_STUB: unsupported handle_protocol\n");
 
@@ -764,14 +771,12 @@ pub struct LoadedImageProtocol {
 }
 
 #[cfg(not(test))]
-#[repr(C)]
-struct FileDevicePathProtocol {
-    device_path: DevicePathProtocol,
-    filename: [u16; 64],
-}
-
-#[cfg(not(test))]
-pub fn efi_exec(address: u64, loaded_address: u64, loaded_size: u64) {
+pub fn efi_exec(
+    address: u64,
+    loaded_address: u64,
+    loaded_size: u64,
+    fs: &crate::fat::Filesystem,
+) {
     let mut stdin = SimpleTextInputProtocol {
         reset: stdin_reset,
         read_key_stroke: stdin_read_key_stroke,
@@ -906,7 +911,7 @@ pub fn efi_exec(address: u64, loaded_address: u64, loaded_size: u64) {
     };
 
     let mut file_paths = [
-        FileDevicePathProtocol {
+        file::FileDevicePathProtocol {
             device_path: DevicePathProtocol {
                 r#type: r_efi::protocols::device_path::TYPE_MEDIA,
                 sub_type: 4, // Media Path type file
@@ -914,7 +919,7 @@ pub fn efi_exec(address: u64, loaded_address: u64, loaded_size: u64) {
             },
             filename: [0; 64],
         },
-        FileDevicePathProtocol {
+        file::FileDevicePathProtocol {
             device_path: DevicePathProtocol {
                 r#type: r_efi::protocols::device_path::TYPE_MEDIA,
                 sub_type: 4, // Media Path type file
@@ -922,7 +927,7 @@ pub fn efi_exec(address: u64, loaded_address: u64, loaded_size: u64) {
             },
             filename: [0; 64],
         },
-        FileDevicePathProtocol {
+        file::FileDevicePathProtocol {
             device_path: DevicePathProtocol {
                 r#type: r_efi::protocols::device_path::TYPE_END,
                 sub_type: 0xff, // End of full path
@@ -935,11 +940,13 @@ pub fn efi_exec(address: u64, loaded_address: u64, loaded_size: u64) {
     crate::common::ascii_to_ucs2("\\EFI\\BOOT", &mut file_paths[0].filename);
     crate::common::ascii_to_ucs2("BOOTX64.EFI", &mut file_paths[1].filename);
 
+    let wrapped_fs = file::FileSystemWrapper::new(fs);
+
     let image = LoadedImageProtocol {
         revision: r_efi::protocols::loaded_image::REVISION,
         parent_handle: 0 as Handle,
         system_table: &mut st,
-        device_handle: 0 as Handle, // TODO: Add a filesystem device
+        device_handle: &wrapped_fs.proto as *const _ as Handle,
         file_path: &mut file_paths[0].device_path, // Pointer to first path entry
         load_options_size: 0,
         load_options: core::ptr::null_mut(),
