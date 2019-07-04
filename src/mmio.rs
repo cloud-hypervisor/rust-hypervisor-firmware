@@ -115,4 +115,7 @@ impl VirtioTransport for VirtioMMIOTransport {
     fn notify_queue(&self, queue: u16) {
         self.region.io_write_u32(0x50, u32::from(queue));
     }
+    fn read_device_config(&self, offset: u64) -> u32 {
+        self.region.io_read_u32(0x100 + offset)
+    }
 }

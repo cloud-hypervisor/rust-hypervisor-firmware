@@ -52,4 +52,5 @@ pub trait VirtioTransport {
     fn set_used_ring(&self, address: u64);
     fn set_queue_enable(&self);
     fn notify_queue(&self, queue: u16);
+    fn read_device_config(&self, offset: u64) -> u32;
 }
