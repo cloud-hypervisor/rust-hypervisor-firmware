@@ -222,7 +222,6 @@ enum VirtioPciCapabilityType {
     NotifyConfig = 2,
     #[allow(unused)]
     IsrConfig = 3,
-    #[allow(unused)]
     DeviceConfig = 4,
     #[allow(unused)]
     PciConfig = 5,
@@ -232,9 +231,10 @@ enum VirtioPciCapabilityType {
 #[derive(Default)]
 pub struct VirtioPciTransport {
     device: PciDevice,
-    region: mem::MemoryRegion,        // common configuration region
-    notify_region: mem::MemoryRegion, // notify region
-    notify_off_multiplier: u32,       // from notify config cap
+    region: mem::MemoryRegion,               // common configuration region
+    notify_region: mem::MemoryRegion,        // notify region
+    notify_off_multiplier: u32,              // from notify config cap
+    device_config_region: mem::MemoryRegion, // device specific region
 }
 
 #[cfg(not(test))]
@@ -320,6 +320,13 @@ impl VirtioTransport for VirtioPciTransport {
                     //         le32 notify_off_multiplier; /* Multiplier for queue_notify_off. */
                     // };
                     self.notify_off_multiplier = self.device.config_read_u32(cap_next + 16);
+                }
+
+                if cfg_type == VirtioPciCapabilityType::DeviceConfig as u8 {
+                    self.device_config_region = mem::MemoryRegion::new(
+                        self.device.bars[usize::from(bar)].address + u64::from(offset),
+                        u64::from(length),
+                    );
                 }
             }
             cap_next = self.device.config_read_u8(cap_next + 1)
@@ -413,5 +420,9 @@ impl VirtioTransport for VirtioPciTransport {
             u64::from(queue_notify_off) * u64::from(self.notify_off_multiplier),
             u32::from(queue),
         );
+    }
+
+    fn read_device_config(&self, offset: u64) -> u32 {
+        self.device_config_region.io_read_u32(offset)
     }
 }
