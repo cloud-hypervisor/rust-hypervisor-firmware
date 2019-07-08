@@ -214,6 +214,7 @@ pub struct FileSystemWrapper<'a> {
     hw: super::HandleWrapper,
     fs: &'a crate::fat::Filesystem<'a>,
     pub proto: SimpleFileSystemProtocol,
+    pub block_part_id: Option<u32>,
 }
 
 #[cfg(not(test))]
@@ -252,7 +253,10 @@ impl<'a> FileSystemWrapper<'a> {
         }
     }
 
-    pub fn new(fs: &'a crate::fat::Filesystem) -> FileSystemWrapper<'a> {
+    pub fn new(
+        fs: &'a crate::fat::Filesystem,
+        block_part_id: Option<u32>,
+    ) -> FileSystemWrapper<'a> {
         FileSystemWrapper {
             hw: super::HandleWrapper {
                 handle_type: super::HandleType::FileSystem,
@@ -262,6 +266,7 @@ impl<'a> FileSystemWrapper<'a> {
                 revision: r_efi::protocols::simple_file_system::REVISION,
                 open_volume: filesystem_open_volume,
             },
+            block_part_id,
         }
     }
 }
