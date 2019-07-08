@@ -13,6 +13,7 @@
 // limitations under the License.
 
 mod alloc;
+mod block;
 mod file;
 
 use lazy_static::lazy_static;
@@ -57,6 +58,12 @@ struct HandleWrapper {
 lazy_static! {
     pub static ref ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator::new());
 }
+
+#[cfg(not(test))]
+static mut BLOCK_WRAPPERS: block::BlockWrappers = block::BlockWrappers {
+    wrappers: [core::ptr::null_mut(); 16],
+    count: 0,
+};
 
 #[cfg(not(test))]
 pub extern "win64" fn stdin_reset(_: *mut SimpleTextInputProtocol, _: Boolean) -> Status {
@@ -490,12 +497,37 @@ pub extern "win64" fn register_protocol_notify(
 #[cfg(not(test))]
 pub extern "win64" fn locate_handle(
     _: LocateSearchType,
-    _: *mut Guid,
+    guid: *mut Guid,
     _: *mut c_void,
-    _: *mut usize,
-    _: *mut Handle,
+    size: *mut usize,
+    handles: *mut Handle,
 ) -> Status {
-    crate::log!("EFI_STUB: locate_handle\n");
+    if unsafe { *guid } == block::PROTOCOL_GUID {
+        let count = unsafe { BLOCK_WRAPPERS.count };
+        if unsafe { *size } < core::mem::size_of::<Handle>() * count {
+            unsafe { *size = core::mem::size_of::<Handle>() * count };
+            return Status::BUFFER_TOO_SMALL;
+        }
+
+        let handles = unsafe {
+            core::slice::from_raw_parts_mut(handles, *size / core::mem::size_of::<Handle>())
+        };
+
+        let wrappers_as_handles: &[Handle] = unsafe {
+            core::slice::from_raw_parts_mut(
+                BLOCK_WRAPPERS.wrappers.as_mut_ptr() as *mut *mut block::BlockWrapper
+                    as *mut Handle,
+                count,
+            )
+        };
+
+        handles[0..count].copy_from_slice(wrappers_as_handles);
+
+        unsafe { *size = core::mem::size_of::<Handle>() * count };
+
+        return Status::SUCCESS;
+    }
+
     Status::UNSUPPORTED
 }
 
@@ -609,6 +641,38 @@ pub extern "win64" fn open_protocol(
         unsafe {
             *out = &mut (*(handle as *mut file::FileSystemWrapper)).proto as *mut _ as *mut c_void;
         }
+        return Status::SUCCESS;
+    }
+
+    if unsafe { *guid } == r_efi::protocols::device_path::PROTOCOL_GUID
+        && handle_type == HandleType::Block
+    {
+        unsafe {
+            *out = &mut (*(handle as *mut block::BlockWrapper)).controller_path as *mut _
+                as *mut c_void;
+        }
+
+        return Status::SUCCESS;
+    }
+
+    if unsafe { *guid } == r_efi::protocols::device_path::PROTOCOL_GUID
+        && handle_type == HandleType::FileSystem
+    {
+        unsafe {
+            if let Some(block_part_id) = (*(handle as *mut file::FileSystemWrapper)).block_part_id {
+                *out = (&mut (*(BLOCK_WRAPPERS.wrappers[block_part_id as usize])).controller_path)
+                    as *mut _ as *mut c_void;
+
+                return Status::SUCCESS;
+            }
+        }
+    }
+
+    if unsafe { *guid } == block::PROTOCOL_GUID && handle_type == HandleType::Block {
+        unsafe {
+            *out = &mut (*(handle as *mut block::BlockWrapper)).proto as *mut _ as *mut c_void;
+        }
+
         return Status::SUCCESS;
     }
 
@@ -818,6 +882,7 @@ pub fn efi_exec(
     loaded_address: u64,
     loaded_size: u64,
     fs: &crate::fat::Filesystem,
+    block: *const crate::block::VirtioBlockDevice,
 ) {
     let mut stdin = SimpleTextInputProtocol {
         reset: stdin_reset,
@@ -954,6 +1019,8 @@ pub fn efi_exec(
 
     populate_allocator(loaded_address, loaded_size);
 
+    let efi_part_id = unsafe { block::populate_block_wrappers(&mut BLOCK_WRAPPERS, block) };
+
     let mut file_paths = [
         file::FileDevicePathProtocol {
             device_path: DevicePathProtocol {
@@ -984,7 +1051,7 @@ pub fn efi_exec(
     crate::common::ascii_to_ucs2("\\EFI\\BOOT", &mut file_paths[0].filename);
     crate::common::ascii_to_ucs2("BOOTX64.EFI", &mut file_paths[1].filename);
 
-    let wrapped_fs = file::FileSystemWrapper::new(fs);
+    let wrapped_fs = file::FileSystemWrapper::new(fs, efi_part_id);
 
     let image = LoadedImageWrapper {
         hw: HandleWrapper {

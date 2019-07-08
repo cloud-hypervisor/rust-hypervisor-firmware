@@ -167,7 +167,7 @@ pub extern "C" fn _start() -> ! {
                     match l.load(0x20_0000) {
                         Ok((a, size)) => {
                             log!("Executable loaded\n");
-                            efi::efi_exec(a, 0x20_0000, size, &f);
+                            efi::efi_exec(a, 0x20_0000, size, &f, &device);
                             i8042_reset();
                         }
                         Err(e) => match e {

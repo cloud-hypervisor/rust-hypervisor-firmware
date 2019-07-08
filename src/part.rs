@@ -45,7 +45,7 @@ pub struct PartitionEntry {
 }
 
 impl PartitionEntry {
-    fn is_efi_partition(&self) -> bool {
+    pub fn is_efi_partition(&self) -> bool {
         // GUID is C12A7328-F81F-11D2-BA4B-00A0C93EC93B in mixed-endian
         // 0-3, 4-5, 6-7 are LE, 8-19, and 10-15 are BE
         self.type_guid
