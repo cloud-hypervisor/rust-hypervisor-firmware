@@ -401,14 +401,27 @@ pub extern "win64" fn check_event(_: Event) -> Status {
 }
 
 #[cfg(not(test))]
+const SHIM_LOCK_PROTOCOL_GUID: Guid = Guid::from_fields(
+    0x605d_ab50,
+    0xe046,
+    0x4300,
+    0xab,
+    0xb6,
+    &[0x3d, 0xd8, 0x10, 0xdd, 0x8b, 0x23],
+);
+
+#[cfg(not(test))]
 pub extern "win64" fn install_protocol_interface(
     _: *mut Handle,
-    _: *mut Guid,
+    guid: *mut Guid,
     _: InterfaceType,
     _: *mut c_void,
 ) -> Status {
-    crate::log!("EFI_STUB: install_protocol_interface\n");
-    Status::UNSUPPORTED
+    if unsafe { *guid } == SHIM_LOCK_PROTOCOL_GUID {
+        Status::SUCCESS
+    } else {
+        Status::UNSUPPORTED
+    }
 }
 
 #[cfg(not(test))]
