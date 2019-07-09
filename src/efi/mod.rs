@@ -53,8 +53,7 @@ pub extern "win64" fn stdin_read_key_stroke(
     _: *mut SimpleTextInputProtocol,
     _: *mut InputKey,
 ) -> Status {
-    crate::log!("EFI_STUB: stdin_read_key_stroke\n");
-    Status::UNSUPPORTED
+    Status::NOT_READY
 }
 
 #[cfg(not(test))]
