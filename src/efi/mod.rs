@@ -199,8 +199,7 @@ pub extern "win64" fn get_variable(
     _: *mut usize,
     _: *mut core::ffi::c_void,
 ) -> Status {
-    crate::log!("EFI_STUB: get_variable\n");
-    Status::UNSUPPORTED
+    Status::NOT_FOUND
 }
 
 #[cfg(not(test))]
@@ -209,8 +208,7 @@ pub extern "win64" fn get_next_variable_name(
     _: *mut Char16,
     _: *mut Guid,
 ) -> Status {
-    crate::log!("EFI_STUB: get_next_variable\n");
-    Status::UNSUPPORTED
+    Status::NOT_FOUND
 }
 
 #[cfg(not(test))]
@@ -221,7 +219,6 @@ pub extern "win64" fn set_variable(
     _: usize,
     _: *mut c_void,
 ) -> Status {
-    crate::log!("EFI_STUB: set_variable\n");
     Status::UNSUPPORTED
 }
 
