@@ -93,8 +93,7 @@ pub extern "win64" fn stdout_test_string(
     _: *mut SimpleTextOutputProtocol,
     _: *mut Char16,
 ) -> Status {
-    crate::log!("EFI_STUB: stdout_test_string\n");
-    Status::UNSUPPORTED
+    Status::SUCCESS
 }
 
 #[cfg(not(test))]
