@@ -102,6 +102,7 @@ impl<'a> Loader<'a> {
 
         self.image_base = optional_region.read_u64(24);
         self.image_size = optional_region.read_u32(56);
+        let size_of_headers = optional_region.read_u32(60);
 
         let sections = &data[(24 + pe_header_offset + u32::from(optional_header_size)) as usize..];
         let sections: &[Section] = unsafe {
@@ -112,6 +113,26 @@ impl<'a> Loader<'a> {
         };
 
         let mut loaded_region = MemoryRegion::new(address, u64::from(self.image_size));
+
+        // Copy the PE header into the start of the destination memory
+        match self.file.seek(0) {
+            Ok(_) => {}
+            Err(_) => return Err(Error::FileError),
+        }
+
+        let mut header_offset = 0u64;
+        while header_offset < u64::from(size_of_headers) {
+            match self
+                .file
+                .read(loaded_region.as_mut_slice(header_offset, 512))
+            {
+                Ok(_) => {}
+                Err(_) => {
+                    return Err(Error::FileError);
+                }
+            }
+            header_offset += 512;
+        }
 
         for section in sections {
             for x in 0..section.virt_size {
