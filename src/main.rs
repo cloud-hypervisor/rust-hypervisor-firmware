@@ -95,6 +95,7 @@ const VIRTIO_PCI_VENDOR_ID: u16 = 0x1af4;
 const VIRTIO_PCI_BLOCK_DEVICE_ID: u16 = 0x1042;
 
 #[cfg(not(test))]
+#[allow(unused_attributes)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     unsafe {
