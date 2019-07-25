@@ -38,6 +38,22 @@ use core::ffi::c_void;
 
 use alloc::Allocator;
 
+#[cfg(not(test))]
+#[derive(Copy, Clone, PartialEq)]
+enum HandleType {
+    None,
+    Block,
+    FileSystem,
+    LoadedImage,
+}
+
+#[cfg(not(test))]
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct HandleWrapper {
+    handle_type: HandleType,
+}
+
 lazy_static! {
     pub static ref ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator::new());
 }
@@ -451,22 +467,14 @@ pub extern "win64" fn handle_protocol(
     guid: *mut Guid,
     out: *mut *mut c_void,
 ) -> Status {
-    if unsafe { *guid } == r_efi::protocols::loaded_image::PROTOCOL_GUID {
-        unsafe {
-            *out = handle;
-        }
-        return Status::SUCCESS;
-    }
-    if unsafe { *guid } == r_efi::protocols::simple_file_system::PROTOCOL_GUID {
-        unsafe {
-            *out = handle;
-        }
-        return Status::SUCCESS;
-    }
-
-    crate::log!("EFI_STUB: unsupported handle_protocol\n");
-
-    Status::UNSUPPORTED
+    open_protocol(
+        handle,
+        guid,
+        out,
+        core::ptr::null_mut(),
+        core::ptr::null_mut(),
+        0,
+    )
 }
 
 #[cfg(not(test))]
@@ -584,13 +592,26 @@ pub extern "win64" fn open_protocol(
     _: Handle,
     _: u32,
 ) -> Status {
-    if unsafe { *guid } == r_efi::protocols::loaded_image::PROTOCOL_GUID {
+    let hw = handle as *const HandleWrapper;
+    let handle_type = unsafe { (*hw).handle_type };
+    if unsafe { *guid } == r_efi::protocols::loaded_image::PROTOCOL_GUID
+        && handle_type == HandleType::LoadedImage
+    {
         unsafe {
-            *out = handle;
+            *out = &mut (*(handle as *mut LoadedImageWrapper)).proto as *mut _ as *mut c_void;
         }
         return Status::SUCCESS;
     }
-    crate::log!("EFI_STUB: open_protocol\n");
+
+    if unsafe { *guid } == r_efi::protocols::simple_file_system::PROTOCOL_GUID
+        && handle_type == HandleType::FileSystem
+    {
+        unsafe {
+            *out = &mut (*(handle as *mut file::FileSystemWrapper)).proto as *mut _ as *mut c_void;
+        }
+        return Status::SUCCESS;
+    }
+
     Status::UNSUPPORTED
 }
 
@@ -748,11 +769,17 @@ fn populate_allocator(image_address: u64, image_size: u64) {
 }
 
 #[cfg(not(test))]
-const STDIN_HANDLE: Handle = 0 as Handle;
+const STDIN_HANDLE: Handle = &HandleWrapper {
+    handle_type: HandleType::None,
+} as *const _ as Handle;
 #[cfg(not(test))]
-const STDOUT_HANDLE: Handle = 1 as Handle;
+const STDOUT_HANDLE: Handle = &HandleWrapper {
+    handle_type: HandleType::None,
+} as *const _ as Handle;
 #[cfg(not(test))]
-const STDERR_HANDLE: Handle = 2 as Handle;
+const STDERR_HANDLE: Handle = &HandleWrapper {
+    handle_type: HandleType::None,
+} as *const _ as Handle;
 
 // HACK: Until r-util/r-efi#11 gets merged
 #[cfg(not(test))]
@@ -776,6 +803,13 @@ pub struct LoadedImageProtocol {
     pub unload: eficall! {fn(
         Handle,
     ) -> Status},
+}
+
+#[cfg(not(test))]
+#[repr(C)]
+struct LoadedImageWrapper {
+    hw: HandleWrapper,
+    proto: LoadedImageProtocol,
 }
 
 #[cfg(not(test))]
@@ -918,6 +952,8 @@ pub fn efi_exec(
         configuration_table: &mut ct,
     };
 
+    populate_allocator(loaded_address, loaded_size);
+
     let mut file_paths = [
         file::FileDevicePathProtocol {
             device_path: DevicePathProtocol {
@@ -950,23 +986,26 @@ pub fn efi_exec(
 
     let wrapped_fs = file::FileSystemWrapper::new(fs);
 
-    let image = LoadedImageProtocol {
-        revision: r_efi::protocols::loaded_image::REVISION,
-        parent_handle: 0 as Handle,
-        system_table: &mut st,
-        device_handle: &wrapped_fs.proto as *const _ as Handle,
-        file_path: &mut file_paths[0].device_path, // Pointer to first path entry
-        load_options_size: 0,
-        load_options: core::ptr::null_mut(),
-        image_base: loaded_address as *mut _,
-        image_size: loaded_size,
-        image_code_type: efi::MemoryType::LoaderCode,
-        image_data_type: efi::MemoryType::LoaderData,
-        unload: image_unload,
-        reserved: core::ptr::null_mut(),
+    let image = LoadedImageWrapper {
+        hw: HandleWrapper {
+            handle_type: HandleType::LoadedImage,
+        },
+        proto: LoadedImageProtocol {
+            revision: r_efi::protocols::loaded_image::REVISION,
+            parent_handle: 0 as Handle,
+            system_table: &mut st,
+            device_handle: &wrapped_fs as *const _ as Handle,
+            file_path: &mut file_paths[0].device_path, // Pointer to first path entry
+            load_options_size: 0,
+            load_options: core::ptr::null_mut(),
+            image_base: loaded_address as *mut _,
+            image_size: loaded_size,
+            image_code_type: efi::MemoryType::LoaderCode,
+            image_data_type: efi::MemoryType::LoaderData,
+            unload: image_unload,
+            reserved: core::ptr::null_mut(),
+        },
     };
-
-    populate_allocator(loaded_address, loaded_size);
 
     let ptr = address as *const ();
     let code: extern "win64" fn(Handle, *mut efi::SystemTable) -> Status =

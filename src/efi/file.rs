@@ -209,7 +209,9 @@ struct FileWrapper<'a> {
 }
 
 #[cfg(not(test))]
+#[repr(C)]
 pub struct FileSystemWrapper<'a> {
+    hw: super::HandleWrapper,
     fs: &'a crate::fat::Filesystem<'a>,
     pub proto: SimpleFileSystemProtocol,
 }
@@ -252,6 +254,9 @@ impl<'a> FileSystemWrapper<'a> {
 
     pub fn new(fs: &'a crate::fat::Filesystem) -> FileSystemWrapper<'a> {
         FileSystemWrapper {
+            hw: super::HandleWrapper {
+                handle_type: super::HandleType::FileSystem,
+            },
             fs,
             proto: SimpleFileSystemProtocol {
                 revision: r_efi::protocols::simple_file_system::REVISION,
