@@ -36,7 +36,6 @@ pub const STDERR_HANDLE: Handle = &HandleWrapper {
 
 #[cfg(not(test))]
 pub extern "win64" fn stdin_reset(_: *mut SimpleTextInputProtocol, _: Boolean) -> Status {
-    crate::log!("EFI_STUB: stdin_reset\n");
     Status::UNSUPPORTED
 }
 
@@ -50,8 +49,7 @@ pub extern "win64" fn stdin_read_key_stroke(
 
 #[cfg(not(test))]
 pub extern "win64" fn stdout_reset(_: *mut SimpleTextOutputProtocol, _: Boolean) -> Status {
-    crate::log!("EFI_STUB: stdout_reset\n");
-    Status::UNSUPPORTED
+    Status::SUCCESS
 }
 
 #[cfg(not(test))]
@@ -91,29 +89,38 @@ pub extern "win64" fn stdout_test_string(
 #[cfg(not(test))]
 pub extern "win64" fn stdout_query_mode(
     _: *mut SimpleTextOutputProtocol,
-    _: usize,
-    _: *mut usize,
-    _: *mut usize,
+    mode: usize,
+    columns: *mut usize,
+    rows: *mut usize,
 ) -> Status {
-    crate::log!("EFI_STUB: stdout_query_mode\n");
-    Status::UNSUPPORTED
+    if mode == 0 {
+        unsafe {
+            *columns = 80;
+            *rows = 25;
+        }
+        Status::SUCCESS
+    } else {
+        Status::UNSUPPORTED
+    }
 }
 
 #[cfg(not(test))]
-pub extern "win64" fn stdout_set_mode(_: *mut SimpleTextOutputProtocol, _: usize) -> Status {
-    crate::log!("EFI_STUB: stdout_set_mode\n");
-    Status::UNSUPPORTED
+pub extern "win64" fn stdout_set_mode(_: *mut SimpleTextOutputProtocol, mode: usize) -> Status {
+    if mode == 0 {
+        Status::SUCCESS
+    } else {
+        Status::UNSUPPORTED
+    }
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn stdout_set_attribute(_: *mut SimpleTextOutputProtocol, _: usize) -> Status {
-    crate::log!("EFI_STUB: stdout_set_attribute\n");
-    Status::UNSUPPORTED
+    // Accept all attribute changes but ignore them
+    Status::SUCCESS
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn stdout_clear_screen(_: *mut SimpleTextOutputProtocol) -> Status {
-    crate::log!("EFI_STUB: stdout_clear_screen\n");
     Status::UNSUPPORTED
 }
 
@@ -123,13 +130,11 @@ pub extern "win64" fn stdout_set_cursor_position(
     _: usize,
     _: usize,
 ) -> Status {
-    crate::log!("EFI_STUB: stdout_set_cursor_position\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn stdout_enable_cursor(_: *mut SimpleTextOutputProtocol, _: Boolean) -> Status {
-    crate::log!("EFI_STUB: stdout_enable_cursor\n");
     Status::UNSUPPORTED
 }
 
