@@ -26,14 +26,12 @@ use r_efi::efi::{
     ResetType, Status, Time, TimeCapabilities, TimerDelay, Tpl,
 };
 
+use r_efi::protocols::device_path::Protocol as DevicePathProtocol;
+use r_efi::protocols::loaded_image::Protocol as LoadedImageProtocol;
 use r_efi::protocols::simple_text_input::InputKey;
 use r_efi::protocols::simple_text_input::Protocol as SimpleTextInputProtocol;
 use r_efi::protocols::simple_text_output::Mode as SimpleTextOutputMode;
 use r_efi::protocols::simple_text_output::Protocol as SimpleTextOutputProtocol;
-//use r_efi::protocols::loaded_image::Protocol as LoadedImageProtocol;
-use r_efi::protocols::device_path::Protocol as DevicePathProtocol;
-
-use r_efi::{eficall, eficall_abi};
 
 use core::ffi::c_void;
 
@@ -844,30 +842,6 @@ const STDOUT_HANDLE: Handle = &HandleWrapper {
 const STDERR_HANDLE: Handle = &HandleWrapper {
     handle_type: HandleType::None,
 } as *const _ as Handle;
-
-// HACK: Until r-util/r-efi#11 gets merged
-#[cfg(not(test))]
-#[repr(C)]
-pub struct LoadedImageProtocol {
-    pub revision: u32,
-    pub parent_handle: Handle,
-    pub system_table: *mut efi::SystemTable,
-
-    pub device_handle: Handle,
-    pub file_path: *mut r_efi::protocols::device_path::Protocol,
-    pub reserved: *mut core::ffi::c_void,
-
-    pub load_options_size: u32,
-    pub load_options: *mut core::ffi::c_void,
-
-    pub image_base: *mut core::ffi::c_void,
-    pub image_size: u64,
-    pub image_code_type: efi::MemoryType,
-    pub image_data_type: efi::MemoryType,
-    pub unload: eficall! {fn(
-        Handle,
-    ) -> Status},
-}
 
 #[cfg(not(test))]
 #[repr(C)]
