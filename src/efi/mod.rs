@@ -62,25 +62,21 @@ static mut BLOCK_WRAPPERS: block::BlockWrappers = block::BlockWrappers {
 
 #[cfg(not(test))]
 pub extern "win64" fn get_time(_: *mut Time, _: *mut TimeCapabilities) -> Status {
-    crate::log!("EFI_STUB: get_time\n");
-    Status::UNSUPPORTED
+    Status::DEVICE_ERROR
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn set_time(_: *mut Time) -> Status {
-    crate::log!("EFI_STUB: set_time\n");
-    Status::UNSUPPORTED
+    Status::DEVICE_ERROR
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn get_wakeup_time(_: *mut Boolean, _: *mut Boolean, _: *mut Time) -> Status {
-    crate::log!("EFI_STUB: get_wakeup_time\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn set_wakeup_time(_: Boolean, _: *mut Time) -> Status {
-    crate::log!("EFI_STUB: set_wakeup_time\n");
     Status::UNSUPPORTED
 }
 
@@ -106,7 +102,6 @@ pub extern "win64" fn set_virtual_address_map(
 
 #[cfg(not(test))]
 pub extern "win64" fn convert_pointer(_: usize, _: *mut *mut c_void) -> Status {
-    crate::log!("EFI_STUB: convert_pointer\n");
     Status::UNSUPPORTED
 }
 
@@ -143,8 +138,7 @@ pub extern "win64" fn set_variable(
 
 #[cfg(not(test))]
 pub extern "win64" fn get_next_high_mono_count(_: *mut u32) -> Status {
-    crate::log!("EFI_STUB: get_next_high_mono_count\n");
-    Status::UNSUPPORTED
+    Status::DEVICE_ERROR
 }
 
 #[cfg(not(test))]
@@ -158,7 +152,6 @@ pub extern "win64" fn update_capsule(
     _: usize,
     _: PhysicalAddress,
 ) -> Status {
-    crate::log!("EFI_STUB: update_capsule\n");
     Status::UNSUPPORTED
 }
 
@@ -169,26 +162,31 @@ pub extern "win64" fn query_capsule_capabilities(
     _: *mut u64,
     _: *mut ResetType,
 ) -> Status {
-    crate::log!("EFI_STUB: query_capsule_capabilities\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
-pub extern "win64" fn query_variable_info(_: u32, _: *mut u64, _: *mut u64, _: *mut u64) -> Status {
-    crate::log!("EFI_STUB: query_variable_info\n");
-    Status::UNSUPPORTED
+pub extern "win64" fn query_variable_info(
+    _: u32,
+    max_storage: *mut u64,
+    remaining_storage: *mut u64,
+    max_size: *mut u64,
+) -> Status {
+    unsafe {
+        *max_storage = 0;
+        *remaining_storage = 0;
+        *max_size = 0;
+    }
+    Status::SUCCESS
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn raise_tpl(_: Tpl) -> Tpl {
-    crate::log!("EFI_STUB: raise_tpl\n");
     0
 }
 
 #[cfg(not(test))]
-pub extern "win64" fn restore_tpl(_: Tpl) {
-    crate::log!("EFI_STUB: restore_tpl\n");
-}
+pub extern "win64" fn restore_tpl(_: Tpl) {}
 
 #[cfg(not(test))]
 pub extern "win64" fn allocate_pages(
@@ -285,37 +283,31 @@ pub extern "win64" fn create_event(
     _: *mut c_void,
     _: *mut Event,
 ) -> Status {
-    crate::log!("EFI_STUB: create_event\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn set_timer(_: Event, _: TimerDelay, _: u64) -> Status {
-    crate::log!("EFI_STUB: set_timer\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn wait_for_event(_: usize, _: *mut Event, _: *mut usize) -> Status {
-    crate::log!("EFI_STUB: wait_for_event\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn signal_event(_: Event) -> Status {
-    crate::log!("EFI_STUB: signal_event\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn close_event(_: Event) -> Status {
-    crate::log!("EFI_STUB: close_event\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn check_event(_: Event) -> Status {
-    crate::log!("EFI_STUB: check_event\n");
     Status::UNSUPPORTED
 }
 
@@ -350,8 +342,7 @@ pub extern "win64" fn reinstall_protocol_interface(
     _: *mut c_void,
     _: *mut c_void,
 ) -> Status {
-    crate::log!("EFI_STUB: reinstall_protocol_interface\n");
-    Status::UNSUPPORTED
+    Status::NOT_FOUND
 }
 
 #[cfg(not(test))]
@@ -360,8 +351,7 @@ pub extern "win64" fn uninstall_protocol_interface(
     _: *mut Guid,
     _: *mut c_void,
 ) -> Status {
-    crate::log!("EFI_STUB: uninstall_protocol_interface\n");
-    Status::UNSUPPORTED
+    Status::NOT_FOUND
 }
 
 #[cfg(not(test))]
@@ -386,7 +376,6 @@ pub extern "win64" fn register_protocol_notify(
     _: Event,
     _: *mut *mut c_void,
 ) -> Status {
-    crate::log!("EFI_STUB: register_protocol_notify\n");
     Status::UNSUPPORTED
 }
 
@@ -429,14 +418,11 @@ pub extern "win64" fn locate_handle(
 
 #[cfg(not(test))]
 pub extern "win64" fn locate_device_path(_: *mut Guid, _: *mut *mut c_void) -> Status {
-    crate::log!("EFI_STUB: locate_device_path\n");
-    Status::UNSUPPORTED
+    Status::NOT_FOUND
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn install_configuration_table(_: *mut Guid, _: *mut c_void) -> Status {
-    crate::log!("EFI_STUB: install_configuration_table\n");
-
     Status::UNSUPPORTED
 }
 
@@ -449,25 +435,21 @@ pub extern "win64" fn load_image(
     _: usize,
     _: *mut Handle,
 ) -> Status {
-    crate::log!("EFI_STUB: load_image\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn start_image(_: Handle, _: *mut usize, _: *mut *mut Char16) -> Status {
-    crate::log!("EFI_STUB: start_image\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn exit(_: Handle, _: Status, _: usize, _: *mut Char16) -> Status {
-    crate::log!("EFI_STUB: exit\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn unload_image(_: Handle) -> Status {
-    crate::log!("EFI_STUB: unload_image\n");
     Status::UNSUPPORTED
 }
 
@@ -478,19 +460,16 @@ pub extern "win64" fn exit_boot_services(_: Handle, _: usize) -> Status {
 
 #[cfg(not(test))]
 pub extern "win64" fn get_next_monotonic_count(_: *mut u64) -> Status {
-    crate::log!("EFI_STUB: get_next_monotonic_count\n");
-    Status::UNSUPPORTED
+    Status::DEVICE_ERROR
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn stall(_: usize) -> Status {
-    crate::log!("EFI_STUB: stall\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn set_watchdog_timer(_: usize, _: u64, _: usize, _: *mut Char16) -> Status {
-    crate::log!("EFI_STUB: set_watchdog_timer\n");
     Status::UNSUPPORTED
 }
 
@@ -501,13 +480,11 @@ pub extern "win64" fn connect_controller(
     _: *mut c_void,
     _: Boolean,
 ) -> Status {
-    crate::log!("EFI_STUB: connect_controller\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn disconnect_controller(_: Handle, _: Handle, _: Handle) -> Status {
-    crate::log!("EFI_STUB: disconnect_controller\n");
     Status::UNSUPPORTED
 }
 
@@ -577,7 +554,6 @@ pub extern "win64" fn open_protocol(
 
 #[cfg(not(test))]
 pub extern "win64" fn close_protocol(_: Handle, _: *mut Guid, _: Handle, _: Handle) -> Status {
-    crate::log!("EFI_STUB: close_protocol\n");
     Status::UNSUPPORTED
 }
 
@@ -588,7 +564,6 @@ pub extern "win64" fn open_protocol_information(
     _: *mut *mut OpenProtocolInformationEntry,
     _: *mut usize,
 ) -> Status {
-    crate::log!("EFI_STUB: open_protocol_information\n");
     Status::UNSUPPORTED
 }
 
@@ -598,7 +573,6 @@ pub extern "win64" fn protocols_per_handle(
     _: *mut *mut *mut Guid,
     _: *mut usize,
 ) -> Status {
-    crate::log!("EFI_STUB: protocols_per_handle\n");
     Status::UNSUPPORTED
 }
 
@@ -610,13 +584,11 @@ pub extern "win64" fn locate_handle_buffer(
     _: *mut usize,
     _: *mut *mut Handle,
 ) -> Status {
-    crate::log!("EFI_STUB: locate_handle_buffer\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn locate_protocol(_: *mut Guid, _: *mut c_void, _: *mut *mut c_void) -> Status {
-    crate::log!("EFI_STUB: locate_protocol\n");
     Status::UNSUPPORTED
 }
 
@@ -626,7 +598,6 @@ pub extern "win64" fn install_multiple_protocol_interfaces(
     _: *mut c_void,
     _: *mut c_void,
 ) -> Status {
-    crate::log!("EFI_STUB: install_multiple_protocol_interfaces\n");
     Status::UNSUPPORTED
 }
 
@@ -636,25 +607,19 @@ pub extern "win64" fn uninstall_multiple_protocol_interfaces(
     _: *mut c_void,
     _: *mut c_void,
 ) -> Status {
-    crate::log!("EFI_STUB: uninstall_multiple_protocol_interfaces\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
 pub extern "win64" fn calculate_crc32(_: *mut c_void, _: usize, _: *mut u32) -> Status {
-    crate::log!("EFI_STUB: calculate_crc32\n");
     Status::UNSUPPORTED
 }
 
 #[cfg(not(test))]
-pub extern "win64" fn copy_mem(_: *mut c_void, _: *mut c_void, _: usize) {
-    crate::log!("EFI_STUB: copy_mem\n");
-}
+pub extern "win64" fn copy_mem(_: *mut c_void, _: *mut c_void, _: usize) {}
 
 #[cfg(not(test))]
-pub extern "win64" fn set_mem(_: *mut c_void, _: usize, _: u8) {
-    crate::log!("EFI_STUB: set_mem\n");
-}
+pub extern "win64" fn set_mem(_: *mut c_void, _: usize, _: u8) {}
 
 #[cfg(not(test))]
 pub extern "win64" fn create_event_ex(
@@ -665,7 +630,6 @@ pub extern "win64" fn create_event_ex(
     _: *const Guid,
     _: *mut Event,
 ) -> Status {
-    crate::log!("EFI_STUB: create_event_ex\n");
     Status::UNSUPPORTED
 }
 
