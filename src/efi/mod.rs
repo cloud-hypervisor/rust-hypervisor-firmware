@@ -821,9 +821,18 @@ pub fn efi_exec(
         reserved: core::ptr::null_mut(),
     };
 
+    let vendor_data = 0u32;
+
     let mut ct = efi::ConfigurationTable {
-        vendor_guid: Guid::from_fields(0, 0, 0, 0, 0, &[0; 6]), // TODO
-        vendor_table: core::ptr::null_mut(),
+        vendor_guid: Guid::from_fields(
+            0x678a_9665,
+            0x9957,
+            0x4e7c,
+            0xa6,
+            0x27,
+            &[0x34, 0xc9, 0x46, 0x3d, 0xd2, 0xac],
+        ),
+        vendor_table: &vendor_data as *const _ as *mut _,
     };
 
     let mut st = efi::SystemTable {
@@ -844,7 +853,7 @@ pub fn efi_exec(
         std_err: &mut console::STDOUT,
         runtime_services: &mut rs,
         boot_services: &mut bs,
-        number_of_table_entries: 0,
+        number_of_table_entries: 1,
         configuration_table: &mut ct,
     };
 
