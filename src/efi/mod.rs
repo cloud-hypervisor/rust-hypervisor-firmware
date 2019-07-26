@@ -14,6 +14,7 @@
 
 mod alloc;
 mod block;
+mod console;
 mod file;
 
 use lazy_static::lazy_static;
@@ -28,10 +29,6 @@ use r_efi::efi::{
 
 use r_efi::protocols::device_path::Protocol as DevicePathProtocol;
 use r_efi::protocols::loaded_image::Protocol as LoadedImageProtocol;
-use r_efi::protocols::simple_text_input::InputKey;
-use r_efi::protocols::simple_text_input::Protocol as SimpleTextInputProtocol;
-use r_efi::protocols::simple_text_output::Mode as SimpleTextOutputMode;
-use r_efi::protocols::simple_text_output::Protocol as SimpleTextOutputProtocol;
 
 use core::ffi::c_void;
 
@@ -62,105 +59,6 @@ static mut BLOCK_WRAPPERS: block::BlockWrappers = block::BlockWrappers {
     wrappers: [core::ptr::null_mut(); 16],
     count: 0,
 };
-
-#[cfg(not(test))]
-pub extern "win64" fn stdin_reset(_: *mut SimpleTextInputProtocol, _: Boolean) -> Status {
-    crate::log!("EFI_STUB: stdin_reset\n");
-    Status::UNSUPPORTED
-}
-
-#[cfg(not(test))]
-pub extern "win64" fn stdin_read_key_stroke(
-    _: *mut SimpleTextInputProtocol,
-    _: *mut InputKey,
-) -> Status {
-    Status::NOT_READY
-}
-
-#[cfg(not(test))]
-pub extern "win64" fn stdout_reset(_: *mut SimpleTextOutputProtocol, _: Boolean) -> Status {
-    crate::log!("EFI_STUB: stdout_reset\n");
-    Status::UNSUPPORTED
-}
-
-#[cfg(not(test))]
-pub extern "win64" fn stdout_output_string(
-    _: *mut SimpleTextOutputProtocol,
-    message: *mut Char16,
-) -> Status {
-    let mut string_end = false;
-
-    loop {
-        let mut output: [u8; 128] = [0; 128];
-        let mut i: usize = 0;
-        while i < output.len() {
-            output[i] = (unsafe { *message.add(i) } & 0xffu16) as u8;
-            if output[i] == 0 {
-                string_end = true;
-                break;
-            }
-            i += 1;
-        }
-        crate::log!("{}", unsafe { core::str::from_utf8_unchecked(&output) });
-        if string_end {
-            break;
-        }
-    }
-    Status::SUCCESS
-}
-
-#[cfg(not(test))]
-pub extern "win64" fn stdout_test_string(
-    _: *mut SimpleTextOutputProtocol,
-    _: *mut Char16,
-) -> Status {
-    Status::SUCCESS
-}
-
-#[cfg(not(test))]
-pub extern "win64" fn stdout_query_mode(
-    _: *mut SimpleTextOutputProtocol,
-    _: usize,
-    _: *mut usize,
-    _: *mut usize,
-) -> Status {
-    crate::log!("EFI_STUB: stdout_query_mode\n");
-    Status::UNSUPPORTED
-}
-
-#[cfg(not(test))]
-pub extern "win64" fn stdout_set_mode(_: *mut SimpleTextOutputProtocol, _: usize) -> Status {
-    crate::log!("EFI_STUB: stdout_set_mode\n");
-    Status::UNSUPPORTED
-}
-
-#[cfg(not(test))]
-pub extern "win64" fn stdout_set_attribute(_: *mut SimpleTextOutputProtocol, _: usize) -> Status {
-    crate::log!("EFI_STUB: stdout_set_attribute\n");
-    Status::UNSUPPORTED
-}
-
-#[cfg(not(test))]
-pub extern "win64" fn stdout_clear_screen(_: *mut SimpleTextOutputProtocol) -> Status {
-    crate::log!("EFI_STUB: stdout_clear_screen\n");
-    Status::UNSUPPORTED
-}
-
-#[cfg(not(test))]
-pub extern "win64" fn stdout_set_cursor_position(
-    _: *mut SimpleTextOutputProtocol,
-    _: usize,
-    _: usize,
-) -> Status {
-    crate::log!("EFI_STUB: stdout_set_cursor_position\n");
-    Status::UNSUPPORTED
-}
-
-#[cfg(not(test))]
-pub extern "win64" fn stdout_enable_cursor(_: *mut SimpleTextOutputProtocol, _: Boolean) -> Status {
-    crate::log!("EFI_STUB: stdout_enable_cursor\n");
-    Status::UNSUPPORTED
-}
 
 #[cfg(not(test))]
 pub extern "win64" fn get_time(_: *mut Time, _: *mut TimeCapabilities) -> Status {
@@ -831,19 +729,6 @@ fn populate_allocator(image_address: u64, image_size: u64) {
 }
 
 #[cfg(not(test))]
-const STDIN_HANDLE: Handle = &HandleWrapper {
-    handle_type: HandleType::None,
-} as *const _ as Handle;
-#[cfg(not(test))]
-const STDOUT_HANDLE: Handle = &HandleWrapper {
-    handle_type: HandleType::None,
-} as *const _ as Handle;
-#[cfg(not(test))]
-const STDERR_HANDLE: Handle = &HandleWrapper {
-    handle_type: HandleType::None,
-} as *const _ as Handle;
-
-#[cfg(not(test))]
 #[repr(C)]
 struct LoadedImageWrapper {
     hw: HandleWrapper,
@@ -858,34 +743,6 @@ pub fn efi_exec(
     fs: &crate::fat::Filesystem,
     block: *const crate::block::VirtioBlockDevice,
 ) {
-    let mut stdin = SimpleTextInputProtocol {
-        reset: stdin_reset,
-        read_key_stroke: stdin_read_key_stroke,
-        wait_for_key: 0 as Event,
-    };
-
-    let mut stdout_mode = SimpleTextOutputMode {
-        max_mode: 1,
-        mode: 0,
-        attribute: 0,
-        cursor_column: 0,
-        cursor_row: 0,
-        cursor_visible: Boolean::FALSE,
-    };
-
-    let mut stdout = SimpleTextOutputProtocol {
-        reset: stdout_reset,
-        output_string: stdout_output_string,
-        test_string: stdout_test_string,
-        query_mode: stdout_query_mode,
-        set_mode: stdout_set_mode,
-        set_attribute: stdout_set_attribute,
-        clear_screen: stdout_clear_screen,
-        set_cursor_position: stdout_set_cursor_position,
-        enable_cursor: stdout_enable_cursor,
-        mode: &mut stdout_mode,
-    };
-
     let mut rs = efi::RuntimeServices {
         hdr: efi::TableHeader {
             signature: efi::RUNTIME_SERVICES_SIGNATURE,
@@ -979,12 +836,12 @@ pub fn efi_exec(
         },
         firmware_vendor: core::ptr::null_mut(), // TODO,
         firmware_revision: 0,
-        console_in_handle: STDIN_HANDLE,
-        con_in: &mut stdin,
-        console_out_handle: STDOUT_HANDLE,
-        con_out: &mut stdout,
-        standard_error_handle: STDERR_HANDLE,
-        std_err: &mut stdout,
+        console_in_handle: console::STDIN_HANDLE,
+        con_in: &mut console::STDIN,
+        console_out_handle: console::STDOUT_HANDLE,
+        con_out: &mut console::STDOUT,
+        standard_error_handle: console::STDERR_HANDLE,
+        std_err: &mut console::STDOUT,
         runtime_services: &mut rs,
         boot_services: &mut bs,
         number_of_table_entries: 0,
