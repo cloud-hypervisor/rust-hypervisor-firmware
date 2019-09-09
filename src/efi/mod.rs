@@ -143,7 +143,7 @@ pub extern "win64" fn get_next_high_mono_count(_: *mut u32) -> Status {
 
 #[cfg(not(test))]
 pub extern "win64" fn reset_system(_: ResetType, _: Status, _: usize, _: *mut c_void) {
-    crate::i8042_reset();
+    // Don't do anything to force the kernel to use ACPI for shutdown and triple-fault for reset
 }
 
 #[cfg(not(test))]
