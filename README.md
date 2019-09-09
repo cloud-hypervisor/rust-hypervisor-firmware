@@ -37,6 +37,8 @@ target/target/release/hypervisor-fw
 * FAT12/16/32 directory traversal and file reading
 * bzImage loader
 * "Boot Loader Specification" parser
+* PE32+ loader
+* Minimal EFI environment (sufficient to boot shim + GRUB2 as used by Ubuntu)
 
 ## Running
 
@@ -120,11 +122,6 @@ And clear-28660-kvm.img:
 https://download.clearlinux.org/releases/28660/clear/clear-28660-kvm.img.xz
 
 sha1sum: 5fc086643dea4b20c59a795a262e0d2400fab15f
-
-## TODO
-
-* PE32 loader
-* EFI runtime services required for booting
 
 ## Security
 
