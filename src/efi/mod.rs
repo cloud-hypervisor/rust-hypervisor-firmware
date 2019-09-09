@@ -786,17 +786,32 @@ pub fn efi_exec(
     };
 
     let vendor_data = 0u32;
+    let acpi_rsdp_ptr = unsafe { *((ZERO_PAGE_START + 0x70) as u64 as *const u64) };
 
-    let mut ct = efi::ConfigurationTable {
-        vendor_guid: Guid::from_fields(
-            0x678a_9665,
-            0x9957,
-            0x4e7c,
-            0xa6,
-            0x27,
-            &[0x34, 0xc9, 0x46, 0x3d, 0xd2, 0xac],
-        ),
-        vendor_table: &vendor_data as *const _ as *mut _,
+    let mut ct = if acpi_rsdp_ptr != 0 {
+        efi::ConfigurationTable {
+            vendor_guid: Guid::from_fields(
+                0x8868_e871,
+                0xe4f1,
+                0x11d3,
+                0xbc,
+                0x22,
+                &[0x00, 0x80, 0xc7, 0x3c, 0x88, 0x81],
+            ),
+            vendor_table: acpi_rsdp_ptr as u64 as *mut _,
+        }
+    } else {
+        efi::ConfigurationTable {
+            vendor_guid: Guid::from_fields(
+                0x678a_9665,
+                0x9957,
+                0x4e7c,
+                0xa6,
+                0x27,
+                &[0x34, 0xc9, 0x46, 0x3d, 0xd2, 0xac],
+            ),
+            vendor_table: &vendor_data as *const _ as *mut _,
+        }
     };
 
     let mut st = efi::SystemTable {
