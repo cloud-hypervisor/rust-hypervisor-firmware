@@ -158,8 +158,12 @@ impl<'a> VirtioBlockDevice<'a> {
             return Err(VirtioError::VirtioLegacyOnly);
         }
 
+        // Don't support any advanced features for now
+        let supported_features = VIRTIO_F_VERSION_1;
+
         // Report driver features
-        self.transport.set_features(device_features);
+        self.transport
+            .set_features(device_features & supported_features);
 
         self.transport.add_status(VIRTIO_STATUS_FEATURES_OK);
         if self.transport.get_status() & VIRTIO_STATUS_FEATURES_OK != VIRTIO_STATUS_FEATURES_OK {
