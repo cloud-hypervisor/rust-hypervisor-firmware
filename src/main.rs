@@ -172,19 +172,19 @@ pub extern "C" fn _start() -> ! {
 
     pci::print_bus();
 
-    let mut pci_transport;
-    let mut mmio_transport;
+    pci::with_devices(
+        VIRTIO_PCI_VENDOR_ID,
+        VIRTIO_PCI_BLOCK_DEVICE_ID,
+        |pci_device| {
+            let mut pci_transport = pci::VirtioPciTransport::new(pci_device);
+            block::VirtioBlockDevice::new(&mut pci_transport);
+            let mut device = block::VirtioBlockDevice::new(&mut pci_transport);
+            boot_from_device(&mut device)
+        },
+    );
 
-    let mut device = if let Some(pci_device) =
-        pci::search_bus(VIRTIO_PCI_VENDOR_ID, VIRTIO_PCI_BLOCK_DEVICE_ID)
-    {
-        pci_transport = pci::VirtioPciTransport::new(pci_device);
-        block::VirtioBlockDevice::new(&mut pci_transport)
-    } else {
-        mmio_transport = mmio::VirtioMMIOTransport::new(0xd000_0000u64);
-        block::VirtioBlockDevice::new(&mut mmio_transport)
-    };
-
+    let mut mmio_transport = mmio::VirtioMMIOTransport::new(0xd000_0000u64);
+    let mut device = block::VirtioBlockDevice::new(&mut mmio_transport);
     boot_from_device(&mut device);
 
     #[allow(clippy::empty_loop)]

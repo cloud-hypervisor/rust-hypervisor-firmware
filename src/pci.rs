@@ -90,14 +90,19 @@ pub fn print_bus() {
 }
 
 #[cfg(not(test))]
-pub fn search_bus(target_vendor_id: u16, target_device_id: u16) -> Option<PciDevice> {
+pub fn with_devices<F>(target_vendor_id: u16, target_device_id: u16, per_device: F)
+where
+    F: Fn(PciDevice) -> bool,
+{
     for device in 0..MAX_DEVICES {
         let (vendor_id, device_id) = get_device_details(0, device, 0);
-        if vendor_id == target_vendor_id && device_id == target_device_id {
-            return Some(PciDevice::new(0, device, 0));
+        if vendor_id == target_vendor_id
+            && device_id == target_device_id
+            && per_device(PciDevice::new(0, device, 0))
+        {
+            break;
         }
     }
-    None
 }
 
 #[cfg(not(test))]
