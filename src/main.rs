@@ -25,8 +25,6 @@ mod common;
 
 use core::panic::PanicInfo;
 
-use cpuio::Port;
-
 mod block;
 mod bzimage;
 mod efi;
@@ -44,19 +42,6 @@ mod virtio;
 #[allow(clippy::empty_loop)]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
-}
-
-#[cfg(not(test))]
-/// Reset the VM via the keyboard controller
-fn i8042_reset() -> ! {
-    loop {
-        let mut good: u8 = 0x02;
-        let mut i8042_command: Port<u8> = unsafe { Port::new(0x64) };
-        while good & 0x02 > 0 {
-            good = i8042_command.read();
-        }
-        i8042_command.write(0xFE);
-    }
 }
 
 #[cfg(not(test))]
@@ -95,6 +80,84 @@ const VIRTIO_PCI_VENDOR_ID: u16 = 0x1af4;
 const VIRTIO_PCI_BLOCK_DEVICE_ID: u16 = 0x1042;
 
 #[cfg(not(test))]
+fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
+    match device.init() {
+        Err(_) => {
+            log!("Error configuring block device\n");
+            return false;
+        }
+        Ok(_) => log!(
+            "Virtio block device configured. Capacity: {} sectors\n",
+            device.get_capacity()
+        ),
+    }
+
+    let mut f;
+
+    match part::find_efi_partition(device) {
+        Ok((start, end)) => {
+            log!("Found EFI partition\n");
+            f = fat::Filesystem::new(device, start, end);
+            if f.init().is_err() {
+                log!("Failed to create filesystem\n");
+                return false;
+            }
+        }
+        Err(_) => {
+            log!("Failed to find EFI partition\n");
+            return false;
+        }
+    }
+
+    log!("Filesystem ready\n");
+
+    let jump_address;
+
+    match loader::load_default_entry(&f) {
+        Ok(addr) => {
+            jump_address = addr;
+        }
+        Err(_) => {
+            log!("Error loading default entry. Using EFI boot.\n");
+            match f.open("/EFI/BOOT/BOOTX64 EFI") {
+                Ok(mut file) => {
+                    log!("Found bootloader (BOOTX64.EFI)\n");
+                    let mut l = pe::Loader::new(&mut file);
+                    match l.load(0x20_0000) {
+                        Ok((a, size)) => {
+                            log!("Executable loaded\n");
+                            efi::efi_exec(a, 0x20_0000, size, &f, device);
+                            return true;
+                        }
+                        Err(e) => {
+                            match e {
+                                pe::Error::FileError => log!("File error\n"),
+                                pe::Error::InvalidExecutable => log!("Invalid executable\n"),
+                            }
+                            return false;
+                        }
+                    }
+                }
+                Err(_) => {
+                    log!("Failed to find bootloader\n");
+                    return false;
+                }
+            }
+        }
+    }
+
+    device.reset();
+
+    log!("Jumping to kernel\n");
+
+    // Rely on x86 C calling convention where second argument is put into %rsi register
+    let ptr = jump_address as *const ();
+    let code: extern "C" fn(u64, u64) = unsafe { core::mem::transmute(ptr) };
+    (code)(0 /* dummy value */, bzimage::ZERO_PAGE_START as u64);
+    true
+}
+
+#[cfg(not(test))]
 #[allow(unused_attributes)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
@@ -122,74 +185,8 @@ pub extern "C" fn _start() -> ! {
         block::VirtioBlockDevice::new(&mut mmio_transport)
     };
 
-    match device.init() {
-        Err(_) => {
-            log!("Error configuring block device\n");
-            i8042_reset();
-        }
-        Ok(_) => log!(
-            "Virtio block device configured. Capacity: {} sectors\n",
-            device.get_capacity()
-        ),
-    }
+    boot_from_device(&mut device);
 
-    let mut f;
-
-    match part::find_efi_partition(&device) {
-        Ok((start, end)) => {
-            log!("Found EFI partition\n");
-            f = fat::Filesystem::new(&device, start, end);
-            if f.init().is_err() {
-                log!("Failed to create filesystem\n");
-                i8042_reset();
-            }
-        }
-        Err(_) => {
-            log!("Failed to find EFI partition\n");
-            i8042_reset();
-        }
-    }
-
-    log!("Filesystem ready\n");
-
-    let jump_address;
-
-    match loader::load_default_entry(&f) {
-        Ok(addr) => {
-            jump_address = addr;
-        }
-        Err(_) => {
-            log!("Error loading default entry\n");
-            match f.open("/EFI/BOOT/BOOTX64 EFI") {
-                Ok(mut file) => {
-                    log!("Found bootloader (BOOTX64.EFI)\n");
-                    let mut l = pe::Loader::new(&mut file);
-                    match l.load(0x20_0000) {
-                        Ok((a, size)) => {
-                            log!("Executable loaded\n");
-                            efi::efi_exec(a, 0x20_0000, size, &f, &device);
-                            i8042_reset();
-                        }
-                        Err(e) => match e {
-                            pe::Error::FileError => log!("File error\n"),
-                            pe::Error::InvalidExecutable => log!("Invalid executable\n"),
-                        },
-                    }
-                }
-                Err(_) => log!("Failed to find bootloader\n"),
-            }
-            i8042_reset();
-        }
-    }
-
-    device.reset();
-
-    log!("Jumping to kernel\n");
-
-    // Rely on x86 C calling convention where second argument is put into %rsi register
-    let ptr = jump_address as *const ();
-    let code: extern "C" fn(u64, u64) = unsafe { core::mem::transmute(ptr) };
-    (code)(0 /* dummy value */, bzimage::ZERO_PAGE_START as u64);
-
-    i8042_reset()
+    #[allow(clippy::empty_loop)]
+    loop {}
 }
