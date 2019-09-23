@@ -188,5 +188,9 @@ pub extern "C" fn _start() -> ! {
     boot_from_device(&mut device);
 
     #[allow(clippy::empty_loop)]
-    loop {}
+    loop {
+        unsafe {
+            asm!("hlt");
+        }
+    }
 }
