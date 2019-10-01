@@ -145,18 +145,43 @@ pub extern "win64" fn read_blocks(
 
 #[cfg(not(test))]
 pub extern "win64" fn write_blocks(
-    _: *mut BlockIoProtocol,
+    proto: *mut BlockIoProtocol,
     _: u32,
-    _: u64,
-    _: usize,
-    _: *mut c_void,
+    start: u64,
+    size: usize,
+    buffer: *mut c_void,
 ) -> Status {
-    Status::UNSUPPORTED
+    let wrapper = container_of!(proto, BlockWrapper, proto);
+    let wrapper = unsafe { &*wrapper };
+
+    let blocks = (size / 512) as usize;
+    let mut region = crate::mem::MemoryRegion::new(buffer as u64, size as u64);
+
+    for i in 0..blocks {
+        use crate::block::SectorWrite;
+        let data = region.as_mut_slice(i as u64 * 512, 512);
+        let block = unsafe { &*wrapper.block };
+        match block.write(wrapper.start_lba + start + i as u64, data) {
+            Ok(()) => continue,
+            Err(_) => {
+                return Status::DEVICE_ERROR;
+            }
+        };
+    }
+
+    Status::SUCCESS
 }
 
 #[cfg(not(test))]
-pub extern "win64" fn flush_blocks(_: *mut BlockIoProtocol) -> Status {
-    Status::UNSUPPORTED
+pub extern "win64" fn flush_blocks(proto: *mut BlockIoProtocol) -> Status {
+    let wrapper = container_of!(proto, BlockWrapper, proto);
+    let wrapper = unsafe { &*wrapper };
+    use crate::block::SectorWrite;
+    let block = unsafe { &*wrapper.block };
+    match block.flush() {
+        Ok(()) => Status::SUCCESS,
+        Err(_) => Status::DEVICE_ERROR,
+    }
 }
 
 #[cfg(not(test))]
