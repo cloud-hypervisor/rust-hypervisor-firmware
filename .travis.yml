@@ -3,26 +3,28 @@ language: rust
 
 rust:
   - nightly-2019-11-05
-
-before_script:
-  - rustup component add clippy
-  - rustup component add rustfmt
-  - rustup component add rust-src
-  - cargo install cargo-xbuild
-  - sudo apt-get install -y mtools
+env:
+  - RUSTFLAGS="-D warnings"
 
 addons:
   apt:
     update: true
 
-script:
-  - cargo xbuild --release --target target.json
-  - cargo xclippy -- -D warnings
-  - cargo clippy --all-targets --all-features -- -D warnings
-  - cargo fmt --all -- --check
+install:
+  - rustup component add clippy
+  - rustup component add rustfmt
+  - rustup component add rust-src
+  - cargo install cargo-xbuild
+  - sudo apt-get install -y mtools
   - wget https://download.clearlinux.org/releases/28660/clear/clear-28660-kvm.img.xz
   - unxz clear-28660-kvm.img.xz
   - ./make-test-disks.sh
+
+script:
+  - cargo xbuild --release --target target.json
+  - cargo xclippy
+  - cargo clippy --all-targets --all-features
+  - cargo fmt --all -- --check
   - cargo test
 
 deploy:
