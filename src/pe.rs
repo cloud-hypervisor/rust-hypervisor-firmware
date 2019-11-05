@@ -15,7 +15,7 @@
 use crate::mem::MemoryRegion;
 
 pub struct Loader<'a> {
-    file: &'a mut crate::fat::Read,
+    file: &'a mut dyn crate::fat::Read,
     num_sections: u16,
     image_base: u64,
     image_size: u32,
@@ -38,7 +38,7 @@ struct Section {
 }
 
 impl<'a> Loader<'a> {
-    pub fn new(file: &'a mut crate::fat::Read) -> Loader {
+    pub fn new(file: &'a mut dyn crate::fat::Read) -> Loader {
         Loader {
             file,
             num_sections: 0,
