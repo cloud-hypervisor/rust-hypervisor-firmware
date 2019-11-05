@@ -1,15 +1,37 @@
 ENTRY(_start)
 
+PHDRS
+{
+  rodata PT_LOAD FILEHDR PHDRS ;
+  data   PT_LOAD               ;
+  text   PT_LOAD               ;
+}
+
 SECTIONS
 {
 	. = 1M ;
-	start_of_data = . ;
-	.rodata : { *(.rodata .rodata.*) }
-	.data : { *(.data .data.*) }
-	.bss : { *(COMMON) *(.bss .bss.*) }
-	end_of_data = . ;
+	_start_of_file = . ;
 
-	start_of_text = . ;
-	.text : { *(.text .text.*) }
-	end_of_text = . ;
+	/* Mapping in the program headers makes it easier to mmap the whole file. */
+	. += SIZEOF_HEADERS ;
+
+	.rodata : { *(.rodata .rodata.*) } :rodata
+	.data   : { *(.data .data.*)     } :data
+	.bss    : { *(.bss .bss.*)       } :data
+	.text   : { *(.text .text.*)     } :text
+
+	_end_of_file = . ;
+
+	/* Match edk2's GccBase.lds DISCARD section */
+	/DISCARD/ : {
+		*(.note.GNU-stack)
+		*(.gnu_debuglink)
+		*(.interp)
+		*(.dynsym)
+		*(.dynstr)
+		*(.dynamic)
+		*(.hash .gnu.hash)
+		*(.comment)
+		*(COMMON)
+	}
 }
