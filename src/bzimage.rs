@@ -201,7 +201,7 @@ pub fn load_kernel(f: &mut Read) -> Result<(u64), Error> {
 
     let setup_bytes = setup_sects * 512; // Use to start reading the main image
 
-    let mut load_offset = u64::from(KERNEL_LOCATION);;
+    let mut load_offset = u64::from(KERNEL_LOCATION);
 
     f.seek(setup_bytes as u32)?;
 

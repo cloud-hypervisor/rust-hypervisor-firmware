@@ -236,5 +236,4 @@ mod tests {
         assert_eq!(a, fake_mem as u64 + 0x4000);
         assert_eq!(size, 110_592);
     }
-
 }
