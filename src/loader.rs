@@ -126,7 +126,7 @@ fn default_entry_path(fs: &fat::Filesystem) -> Result<[u8; 260], fat::Error> {
 }
 
 #[cfg(not(test))]
-pub fn load_default_entry(fs: &fat::Filesystem) -> Result<(u64), Error> {
+pub fn load_default_entry(fs: &fat::Filesystem) -> Result<u64, Error> {
     let default_entry_path = default_entry_path(&fs)?;
     let default_entry_path = ascii_strip(&default_entry_path);
 

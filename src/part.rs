@@ -68,7 +68,7 @@ pub enum Error {
     NoEFIPartition,
 }
 
-pub fn get_partitions(r: &SectorRead, parts_out: &mut [PartitionEntry]) -> Result<u32, Error> {
+pub fn get_partitions(r: &dyn SectorRead, parts_out: &mut [PartitionEntry]) -> Result<u32, Error> {
     let mut data: [u8; 512] = [0; 512];
     match r.read(1, &mut data) {
         Ok(_) => {}
@@ -123,7 +123,7 @@ pub fn get_partitions(r: &SectorRead, parts_out: &mut [PartitionEntry]) -> Resul
 }
 
 /// Find EFI partition
-pub fn find_efi_partition(r: &SectorRead) -> Result<(u64, u64), Error> {
+pub fn find_efi_partition(r: &dyn SectorRead) -> Result<(u64, u64), Error> {
     // Assume no more than 16 partitions on the disk
     let mut parts: [PartitionEntry; 16] = unsafe { core::mem::zeroed() };
 

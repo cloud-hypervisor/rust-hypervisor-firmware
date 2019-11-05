@@ -70,7 +70,7 @@ struct UsedElem {
 #[cfg(not(test))]
 /// Device driver for virtio block over any transport
 pub struct VirtioBlockDevice<'a> {
-    transport: &'a mut VirtioTransport,
+    transport: &'a mut dyn VirtioTransport,
     state: RefCell<DriverState>,
 }
 
@@ -131,7 +131,7 @@ enum RequestType {
 
 #[cfg(not(test))]
 impl<'a> VirtioBlockDevice<'a> {
-    pub fn new(transport: &'a mut VirtioTransport) -> VirtioBlockDevice<'a> {
+    pub fn new(transport: &'a mut dyn VirtioTransport) -> VirtioBlockDevice<'a> {
         VirtioBlockDevice {
             transport,
             state: RefCell::new(DriverState::default()),
