@@ -1,2 +1,0 @@
-[target.target]
-rustflags = ["-C", "link-arg=-s"]
