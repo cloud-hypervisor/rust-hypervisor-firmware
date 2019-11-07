@@ -22,7 +22,7 @@ install:
 
 script:
   - cargo xbuild --release --target target.json
-  - cargo xclippy
+  - cargo xclippy --target target.json
   - cargo clippy --all-targets --all-features
   - cargo fmt --all -- --check
   - cargo test

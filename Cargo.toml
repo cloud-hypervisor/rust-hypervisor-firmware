@@ -4,14 +4,14 @@ version = "0.1.0"
 authors = ["Rob Bradford <robert.bradford@intel.com>"]
 edition = "2018"
 
-# the profile used for `cargo build`
+# Despite "panic-strategy": "abort" being set in target.json, panic = "abort" is
+# needed here to make "cargo check" and "cargo clippy" run without errors.
 [profile.dev]
-panic = "abort" # disable stack unwinding on panic
+panic = "abort"
 lto = true
 
-# the profile used for `cargo build --release`
 [profile.release]
-panic = "abort" # disable stack unwinding on panic
+panic = "abort"
 lto = true
 
 [dependencies]
