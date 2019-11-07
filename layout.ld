@@ -15,10 +15,9 @@ SECTIONS
 	/* Mapping in the program headers makes it easier to mmap the whole file. */
 	. += SIZEOF_HEADERS ;
 
-	.rodata : { *(.rodata .rodata.*) } :rodata
-	.data   : { *(.data .data.*)     } :data
-	.bss    : { *(.bss .bss.*)       } :data
-	.text   : { *(.text .text.*)     } :text
+	.rodata : { *(.rodata .rodata.*)            } :rodata
+	.data   : { *(.data .data.*) *(.bss .bss.*) } :data
+	.text   : { *(.text .text.*)                } :text
 
 	_end_of_file = . ;
 
