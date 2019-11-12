@@ -13,29 +13,16 @@
 // limitations under the License.
 
 /// Virtio related errors
-#[cfg(not(test))]
 pub enum Error {
-    #[cfg(not(test))]
     VirtioMagicInvalid,
-
-    #[cfg(not(test))]
     VirtioVersionInvalid,
-
-    #[cfg(not(test))]
     VirtioUnsupportedDevice,
-
-    #[cfg(not(test))]
     VirtioLegacyOnly,
-
-    #[cfg(not(test))]
     VirtioFeatureNegotiationFailed,
-
-    #[cfg(not(test))]
     VirtioQueueTooSmall,
 }
 
 /// Trait to allow separation of transport from block driver
-#[cfg(not(test))]
 pub trait VirtioTransport {
     fn init(&mut self, device_type: u32) -> Result<(), Error>;
     fn get_status(&self) -> u32;
