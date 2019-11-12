@@ -53,7 +53,7 @@ pub extern "win64" fn open(
     let wrapper = unsafe { &*wrapper };
 
     if !wrapper.root {
-        log!("Attempt to open file from non-root file is unsupported\n");
+        log!("Attempt to open file from non-root file is unsupported");
         return Status::UNSUPPORTED;
     }
 

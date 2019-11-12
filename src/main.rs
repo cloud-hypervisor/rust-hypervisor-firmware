@@ -68,7 +68,7 @@ fn setup_pagetables() {
         pde.io_write_u64(i * 8, (0xb000u64 + (0x1000u64 * i)) | 0x03);
     }
 
-    log!("Page tables setup\n");
+    log!("Page tables setup");
 }
 
 const VIRTIO_PCI_VENDOR_ID: u16 = 0x1af4;
@@ -77,11 +77,11 @@ const VIRTIO_PCI_BLOCK_DEVICE_ID: u16 = 0x1042;
 fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
     match device.init() {
         Err(_) => {
-            log!("Error configuring block device\n");
+            log!("Error configuring block device");
             return false;
         }
         Ok(_) => log!(
-            "Virtio block device configured. Capacity: {} sectors\n",
+            "Virtio block device configured. Capacity: {} sectors",
             device.get_capacity()
         ),
     }
@@ -90,20 +90,20 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
 
     match part::find_efi_partition(device) {
         Ok((start, end)) => {
-            log!("Found EFI partition\n");
+            log!("Found EFI partition");
             f = fat::Filesystem::new(device, start, end);
             if f.init().is_err() {
-                log!("Failed to create filesystem\n");
+                log!("Failed to create filesystem");
                 return false;
             }
         }
         Err(_) => {
-            log!("Failed to find EFI partition\n");
+            log!("Failed to find EFI partition");
             return false;
         }
     }
 
-    log!("Filesystem ready\n");
+    log!("Filesystem ready");
 
     let jump_address;
 
@@ -112,28 +112,28 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
             jump_address = addr;
         }
         Err(_) => {
-            log!("Error loading default entry. Using EFI boot.\n");
+            log!("Error loading default entry. Using EFI boot.");
             match f.open("/EFI/BOOT/BOOTX64 EFI") {
                 Ok(mut file) => {
-                    log!("Found bootloader (BOOTX64.EFI)\n");
+                    log!("Found bootloader (BOOTX64.EFI)");
                     let mut l = pe::Loader::new(&mut file);
                     match l.load(0x20_0000) {
                         Ok((a, size)) => {
-                            log!("Executable loaded\n");
+                            log!("Executable loaded");
                             efi::efi_exec(a, 0x20_0000, size, &f, device);
                             return true;
                         }
                         Err(e) => {
                             match e {
-                                pe::Error::FileError => log!("File error\n"),
-                                pe::Error::InvalidExecutable => log!("Invalid executable\n"),
+                                pe::Error::FileError => log!("File error"),
+                                pe::Error::InvalidExecutable => log!("Invalid executable"),
                             }
                             return false;
                         }
                     }
                 }
                 Err(_) => {
-                    log!("Failed to find bootloader\n");
+                    log!("Failed to find bootloader");
                     return false;
                 }
             }
@@ -142,7 +142,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
 
     device.reset();
 
-    log!("Jumping to kernel\n");
+    log!("Jumping to kernel");
 
     // Rely on x86 C calling convention where second argument is put into %rsi register
     let ptr = jump_address as *const ();
@@ -157,7 +157,7 @@ pub extern "C" fn _start() -> ! {
         asm!("movq $$0x180000, %rsp");
     }
 
-    log!("Starting..\n");
+    log!("Starting..");
 
     enable_sse2();
     setup_pagetables();

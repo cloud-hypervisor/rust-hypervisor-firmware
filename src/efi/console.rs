@@ -49,6 +49,8 @@ pub extern "win64" fn stdout_output_string(
     _: *mut SimpleTextOutputProtocol,
     message: *mut Char16,
 ) -> Status {
+    use core::fmt::Write;
+    let mut logger = crate::logger::LOGGER.lock();
     let mut string_end = false;
 
     loop {
@@ -62,7 +64,8 @@ pub extern "win64" fn stdout_output_string(
             }
             i += 1;
         }
-        crate::log!("{}", unsafe { core::str::from_utf8_unchecked(&output) });
+        let s = unsafe { core::str::from_utf8_unchecked(&output) };
+        logger.write_str(s).unwrap();
         if string_end {
             break;
         }

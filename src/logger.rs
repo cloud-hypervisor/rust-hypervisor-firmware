@@ -22,12 +22,12 @@ use spin::Mutex;
 use cpuio::Port;
 
 lazy_static! {
-    static ref LOGGER: Mutex<Logger> = Mutex::new(Logger {
+    pub static ref LOGGER: Mutex<Logger> = Mutex::new(Logger {
         port: unsafe { Port::new(0x3f8) }
     });
 }
 
-struct Logger {
+pub struct Logger {
     port: Port<u8>,
 }
 
@@ -52,17 +52,11 @@ impl fmt::Write for Logger {
 
 #[macro_export]
 macro_rules! log {
-    ($($arg:tt)*) => ($crate::logger::_log(format_args!($($arg)*)));
-}
-
-#[cfg(not(test))]
-pub fn _log(args: fmt::Arguments) {
-    use core::fmt::Write;
-    LOGGER.lock().write_fmt(args).unwrap();
-}
-
-#[cfg(test)]
-pub fn _log(args: fmt::Arguments) {
-    use std::io::{self, Write};
-    write!(&mut std::io::stdout(), "{}", args).expect("stdout logging failed");
+    ($($arg:tt)*) => {{
+        use core::fmt::Write;
+        #[cfg(not(test))]
+        writeln!(&mut crate::logger::LOGGER.lock(), $($arg)*).unwrap();
+        #[cfg(test)]
+        println!($($arg)*);
+    }};
 }

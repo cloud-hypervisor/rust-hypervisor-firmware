@@ -69,7 +69,7 @@ pub fn print_bus() {
             continue;
         }
         log!(
-            "Found PCI device vendor={:x} device={:x} in slot={}\n",
+            "Found PCI device vendor={:x} device={:x} in slot={}",
             vendor_id,
             device_id,
             device
@@ -151,7 +151,7 @@ impl PciDevice {
         self.device_id = device_id;
 
         log!(
-            "PCI Device: {}:{}.{} {:x}:{:x}\n",
+            "PCI Device: {}:{}.{} {:x}:{:x}",
             self.bus,
             self.device,
             self.func,
@@ -197,7 +197,7 @@ impl PciDevice {
 
         #[allow(clippy::blacklisted_name)]
         for bar in &self.bars {
-            log!("Bar: type={:?} address={:x}\n", bar.bar_type, bar.address);
+            log!("Bar: type={:?} address={:x}", bar.bar_type, bar.address);
         }
     }
 }
@@ -258,7 +258,7 @@ impl VirtioTransport for VirtioPciTransport {
 
         // bit 4 of status is capability bit
         if status & 1 << 4 == 0 {
-            log!("No capabilities detected\n");
+            log!("No capabilities detected");
             return Err(VirtioError::VirtioUnsupportedDevice);
         }
 
