@@ -1,4 +1,4 @@
-ENTRY(_start)
+ENTRY(ram64_start)
 
 PHDRS
 {
@@ -25,7 +25,10 @@ SECTIONS
 
 	.rodata : { *(.rodata .rodata.*)            } :rodata
 	.data   : { *(.data .data.*) *(.bss .bss.*) } :data
-	.text   : { *(.text .text.*)                } :text
+	.text   : {
+		*(.text .text.*)
+		*(.ram64)
+	} :text
 
 	firmware_ram_size = . - ram_min;
 

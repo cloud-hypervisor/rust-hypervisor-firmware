@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(asm)]
+#![feature(global_asm)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(unused_imports))]
@@ -38,28 +38,16 @@ mod pci;
 mod pe;
 mod virtio;
 
-fn halt() -> ! {
-    loop {
-        unsafe { asm!("hlt") };
-    }
+global_asm!(include_str!("asm/ram64.s"));
+
+extern "C" {
+    fn halt_loop() -> !;
 }
 
 #[cfg_attr(not(test), panic_handler)]
 fn panic(info: &PanicInfo) -> ! {
     log!("PANIC: {}", info);
-    halt()
-}
-
-/// Enable SSE2 for XMM registers (needed for EFI calling)
-fn enable_sse2() {
-    unsafe {
-        asm!("movq %cr0, %rax");
-        asm!("or $$0x2, %ax");
-        asm!("movq %rax, %cr0");
-        asm!("movq %cr4, %rax");
-        asm!("or $$0x600, %ax");
-        asm!("movq %rax, %cr4");
-    }
+    unsafe { halt_loop() }
 }
 
 /// Setup page tables to provide an identity mapping over the full 4GiB range
@@ -167,14 +155,8 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
 }
 
 #[cfg_attr(not(test), no_mangle)]
-pub extern "C" fn _start() -> ! {
-    unsafe {
-        asm!("movq $$0x180000, %rsp");
-    }
-
-    log!("Starting..");
-
-    enable_sse2();
+pub extern "C" fn rust64_start() -> ! {
+    log!("\nStarting..");
     setup_pagetables();
 
     pci::print_bus();
@@ -194,5 +176,5 @@ pub extern "C" fn _start() -> ! {
     let mut device = block::VirtioBlockDevice::new(&mut mmio_transport);
     boot_from_device(&mut device);
 
-    halt()
+    unsafe { halt_loop() }
 }
