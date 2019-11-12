@@ -38,9 +38,16 @@ mod pci;
 mod pe;
 mod virtio;
 
+fn halt() -> ! {
+    loop {
+        unsafe { asm!("hlt") };
+    }
+}
+
 #[cfg_attr(not(test), panic_handler)]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
+fn panic(info: &PanicInfo) -> ! {
+    log!("PANIC: {}", info);
+    halt()
 }
 
 /// Enable SSE2 for XMM registers (needed for EFI calling)
@@ -179,10 +186,5 @@ pub extern "C" fn _start() -> ! {
     let mut device = block::VirtioBlockDevice::new(&mut mmio_transport);
     boot_from_device(&mut device);
 
-    #[allow(clippy::empty_loop)]
-    loop {
-        unsafe {
-            asm!("hlt");
-        }
-    }
+    halt()
 }
