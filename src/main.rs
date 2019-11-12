@@ -65,14 +65,22 @@ fn enable_sse2() {
 /// Setup page tables to provide an identity mapping over the full 4GiB range
 fn setup_pagetables() {
     const ADDRESS_SPACE_GIB: u64 = 64;
-    let pte = mem::MemoryRegion::new(0xb000, 512 * ADDRESS_SPACE_GIB * 8);
+    type Page = [u64; 512];
+
+    extern "C" {
+        static pml3t: Page;
+        static pml2t: [Page; ADDRESS_SPACE_GIB as usize];
+    }
+
+    let pte = mem::MemoryRegion::from_slice(unsafe { &pml2t });
     for i in 0..(512 * ADDRESS_SPACE_GIB) {
         pte.io_write_u64(i * 8, (i << 21) + 0x83u64)
     }
 
-    let pde = mem::MemoryRegion::new(0xa000, 4096);
+    let pml2t_addr = unsafe { pml2t.as_ptr() } as usize as u64;
+    let pde = mem::MemoryRegion::from_slice(unsafe { &pml3t });
     for i in 0..ADDRESS_SPACE_GIB {
-        pde.io_write_u64(i * 8, (0xb000u64 + (0x1000u64 * i)) | 0x03);
+        pde.io_write_u64(i * 8, (pml2t_addr + (0x1000u64 * i)) | 0x03);
     }
 
     log!("Page tables setup");
