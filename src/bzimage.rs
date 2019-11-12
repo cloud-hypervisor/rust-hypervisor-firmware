@@ -15,7 +15,6 @@
 use crate::fat;
 use fat::Read;
 
-#[cfg(not(test))]
 pub enum Error {
     FileError,
     KernelOld,
@@ -23,7 +22,6 @@ pub enum Error {
     NotRelocatable,
 }
 
-#[cfg(not(test))]
 impl From<fat::Error> for Error {
     fn from(_: fat::Error) -> Error {
         Error::FileError
@@ -31,23 +29,17 @@ impl From<fat::Error> for Error {
 }
 
 // From firecracker
-#[cfg(not(test))]
 /// Kernel command line start address.
 const CMDLINE_START: usize = 0x4b000;
-#[cfg(not(test))]
 /// Kernel command line start address maximum size.
 const CMDLINE_MAX_SIZE: usize = 0x10000;
-#[cfg(not(test))]
 /// The 'zero page', a.k.a linux kernel bootparams.
 pub const ZERO_PAGE_START: usize = 0x7000;
 
-#[cfg(not(test))]
 const KERNEL_LOCATION: u32 = 0x20_0000;
 
-#[cfg(not(test))]
 const E820_RAM: u32 = 1;
 
-#[cfg(not(test))]
 #[repr(C, packed)]
 struct E820Entry {
     addr: u64,
@@ -55,7 +47,6 @@ struct E820Entry {
     entry_type: u32,
 }
 
-#[cfg(not(test))]
 pub fn load_initrd(f: &mut dyn Read) -> Result<(), Error> {
     let mut zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
 
@@ -119,7 +110,6 @@ pub fn load_initrd(f: &mut dyn Read) -> Result<(), Error> {
     Ok(())
 }
 
-#[cfg(not(test))]
 pub fn append_commandline(addition: &str) -> Result<(), Error> {
     let mut cmdline_region =
         crate::mem::MemoryRegion::new(CMDLINE_START as u64, CMDLINE_MAX_SIZE as u64);
@@ -146,7 +136,6 @@ pub fn append_commandline(addition: &str) -> Result<(), Error> {
     Ok(())
 }
 
-#[cfg(not(test))]
 pub fn load_kernel(f: &mut dyn Read) -> Result<u64, Error> {
     f.seek(0)?;
 

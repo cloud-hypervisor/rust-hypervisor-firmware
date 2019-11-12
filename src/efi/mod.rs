@@ -34,7 +34,6 @@ use core::ffi::c_void;
 
 use alloc::Allocator;
 
-#[cfg(not(test))]
 #[derive(Copy, Clone, PartialEq)]
 enum HandleType {
     None,
@@ -43,7 +42,6 @@ enum HandleType {
     LoadedImage,
 }
 
-#[cfg(not(test))]
 #[repr(C)]
 #[derive(Copy, Clone)]
 struct HandleWrapper {
@@ -54,33 +52,27 @@ lazy_static! {
     pub static ref ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator::new());
 }
 
-#[cfg(not(test))]
 static mut BLOCK_WRAPPERS: block::BlockWrappers = block::BlockWrappers {
     wrappers: [core::ptr::null_mut(); 16],
     count: 0,
 };
 
-#[cfg(not(test))]
 pub extern "win64" fn get_time(_: *mut Time, _: *mut TimeCapabilities) -> Status {
     Status::DEVICE_ERROR
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn set_time(_: *mut Time) -> Status {
     Status::DEVICE_ERROR
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn get_wakeup_time(_: *mut Boolean, _: *mut Boolean, _: *mut Time) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn set_wakeup_time(_: Boolean, _: *mut Time) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn set_virtual_address_map(
     map_size: usize,
     descriptor_size: usize,
@@ -100,12 +92,10 @@ pub extern "win64" fn set_virtual_address_map(
     ALLOCATOR.lock().update_virtual_addresses(descriptors)
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn convert_pointer(_: usize, _: *mut *mut c_void) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn get_variable(
     _: *mut Char16,
     _: *mut Guid,
@@ -116,7 +106,6 @@ pub extern "win64" fn get_variable(
     Status::NOT_FOUND
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn get_next_variable_name(
     _: *mut usize,
     _: *mut Char16,
@@ -125,7 +114,6 @@ pub extern "win64" fn get_next_variable_name(
     Status::NOT_FOUND
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn set_variable(
     _: *mut Char16,
     _: *mut Guid,
@@ -136,17 +124,14 @@ pub extern "win64" fn set_variable(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn get_next_high_mono_count(_: *mut u32) -> Status {
     Status::DEVICE_ERROR
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn reset_system(_: ResetType, _: Status, _: usize, _: *mut c_void) {
     // Don't do anything to force the kernel to use ACPI for shutdown and triple-fault for reset
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn update_capsule(
     _: *mut *mut CapsuleHeader,
     _: usize,
@@ -155,7 +140,6 @@ pub extern "win64" fn update_capsule(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn query_capsule_capabilities(
     _: *mut *mut CapsuleHeader,
     _: usize,
@@ -165,7 +149,6 @@ pub extern "win64" fn query_capsule_capabilities(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn query_variable_info(
     _: u32,
     max_storage: *mut u64,
@@ -180,15 +163,12 @@ pub extern "win64" fn query_variable_info(
     Status::SUCCESS
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn raise_tpl(_: Tpl) -> Tpl {
     0
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn restore_tpl(_: Tpl) {}
 
-#[cfg(not(test))]
 pub extern "win64" fn allocate_pages(
     allocate_type: AllocateType,
     memory_type: MemoryType,
@@ -212,12 +192,10 @@ pub extern "win64" fn allocate_pages(
     status
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn free_pages(address: PhysicalAddress, _: usize) -> Status {
     ALLOCATOR.lock().free_pages(address)
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn get_memory_map(
     memory_map_size: *mut usize,
     out: *mut MemoryDescriptor,
@@ -248,7 +226,6 @@ pub extern "win64" fn get_memory_map(
     Status::SUCCESS
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn allocate_pool(
     memory_type: MemoryType,
     size: usize,
@@ -270,12 +247,10 @@ pub extern "win64" fn allocate_pool(
     status
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn free_pool(ptr: *mut c_void) -> Status {
     ALLOCATOR.lock().free_pages(ptr as u64)
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn create_event(
     _: u32,
     _: Tpl,
@@ -286,32 +261,26 @@ pub extern "win64" fn create_event(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn set_timer(_: Event, _: TimerDelay, _: u64) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn wait_for_event(_: usize, _: *mut Event, _: *mut usize) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn signal_event(_: Event) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn close_event(_: Event) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn check_event(_: Event) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 const SHIM_LOCK_PROTOCOL_GUID: Guid = Guid::from_fields(
     0x605d_ab50,
     0xe046,
@@ -321,7 +290,6 @@ const SHIM_LOCK_PROTOCOL_GUID: Guid = Guid::from_fields(
     &[0x3d, 0xd8, 0x10, 0xdd, 0x8b, 0x23],
 );
 
-#[cfg(not(test))]
 pub extern "win64" fn install_protocol_interface(
     _: *mut Handle,
     guid: *mut Guid,
@@ -335,7 +303,6 @@ pub extern "win64" fn install_protocol_interface(
     }
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn reinstall_protocol_interface(
     _: Handle,
     _: *mut Guid,
@@ -345,7 +312,6 @@ pub extern "win64" fn reinstall_protocol_interface(
     Status::NOT_FOUND
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn uninstall_protocol_interface(
     _: Handle,
     _: *mut Guid,
@@ -354,7 +320,6 @@ pub extern "win64" fn uninstall_protocol_interface(
     Status::NOT_FOUND
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn handle_protocol(
     handle: Handle,
     guid: *mut Guid,
@@ -370,7 +335,6 @@ pub extern "win64" fn handle_protocol(
     )
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn register_protocol_notify(
     _: *mut Guid,
     _: Event,
@@ -379,7 +343,6 @@ pub extern "win64" fn register_protocol_notify(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn locate_handle(
     _: LocateSearchType,
     guid: *mut Guid,
@@ -416,17 +379,14 @@ pub extern "win64" fn locate_handle(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn locate_device_path(_: *mut Guid, _: *mut *mut c_void) -> Status {
     Status::NOT_FOUND
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn install_configuration_table(_: *mut Guid, _: *mut c_void) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn load_image(
     _: Boolean,
     _: Handle,
@@ -438,42 +398,34 @@ pub extern "win64" fn load_image(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn start_image(_: Handle, _: *mut usize, _: *mut *mut Char16) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn exit(_: Handle, _: Status, _: usize, _: *mut Char16) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn unload_image(_: Handle) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn exit_boot_services(_: Handle, _: usize) -> Status {
     Status::SUCCESS
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn get_next_monotonic_count(_: *mut u64) -> Status {
     Status::DEVICE_ERROR
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn stall(_: usize) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn set_watchdog_timer(_: usize, _: u64, _: usize, _: *mut Char16) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn connect_controller(
     _: Handle,
     _: *mut Handle,
@@ -483,12 +435,10 @@ pub extern "win64" fn connect_controller(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn disconnect_controller(_: Handle, _: Handle, _: Handle) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn open_protocol(
     handle: Handle,
     guid: *mut Guid,
@@ -552,12 +502,10 @@ pub extern "win64" fn open_protocol(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn close_protocol(_: Handle, _: *mut Guid, _: Handle, _: Handle) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn open_protocol_information(
     _: Handle,
     _: *mut Guid,
@@ -567,7 +515,6 @@ pub extern "win64" fn open_protocol_information(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn protocols_per_handle(
     _: Handle,
     _: *mut *mut *mut Guid,
@@ -576,7 +523,6 @@ pub extern "win64" fn protocols_per_handle(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn locate_handle_buffer(
     _: LocateSearchType,
     _: *mut Guid,
@@ -587,12 +533,10 @@ pub extern "win64" fn locate_handle_buffer(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn locate_protocol(_: *mut Guid, _: *mut c_void, _: *mut *mut c_void) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn install_multiple_protocol_interfaces(
     _: *mut Handle,
     _: *mut c_void,
@@ -601,7 +545,6 @@ pub extern "win64" fn install_multiple_protocol_interfaces(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn uninstall_multiple_protocol_interfaces(
     _: *mut Handle,
     _: *mut c_void,
@@ -610,18 +553,14 @@ pub extern "win64" fn uninstall_multiple_protocol_interfaces(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn calculate_crc32(_: *mut c_void, _: usize, _: *mut u32) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn copy_mem(_: *mut c_void, _: *mut c_void, _: usize) {}
 
-#[cfg(not(test))]
 pub extern "win64" fn set_mem(_: *mut c_void, _: usize, _: u8) {}
 
-#[cfg(not(test))]
 pub extern "win64" fn create_event_ex(
     _: u32,
     _: Tpl,
@@ -633,19 +572,15 @@ pub extern "win64" fn create_event_ex(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 extern "win64" fn image_unload(_: Handle) -> Status {
     efi::Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 /// The 'zero page', a.k.a linux kernel bootparams.
 pub const ZERO_PAGE_START: usize = 0x7000;
 
-#[cfg(not(test))]
 const E820_RAM: u32 = 1;
 
-#[cfg(not(test))]
 #[repr(C, packed)]
 struct E820Entry {
     addr: u64,
@@ -653,10 +588,8 @@ struct E820Entry {
     entry_type: u32,
 }
 
-#[cfg(not(test))]
 const PAGE_SIZE: u64 = 4096;
 
-#[cfg(not(test))]
 // Populate allocator from E820, fixed ranges for the firmware and the loaded binary.
 fn populate_allocator(image_address: u64, image_size: u64) {
     let mut zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
@@ -692,14 +625,12 @@ fn populate_allocator(image_address: u64, image_size: u64) {
     );
 }
 
-#[cfg(not(test))]
 #[repr(C)]
 struct LoadedImageWrapper {
     hw: HandleWrapper,
     proto: LoadedImageProtocol,
 }
 
-#[cfg(not(test))]
 pub fn efi_exec(
     address: u64,
     loaded_address: u64,

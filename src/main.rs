@@ -16,6 +16,7 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(unused_imports))]
+#![cfg_attr(test, allow(dead_code))]
 
 #[macro_use]
 mod logger;
@@ -37,14 +38,11 @@ mod pci;
 mod pe;
 mod virtio;
 
-#[cfg(not(test))]
-#[panic_handler]
-#[allow(clippy::empty_loop)]
+#[cfg_attr(not(test), panic_handler)]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[cfg(not(test))]
 /// Enable SSE2 for XMM registers (needed for EFI calling)
 fn enable_sse2() {
     unsafe {
@@ -57,7 +55,6 @@ fn enable_sse2() {
     }
 }
 
-#[cfg(not(test))]
 /// Setup page tables to provide an identity mapping over the full 4GiB range
 fn setup_pagetables() {
     const ADDRESS_SPACE_GIB: u64 = 64;
@@ -74,12 +71,9 @@ fn setup_pagetables() {
     log!("Page tables setup\n");
 }
 
-#[cfg(not(test))]
 const VIRTIO_PCI_VENDOR_ID: u16 = 0x1af4;
-#[cfg(not(test))]
 const VIRTIO_PCI_BLOCK_DEVICE_ID: u16 = 0x1042;
 
-#[cfg(not(test))]
 fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
     match device.init() {
         Err(_) => {
@@ -157,9 +151,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
     true
 }
 
-#[cfg(not(test))]
-#[allow(unused_attributes)]
-#[no_mangle]
+#[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn _start() -> ! {
     unsafe {
         asm!("movq $$0x180000, %rsp");

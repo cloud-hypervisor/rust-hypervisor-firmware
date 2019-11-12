@@ -14,17 +14,13 @@
 
 use crate::mem;
 
-#[cfg(not(test))]
 use crate::virtio::Error as VirtioError;
-#[cfg(not(test))]
 use crate::virtio::VirtioTransport;
 
-#[cfg(not(test))]
 pub struct VirtioMMIOTransport {
     region: mem::MemoryRegion,
 }
 
-#[cfg(not(test))]
 impl VirtioMMIOTransport {
     pub fn new(base: u64) -> VirtioMMIOTransport {
         VirtioMMIOTransport {
@@ -33,7 +29,6 @@ impl VirtioMMIOTransport {
     }
 }
 
-#[cfg(not(test))]
 impl VirtioTransport for VirtioMMIOTransport {
     fn init(&mut self, device_type: u32) -> Result<(), VirtioError> {
         const VIRTIO_MAGIC: u32 = 0x7472_6976;

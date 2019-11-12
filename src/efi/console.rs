@@ -18,28 +18,22 @@ use r_efi::protocols::simple_text_input::Protocol as SimpleTextInputProtocol;
 use r_efi::protocols::simple_text_output::Mode as SimpleTextOutputMode;
 use r_efi::protocols::simple_text_output::Protocol as SimpleTextOutputProtocol;
 
-#[cfg(not(test))]
 use super::{HandleType, HandleWrapper};
 
-#[cfg(not(test))]
 pub const STDIN_HANDLE: Handle = &HandleWrapper {
     handle_type: HandleType::None,
 } as *const _ as Handle;
-#[cfg(not(test))]
 pub const STDOUT_HANDLE: Handle = &HandleWrapper {
     handle_type: HandleType::None,
 } as *const _ as Handle;
-#[cfg(not(test))]
 pub const STDERR_HANDLE: Handle = &HandleWrapper {
     handle_type: HandleType::None,
 } as *const _ as Handle;
 
-#[cfg(not(test))]
 pub extern "win64" fn stdin_reset(_: *mut SimpleTextInputProtocol, _: Boolean) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn stdin_read_key_stroke(
     _: *mut SimpleTextInputProtocol,
     _: *mut InputKey,
@@ -47,12 +41,10 @@ pub extern "win64" fn stdin_read_key_stroke(
     Status::NOT_READY
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn stdout_reset(_: *mut SimpleTextOutputProtocol, _: Boolean) -> Status {
     Status::SUCCESS
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn stdout_output_string(
     _: *mut SimpleTextOutputProtocol,
     message: *mut Char16,
@@ -78,7 +70,6 @@ pub extern "win64" fn stdout_output_string(
     Status::SUCCESS
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn stdout_test_string(
     _: *mut SimpleTextOutputProtocol,
     _: *mut Char16,
@@ -86,7 +77,6 @@ pub extern "win64" fn stdout_test_string(
     Status::SUCCESS
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn stdout_query_mode(
     _: *mut SimpleTextOutputProtocol,
     mode: usize,
@@ -104,7 +94,6 @@ pub extern "win64" fn stdout_query_mode(
     }
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn stdout_set_mode(_: *mut SimpleTextOutputProtocol, mode: usize) -> Status {
     if mode == 0 {
         Status::SUCCESS
@@ -113,18 +102,15 @@ pub extern "win64" fn stdout_set_mode(_: *mut SimpleTextOutputProtocol, mode: us
     }
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn stdout_set_attribute(_: *mut SimpleTextOutputProtocol, _: usize) -> Status {
     // Accept all attribute changes but ignore them
     Status::SUCCESS
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn stdout_clear_screen(_: *mut SimpleTextOutputProtocol) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn stdout_set_cursor_position(
     _: *mut SimpleTextOutputProtocol,
     _: usize,
@@ -133,19 +119,16 @@ pub extern "win64" fn stdout_set_cursor_position(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn stdout_enable_cursor(_: *mut SimpleTextOutputProtocol, _: Boolean) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub const STDIN: SimpleTextInputProtocol = SimpleTextInputProtocol {
     reset: stdin_reset,
     read_key_stroke: stdin_read_key_stroke,
     wait_for_key: 0 as Event,
 };
 
-#[cfg(not(test))]
 pub const STDOUT_OUTPUT_MODE: SimpleTextOutputMode = SimpleTextOutputMode {
     max_mode: 1,
     mode: 0,
@@ -155,7 +138,6 @@ pub const STDOUT_OUTPUT_MODE: SimpleTextOutputMode = SimpleTextOutputMode {
     cursor_visible: Boolean::FALSE,
 };
 
-#[cfg(not(test))]
 pub const STDOUT: SimpleTextOutputProtocol = SimpleTextOutputProtocol {
     reset: stdout_reset,
     output_string: stdout_output_string,

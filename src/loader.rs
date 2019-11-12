@@ -22,20 +22,17 @@ pub struct LoaderConfig {
     pub cmdline: [u8; 4096],
 }
 
-#[cfg(not(test))]
 pub enum Error {
     FileError,
     BzImageError,
 }
 
-#[cfg(not(test))]
 impl From<fat::Error> for Error {
     fn from(_: fat::Error) -> Error {
         Error::FileError
     }
 }
 
-#[cfg(not(test))]
 impl From<bzimage::Error> for Error {
     fn from(_: bzimage::Error) -> Error {
         Error::BzImageError
@@ -125,7 +122,6 @@ fn default_entry_path(fs: &fat::Filesystem) -> Result<[u8; 260], fat::Error> {
     Ok(entry_path)
 }
 
-#[cfg(not(test))]
 pub fn load_default_entry(fs: &fat::Filesystem) -> Result<u64, Error> {
     let default_entry_path = default_entry_path(&fs)?;
     let default_entry_path = ascii_strip(&default_entry_path);

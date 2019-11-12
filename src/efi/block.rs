@@ -18,7 +18,6 @@ use r_efi::efi::{AllocateType, Guid, MemoryType, Status};
 use r_efi::protocols::device_path::Protocol as DevicePathProtocol;
 use r_efi::{eficall, eficall_abi};
 
-#[cfg(not(test))]
 pub const PROTOCOL_GUID: Guid = Guid::from_fields(
     0x964e_5b21,
     0x6459,
@@ -28,7 +27,6 @@ pub const PROTOCOL_GUID: Guid = Guid::from_fields(
     &[0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b],
 );
 
-#[cfg(not(test))]
 #[repr(packed)]
 pub struct HardDiskDevicePathProtocol {
     pub device_path: DevicePathProtocol,
@@ -40,14 +38,12 @@ pub struct HardDiskDevicePathProtocol {
     pub signature_type: u8,
 }
 
-#[cfg(not(test))]
 #[repr(packed)]
 pub struct ControllerDevicePathProtocol {
     pub device_path: DevicePathProtocol,
     pub controller: u32,
 }
 
-#[cfg(not(test))]
 #[repr(C)]
 struct BlockIoMedia {
     media_id: u32,
@@ -61,7 +57,6 @@ struct BlockIoMedia {
     last_block: u64,
 }
 
-#[cfg(not(test))]
 #[repr(C)]
 pub struct BlockIoProtocol {
     revision: u64,
@@ -89,7 +84,6 @@ pub struct BlockIoProtocol {
     ) -> Status},
 }
 
-#[cfg(not(test))]
 #[repr(C)]
 pub struct BlockWrapper<'a> {
     hw: super::HandleWrapper,
@@ -103,18 +97,15 @@ pub struct BlockWrapper<'a> {
     start_lba: u64,
 }
 
-#[cfg(not(test))]
 pub struct BlockWrappers<'a> {
     pub wrappers: [*mut BlockWrapper<'a>; 16],
     pub count: usize,
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn reset(_: *mut BlockIoProtocol, _: bool) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn read_blocks(
     proto: *mut BlockIoProtocol,
     _: u32,
@@ -143,7 +134,6 @@ pub extern "win64" fn read_blocks(
     Status::SUCCESS
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn write_blocks(
     proto: *mut BlockIoProtocol,
     _: u32,
@@ -172,7 +162,6 @@ pub extern "win64" fn write_blocks(
     Status::SUCCESS
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn flush_blocks(proto: *mut BlockIoProtocol) -> Status {
     let wrapper = container_of!(proto, BlockWrapper, proto);
     let wrapper = unsafe { &*wrapper };
@@ -184,7 +173,6 @@ pub extern "win64" fn flush_blocks(proto: *mut BlockIoProtocol) -> Status {
     }
 }
 
-#[cfg(not(test))]
 impl<'a> BlockWrapper<'a> {
     pub fn new(
         block: *const crate::block::VirtioBlockDevice,
@@ -307,7 +295,6 @@ impl<'a> BlockWrapper<'a> {
     }
 }
 
-#[cfg(not(test))]
 #[allow(clippy::transmute_ptr_to_ptr)]
 pub fn populate_block_wrappers(
     wrappers: &mut BlockWrappers,

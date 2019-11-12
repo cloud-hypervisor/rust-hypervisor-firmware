@@ -19,14 +19,12 @@ use r_efi::protocols::device_path::Protocol as DevicePathProtocol;
 use r_efi::protocols::file::Protocol as FileProtocol;
 use r_efi::protocols::simple_file_system::Protocol as SimpleFileSystemProtocol;
 
-#[cfg(not(test))]
 #[repr(C)]
 pub struct FileDevicePathProtocol {
     pub device_path: DevicePathProtocol,
     pub filename: [u16; 64],
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn filesystem_open_volume(
     fs_proto: *mut SimpleFileSystemProtocol,
     file: *mut *mut FileProtocol,
@@ -44,7 +42,6 @@ pub extern "win64" fn filesystem_open_volume(
     }
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn open(
     file_in: *mut FileProtocol,
     file_out: *mut *mut FileProtocol,
@@ -81,7 +78,6 @@ pub extern "win64" fn open(
     }
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn close(proto: *mut FileProtocol) -> Status {
     let wrapper = container_of!(proto, FileWrapper, proto);
     super::ALLOCATOR
@@ -89,12 +85,10 @@ pub extern "win64" fn close(proto: *mut FileProtocol) -> Status {
         .free_pages(&wrapper as *const _ as u64)
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn delete(_: *mut FileProtocol) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn read(file: *mut FileProtocol, size: *mut usize, buf: *mut c_void) -> Status {
     let wrapper = container_of_mut!(file, FileWrapper, proto);
 
@@ -127,22 +121,18 @@ pub extern "win64" fn read(file: *mut FileProtocol, size: *mut usize, buf: *mut 
     }
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn write(_: *mut FileProtocol, _: *mut usize, _: *mut c_void) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn get_position(_: *mut FileProtocol, _: *mut u64) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn set_position(_: *mut FileProtocol, _: u64) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 struct FileInfo {
     size: u64,
     file_size: u64,
@@ -154,7 +144,6 @@ struct FileInfo {
     _file_name: [Char16; 256],
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn get_info(
     file: *mut FileProtocol,
     guid: *mut Guid,
@@ -184,7 +173,6 @@ pub extern "win64" fn get_info(
     }
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn set_info(
     _: *mut FileProtocol,
     _: *mut Guid,
@@ -194,12 +182,10 @@ pub extern "win64" fn set_info(
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 pub extern "win64" fn flush(_: *mut FileProtocol) -> Status {
     Status::UNSUPPORTED
 }
 
-#[cfg(not(test))]
 struct FileWrapper<'a> {
     fs: &'a crate::fat::Filesystem<'a>,
     proto: FileProtocol,
@@ -208,7 +194,6 @@ struct FileWrapper<'a> {
     root: bool,
 }
 
-#[cfg(not(test))]
 #[repr(C)]
 pub struct FileSystemWrapper<'a> {
     hw: super::HandleWrapper,
@@ -217,7 +202,6 @@ pub struct FileSystemWrapper<'a> {
     pub block_part_id: Option<u32>,
 }
 
-#[cfg(not(test))]
 impl<'a> FileSystemWrapper<'a> {
     fn create_file(&self, root: bool) -> Option<*mut FileWrapper> {
         let size = core::mem::size_of::<FileWrapper>();

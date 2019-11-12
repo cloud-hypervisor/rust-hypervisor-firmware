@@ -349,7 +349,6 @@ impl Allocator {
         count
     }
 
-    #[cfg(not(test))]
     pub fn update_virtual_addresses(&mut self, descriptors: &[MemoryDescriptor]) -> Status {
         let mut i = 0;
 
@@ -374,7 +373,6 @@ impl Allocator {
         Status::SUCCESS
     }
 
-    #[cfg(not(test))]
     pub fn get_map_key(&self) -> usize {
         self.key
     }
