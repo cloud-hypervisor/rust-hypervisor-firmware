@@ -15,8 +15,8 @@
 #![feature(global_asm)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
-#![cfg_attr(test, allow(unused_imports))]
-#![cfg_attr(test, allow(dead_code))]
+#![cfg_attr(test, allow(unused_imports, dead_code))]
+#![cfg_attr(not(feature = "log-serial"), allow(unused_variables, unused_imports))]
 
 #[macro_use]
 mod logger;
@@ -45,10 +45,17 @@ extern "C" {
     fn halt_loop() -> !;
 }
 
-#[cfg_attr(not(test), panic_handler)]
+#[cfg(all(not(test), feature = "log-panic"))]
+#[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     log!("PANIC: {}", info);
     unsafe { halt_loop() }
+}
+
+#[cfg(all(not(test), not(feature = "log-panic")))]
+#[panic_handler]
+fn panic(_: &PanicInfo) -> ! {
+    loop {}
 }
 
 /// Setup page tables to provide an identity mapping over the full 4GiB range
