@@ -52,12 +52,12 @@ fn panic(info: &PanicInfo) -> ! {
 
 /// Setup page tables to provide an identity mapping over the full 4GiB range
 fn setup_pagetables() {
-    const ADDRESS_SPACE_GIB: u64 = 64;
-    type Page = [u64; 512];
+    const ADDRESS_SPACE_GIB: u64 = 4;
+    type PageTable = [u64; 512];
 
     extern "C" {
-        static pml3t: Page;
-        static pml2t: [Page; ADDRESS_SPACE_GIB as usize];
+        static pml3t: PageTable;
+        static pml2t: [PageTable; ADDRESS_SPACE_GIB as usize];
     }
 
     let pte = mem::MemoryRegion::from_slice(unsafe { &pml2t });
