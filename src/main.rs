@@ -53,22 +53,24 @@ fn panic(info: &PanicInfo) -> ! {
 
 /// Setup page tables to provide an identity mapping over the full 4GiB range
 fn setup_pagetables() {
-    const ADDRESS_SPACE_GIB: u64 = 4;
     type PageTable = [u64; 512];
 
     extern "C" {
         static pml3t: PageTable;
-        static pml2t: [PageTable; ADDRESS_SPACE_GIB as usize];
+        static pml2t: PageTable;
+        static address_space_gib: u8;
     }
+    let num_gib = unsafe { &address_space_gib } as *const _ as usize as u64;
+    log!("Setting up {} GiB identity mapping", num_gib);
 
-    let pte = mem::MemoryRegion::from_slice(unsafe { &pml2t });
-    for i in 0..(512 * ADDRESS_SPACE_GIB) {
+    let pml2t_addr = unsafe { pml2t.as_ptr() } as usize as u64;
+    let pte = mem::MemoryRegion::new(pml2t_addr, num_gib * 4096);
+    for i in 0..(512 * num_gib) {
         pte.io_write_u64(i * 8, (i << 21) + 0x83u64)
     }
 
-    let pml2t_addr = unsafe { pml2t.as_ptr() } as usize as u64;
     let pde = mem::MemoryRegion::from_slice(unsafe { &pml3t });
-    for i in 0..ADDRESS_SPACE_GIB {
+    for i in 0..num_gib {
         pde.io_write_u64(i * 8, (pml2t_addr + (0x1000u64 * i)) | 0x03);
     }
 
