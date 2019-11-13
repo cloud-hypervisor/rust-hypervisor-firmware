@@ -32,11 +32,11 @@ SECTIONS
 
 	firmware_ram_size = . - ram_min;
 
-	/* Memory for 64 GiB identity mapping, keep synced with ADDRESS_SPACE_GIB */
-	identity_mapped_gbs = 64;
+	/* Memory for identity mapping, keep synced with ADDRESS_SPACE_GIB */
+	address_space_gib = 4;
 	. = ALIGN(4K);
 	pml2t = .;
-	. += 4K * identity_mapped_gbs;
+	. += 4K * address_space_gib;
 
 	ASSERT((. <= ram_max - stack_size), "firmware size too big for RAM region")
 
