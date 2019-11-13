@@ -38,6 +38,7 @@ mod pci;
 mod pe;
 mod virtio;
 
+#[cfg(not(test))]
 global_asm!(include_str!("asm/ram64.s"));
 
 extern "C" {
