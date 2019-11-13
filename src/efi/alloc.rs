@@ -18,7 +18,7 @@ use r_efi::efi::{AllocateType, MemoryType, PhysicalAddress, Status, VirtualAddre
 
 // Copied from r_efi so we can do Default on it
 #[repr(C)]
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct MemoryDescriptor {
     pub r#type: u32,
     pub physical_start: PhysicalAddress,
@@ -27,7 +27,7 @@ pub struct MemoryDescriptor {
     pub attribute: u64,
 }
 
-#[derive(Default)]
+#[derive(Copy, Clone)]
 struct Allocation {
     in_use: bool,
     next_allocation: Option<usize>,
@@ -36,7 +36,7 @@ struct Allocation {
 
 const MAX_ALLOCATIONS: usize = 32;
 
-#[derive(Default)]
+#[derive(Copy, Clone)]
 pub struct Allocator {
     allocations: [Allocation; MAX_ALLOCATIONS],
     key: usize,
@@ -341,7 +341,7 @@ impl Allocator {
         let mut cur = self.first_allocation;
 
         while cur != None {
-            out[count] = self.allocations[cur.unwrap()].descriptor.clone();
+            out[count] = self.allocations[cur.unwrap()].descriptor;
             cur = self.allocations[cur.unwrap()].next_allocation;
             count += 1;
         }
@@ -377,11 +377,22 @@ impl Allocator {
         self.key
     }
 
-    pub fn new() -> Allocator {
+    pub const fn new() -> Allocator {
+        let allocation = Allocation {
+            in_use: false,
+            next_allocation: None,
+            descriptor: MemoryDescriptor {
+                r#type: 0,
+                physical_start: 0,
+                virtual_start: 0,
+                number_of_pages: 0,
+                attribute: 0,
+            },
+        };
         Allocator {
-            first_allocation: None,
+            allocations: [allocation; MAX_ALLOCATIONS],
             key: 0,
-            ..Allocator::default()
+            first_allocation: None,
         }
     }
 }
