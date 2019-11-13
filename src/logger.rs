@@ -16,16 +16,13 @@
 // from Philipp Oppermann
 
 use core::fmt;
-use lazy_static::lazy_static;
 use spin::Mutex;
 
 use cpuio::Port;
 
-lazy_static! {
-    pub static ref LOGGER: Mutex<Logger> = Mutex::new(Logger {
-        port: unsafe { Port::new(0x3f8) }
-    });
-}
+pub static LOGGER: Mutex<Logger> = Mutex::new(Logger {
+    port: unsafe { Port::new(0x3f8) },
+});
 
 pub struct Logger {
     port: Port<u8>,

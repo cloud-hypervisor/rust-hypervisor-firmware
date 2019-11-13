@@ -25,7 +25,7 @@ log-panic = ["log-serial"]
 
 [dependencies]
 cpuio = "*"
-spin = "0.4.9"
+spin = "0.5"
 r-efi = "2.1.0"
 
 [dependencies.lazy_static]
