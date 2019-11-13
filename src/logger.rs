@@ -54,9 +54,9 @@ impl fmt::Write for Logger {
 macro_rules! log {
     ($($arg:tt)*) => {{
         use core::fmt::Write;
-        #[cfg(not(test))]
+        #[cfg(all(feature = "log-serial", not(test)))]
         writeln!(&mut crate::logger::LOGGER.lock(), $($arg)*).unwrap();
-        #[cfg(test)]
+        #[cfg(all(feature = "log-serial", test))]
         println!($($arg)*);
     }};
 }

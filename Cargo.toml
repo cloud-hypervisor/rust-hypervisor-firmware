@@ -14,6 +14,15 @@ lto = true
 panic = "abort"
 lto = true
 
+[features]
+default = ["log-serial", "log-panic"]
+# Have the log! macro write to serial output. Disabling this significantly
+# reduces code size, but makes debugging essentially impossible
+log-serial = []
+# Log panics to serial output. Disabling this (without disabling log-serial)
+# gets you most of the code size reduction, without losing _all_ debugging.
+log-panic = ["log-serial"]
+
 [dependencies]
 cpuio = "*"
 spin = "0.4.9"
