@@ -17,7 +17,6 @@ mod block;
 mod console;
 mod file;
 
-use lazy_static::lazy_static;
 use spin::Mutex;
 
 use r_efi::efi;
@@ -48,9 +47,7 @@ struct HandleWrapper {
     handle_type: HandleType,
 }
 
-lazy_static! {
-    pub static ref ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator::new());
-}
+pub static ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator::new());
 
 static mut BLOCK_WRAPPERS: block::BlockWrappers = block::BlockWrappers {
     wrappers: [core::ptr::null_mut(); 16],
