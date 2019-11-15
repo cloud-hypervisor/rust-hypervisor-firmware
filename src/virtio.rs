@@ -14,8 +14,6 @@
 
 /// Virtio related errors
 pub enum Error {
-    VirtioMagicInvalid,
-    VirtioVersionInvalid,
     VirtioUnsupportedDevice,
     VirtioLegacyOnly,
     VirtioFeatureNegotiationFailed,
