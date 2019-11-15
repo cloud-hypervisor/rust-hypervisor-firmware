@@ -32,7 +32,6 @@ mod efi;
 mod fat;
 mod loader;
 mod mem;
-mod mmio;
 mod part;
 mod pci;
 mod pe;
@@ -182,9 +181,6 @@ pub extern "C" fn rust64_start() -> ! {
         },
     );
 
-    let mut mmio_transport = mmio::VirtioMMIOTransport::new(0xd000_0000u64);
-    let mut device = block::VirtioBlockDevice::new(&mut mmio_transport);
-    boot_from_device(&mut device);
-
+    log!("Unable to boot from any virtio-blk device. Halting..");
     unsafe { halt_loop() }
 }
