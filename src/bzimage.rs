@@ -73,7 +73,8 @@ pub fn load_initrd(f: &mut dyn Read) -> Result<(), Error> {
         top_of_usable_ram = max_load_address;
     }
 
-    let initrd_address = top_of_usable_ram - u64::from(f.get_size());
+    // Align address to 2MiB boundary as we use 2 MiB pages
+    let initrd_address = (top_of_usable_ram - u64::from(f.get_size())) & !((2 << 20) - 1);
     let mut initrd_region = crate::mem::MemoryRegion::new(initrd_address, u64::from(f.get_size()));
 
     let mut offset = 0;
@@ -94,7 +95,6 @@ pub fn load_initrd(f: &mut dyn Read) -> Result<(), Error> {
         }
 
         let dst = initrd_region.as_mut_slice(u64::from(offset), 512);
-
         match f.read(dst) {
             Err(crate::fat::Error::EndOfFile) => break,
             Err(_) => return Err(Error::FileError),
