@@ -14,6 +14,7 @@
 
 use core::ffi::c_void;
 
+use atomic_refcell::AtomicRefCell;
 use r_efi::{
     efi::{
         self, AllocateType, Boolean, CapsuleHeader, Char16, Event, EventNotify, Guid, Handle,
@@ -25,7 +26,6 @@ use r_efi::{
         device_path::Protocol as DevicePathProtocol, loaded_image::Protocol as LoadedImageProtocol,
     },
 };
-use spin::Mutex;
 
 mod alloc;
 mod block;
@@ -48,7 +48,7 @@ struct HandleWrapper {
     handle_type: HandleType,
 }
 
-pub static ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator::new());
+pub static ALLOCATOR: AtomicRefCell<Allocator> = AtomicRefCell::new(Allocator::new());
 
 static mut BLOCK_WRAPPERS: block::BlockWrappers = block::BlockWrappers {
     wrappers: [core::ptr::null_mut(); 16],
@@ -87,7 +87,7 @@ pub extern "win64" fn set_virtual_address_map(
         core::slice::from_raw_parts_mut(descriptors as *mut alloc::MemoryDescriptor, count)
     };
 
-    ALLOCATOR.lock().update_virtual_addresses(descriptors)
+    ALLOCATOR.borrow_mut().update_virtual_addresses(descriptors)
 }
 
 pub extern "win64" fn convert_pointer(_: usize, _: *mut *mut c_void) -> Status {
@@ -175,7 +175,7 @@ pub extern "win64" fn allocate_pages(
 ) -> Status {
     let (status, new_address) =
         ALLOCATOR
-            .lock()
+            .borrow_mut()
             .allocate_pages(
                 allocate_type,
                 memory_type,
@@ -191,7 +191,7 @@ pub extern "win64" fn allocate_pages(
 }
 
 pub extern "win64" fn free_pages(address: PhysicalAddress, _: usize) -> Status {
-    ALLOCATOR.lock().free_pages(address)
+    ALLOCATOR.borrow_mut().free_pages(address)
 }
 
 pub extern "win64" fn get_memory_map(
@@ -201,7 +201,7 @@ pub extern "win64" fn get_memory_map(
     descriptor_size: *mut usize,
     descriptor_version: *mut u32,
 ) -> Status {
-    let count = ALLOCATOR.lock().get_descriptor_count();
+    let count = ALLOCATOR.borrow().get_descriptor_count();
     let map_size = core::mem::size_of::<MemoryDescriptor>() * count;
     if unsafe { *memory_map_size } < map_size {
         unsafe {
@@ -212,13 +212,13 @@ pub extern "win64" fn get_memory_map(
 
     let out =
         unsafe { core::slice::from_raw_parts_mut(out as *mut alloc::MemoryDescriptor, count) };
-    let count = ALLOCATOR.lock().get_descriptors(out);
+    let count = ALLOCATOR.borrow().get_descriptors(out);
     let map_size = core::mem::size_of::<MemoryDescriptor>() * count;
     unsafe {
         *memory_map_size = map_size;
         *descriptor_version = efi::MEMORY_DESCRIPTOR_VERSION;
         *descriptor_size = core::mem::size_of::<MemoryDescriptor>();
-        *key = ALLOCATOR.lock().get_map_key();
+        *key = ALLOCATOR.borrow().get_map_key();
     }
 
     Status::SUCCESS
@@ -229,7 +229,7 @@ pub extern "win64" fn allocate_pool(
     size: usize,
     address: *mut *mut c_void,
 ) -> Status {
-    let (status, new_address) = ALLOCATOR.lock().allocate_pages(
+    let (status, new_address) = ALLOCATOR.borrow_mut().allocate_pages(
         AllocateType::AllocateAnyPages,
         memory_type,
         ((size + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize) as u64,
@@ -246,7 +246,7 @@ pub extern "win64" fn allocate_pool(
 }
 
 pub extern "win64" fn free_pool(ptr: *mut c_void) -> Status {
-    ALLOCATOR.lock().free_pages(ptr as u64)
+    ALLOCATOR.borrow_mut().free_pages(ptr as u64)
 }
 
 pub extern "win64" fn create_event(
@@ -597,7 +597,7 @@ fn populate_allocator(image_address: u64, image_size: u64) {
 
     for entry in e820_table {
         if entry.entry_type == E820_RAM {
-            ALLOCATOR.lock().add_initial_allocation(
+            ALLOCATOR.borrow_mut().add_initial_allocation(
                 MemoryType::ConventionalMemory,
                 entry.size / PAGE_SIZE,
                 entry.addr,
@@ -607,7 +607,7 @@ fn populate_allocator(image_address: u64, image_size: u64) {
     }
 
     // Add ourselves
-    ALLOCATOR.lock().allocate_pages(
+    ALLOCATOR.borrow_mut().allocate_pages(
         AllocateType::AllocateAddress,
         MemoryType::RuntimeServicesCode,
         1024 * 1024 / PAGE_SIZE,
@@ -615,7 +615,7 @@ fn populate_allocator(image_address: u64, image_size: u64) {
     );
 
     // Add the loaded binary
-    ALLOCATOR.lock().allocate_pages(
+    ALLOCATOR.borrow_mut().allocate_pages(
         AllocateType::AllocateAddress,
         MemoryType::LoaderCode,
         image_size / PAGE_SIZE,

@@ -24,7 +24,7 @@ log-serial = []
 log-panic = ["log-serial"]
 
 [dependencies]
-cpuio = "*"
-spin = "0.5"
+x86_64 = "0.9"
+atomic_refcell = "0.1"
 r-efi = "2.1.0"
 

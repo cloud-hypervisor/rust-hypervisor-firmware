@@ -21,7 +21,7 @@
 use core::panic::PanicInfo;
 
 #[macro_use]
-mod logger;
+mod serial;
 
 #[macro_use]
 mod common;
