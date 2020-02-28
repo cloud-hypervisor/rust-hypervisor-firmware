@@ -37,6 +37,7 @@ mod efi;
 mod fat;
 mod loader;
 mod mem;
+mod paging;
 mod part;
 mod pci;
 mod pe;
@@ -58,32 +59,6 @@ fn panic(info: &PanicInfo) -> ! {
 #[panic_handler]
 fn panic(_: &PanicInfo) -> ! {
     loop {}
-}
-
-/// Setup page tables to provide an identity mapping over the full 4GiB range
-fn setup_pagetables() {
-    type PageTable = [u64; 512];
-
-    extern "C" {
-        static pml3t: PageTable;
-        static pml2t: PageTable;
-        static address_space_gib: u8;
-    }
-    let num_gib = unsafe { &address_space_gib } as *const _ as usize as u64;
-    log!("Setting up {} GiB identity mapping", num_gib);
-
-    let pml2t_addr = unsafe { pml2t.as_ptr() } as usize as u64;
-    let pte = mem::MemoryRegion::new(pml2t_addr, num_gib * 4096);
-    for i in 0..(512 * num_gib) {
-        pte.io_write_u64(i * 8, (i << 21) + 0x83u64)
-    }
-
-    let pde = mem::MemoryRegion::from_slice(unsafe { &pml3t });
-    for i in 0..num_gib {
-        pde.io_write_u64(i * 8, (pml2t_addr + (0x1000u64 * i)) | 0x03);
-    }
-
-    log!("Page tables setup");
 }
 
 // Enable SSE2 for XMM registers (needed for EFI calling)
@@ -182,7 +157,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
 pub extern "C" fn rust64_start() -> ! {
     log!("\nStarting..");
     enable_sse();
-    setup_pagetables();
+    paging::MANAGER.borrow_mut().setup();
 
     pci::print_bus();
 

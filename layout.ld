@@ -35,7 +35,7 @@ SECTIONS
 	/* Memory for identity mapping, keep synced with ADDRESS_SPACE_GIB */
 	address_space_gib = 4;
 	. = ALIGN(4K);
-	pml2t = .;
+	pml2ts = .;
 	. += 4K * address_space_gib;
 
 	ASSERT((. <= ram_max - stack_size), "firmware size too big for RAM region")
