@@ -20,6 +20,8 @@
 
 use core::panic::PanicInfo;
 
+use x86_64::instructions::hlt;
+
 #[macro_use]
 mod serial;
 
@@ -40,15 +42,13 @@ mod virtio;
 #[cfg(not(test))]
 global_asm!(include_str!("asm/ram64.s"));
 
-extern "C" {
-    fn halt_loop() -> !;
-}
-
 #[cfg(all(not(test), feature = "log-panic"))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     log!("PANIC: {}", info);
-    unsafe { halt_loop() }
+    loop {
+        hlt()
+    }
 }
 
 #[cfg(all(not(test), not(feature = "log-panic")))]
@@ -181,6 +181,5 @@ pub extern "C" fn rust64_start() -> ! {
         },
     );
 
-    log!("Unable to boot from any virtio-blk device. Halting..");
-    unsafe { halt_loop() }
+    panic!("Unable to boot from any virtio-blk device")
 }
