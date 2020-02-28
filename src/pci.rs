@@ -14,10 +14,10 @@
 
 use cpuio::Port;
 
-use crate::virtio::Error as VirtioError;
-use crate::virtio::VirtioTransport;
-
-use crate::mem;
+use crate::{
+    mem,
+    virtio::{Error as VirtioError, VirtioTransport},
+};
 
 const CONFIG_ADDRESS: u16 = 0xcf8;
 const CONFIG_DATA: u16 = 0xcfc;

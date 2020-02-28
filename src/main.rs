@@ -18,13 +18,13 @@
 #![cfg_attr(test, allow(unused_imports, dead_code))]
 #![cfg_attr(not(feature = "log-serial"), allow(unused_variables, unused_imports))]
 
+use core::panic::PanicInfo;
+
 #[macro_use]
 mod logger;
 
 #[macro_use]
 mod common;
-
-use core::panic::PanicInfo;
 
 mod block;
 mod bzimage;

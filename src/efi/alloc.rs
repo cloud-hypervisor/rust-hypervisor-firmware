@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const PAGE_SIZE: u64 = 4096;
-
 use r_efi::efi::{AllocateType, MemoryType, PhysicalAddress, Status, VirtualAddress};
+
+const PAGE_SIZE: u64 = 4096;
 
 // Copied from r_efi so we can do Default on it
 #[repr(C)]

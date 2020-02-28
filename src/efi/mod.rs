@@ -12,24 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use core::ffi::c_void;
+
+use r_efi::{
+    efi::{
+        self, AllocateType, Boolean, CapsuleHeader, Char16, Event, EventNotify, Guid, Handle,
+        InterfaceType, LocateSearchType, MemoryDescriptor, MemoryType,
+        OpenProtocolInformationEntry, PhysicalAddress, ResetType, Status, Time, TimeCapabilities,
+        TimerDelay, Tpl,
+    },
+    protocols::{
+        device_path::Protocol as DevicePathProtocol, loaded_image::Protocol as LoadedImageProtocol,
+    },
+};
+use spin::Mutex;
+
 mod alloc;
 mod block;
 mod console;
 mod file;
-
-use spin::Mutex;
-
-use r_efi::efi;
-use r_efi::efi::{
-    AllocateType, Boolean, CapsuleHeader, Char16, Event, EventNotify, Guid, Handle, InterfaceType,
-    LocateSearchType, MemoryDescriptor, MemoryType, OpenProtocolInformationEntry, PhysicalAddress,
-    ResetType, Status, Time, TimeCapabilities, TimerDelay, Tpl,
-};
-
-use r_efi::protocols::device_path::Protocol as DevicePathProtocol;
-use r_efi::protocols::loaded_image::Protocol as LoadedImageProtocol;
-
-use core::ffi::c_void;
 
 use alloc::Allocator;
 
