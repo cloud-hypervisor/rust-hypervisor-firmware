@@ -23,7 +23,3 @@ ram64_start:
     movq $ram_max, %rsp
 
     jmp rust64_start
-
-halt_loop:
-    hlt
-    jmp halt_loop
