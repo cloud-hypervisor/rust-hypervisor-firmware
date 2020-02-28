@@ -20,7 +20,10 @@
 
 use core::panic::PanicInfo;
 
-use x86_64::instructions::hlt;
+use x86_64::{
+    instructions::hlt,
+    registers::control::{Cr0, Cr0Flags, Cr4, Cr4Flags},
+};
 
 #[macro_use]
 mod serial;
@@ -81,6 +84,18 @@ fn setup_pagetables() {
     }
 
     log!("Page tables setup");
+}
+
+// Enable SSE2 for XMM registers (needed for EFI calling)
+fn enable_sse() {
+    let mut cr0 = Cr0::read();
+    cr0.remove(Cr0Flags::EMULATE_COPROCESSOR);
+    cr0.insert(Cr0Flags::MONITOR_COPROCESSOR);
+    unsafe { Cr0::write(cr0) };
+    let mut cr4 = Cr4::read();
+    cr4.insert(Cr4Flags::OSFXSR);
+    cr4.insert(Cr4Flags::OSXMMEXCPT_ENABLE);
+    unsafe { Cr4::write(cr4) };
 }
 
 const VIRTIO_PCI_VENDOR_ID: u16 = 0x1af4;
@@ -166,6 +181,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn rust64_start() -> ! {
     log!("\nStarting..");
+    enable_sse();
     setup_pagetables();
 
     pci::print_bus();
