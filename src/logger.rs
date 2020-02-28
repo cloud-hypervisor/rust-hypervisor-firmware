@@ -16,9 +16,9 @@
 // from Philipp Oppermann
 
 use core::fmt;
-use spin::Mutex;
 
 use cpuio::Port;
+use spin::Mutex;
 
 pub static LOGGER: Mutex<Logger> = Mutex::new(Logger {
     port: unsafe { Port::new(0x3f8) },

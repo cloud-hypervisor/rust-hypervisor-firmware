@@ -14,9 +14,11 @@
 
 use core::ffi::c_void;
 
-use r_efi::efi::{AllocateType, Guid, MemoryType, Status};
-use r_efi::protocols::device_path::Protocol as DevicePathProtocol;
-use r_efi::{eficall, eficall_abi};
+use r_efi::{
+    efi::{AllocateType, Guid, MemoryType, Status},
+    eficall, eficall_abi,
+    protocols::device_path::Protocol as DevicePathProtocol,
+};
 
 pub const PROTOCOL_GUID: Guid = Guid::from_fields(
     0x964e_5b21,

@@ -14,10 +14,13 @@
 
 use core::ffi::c_void;
 
-use r_efi::efi::{AllocateType, Char16, Guid, MemoryType, Status};
-use r_efi::protocols::device_path::Protocol as DevicePathProtocol;
-use r_efi::protocols::file::Protocol as FileProtocol;
-use r_efi::protocols::simple_file_system::Protocol as SimpleFileSystemProtocol;
+use r_efi::{
+    efi::{AllocateType, Char16, Guid, MemoryType, Status},
+    protocols::{
+        device_path::Protocol as DevicePathProtocol, file::Protocol as FileProtocol,
+        simple_file_system::Protocol as SimpleFileSystemProtocol,
+    },
+};
 
 #[repr(C)]
 pub struct FileDevicePathProtocol {

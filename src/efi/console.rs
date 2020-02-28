@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use r_efi::efi::{Boolean, Char16, Event, Handle, Status};
-use r_efi::protocols::simple_text_input::InputKey;
-use r_efi::protocols::simple_text_input::Protocol as SimpleTextInputProtocol;
-use r_efi::protocols::simple_text_output::Mode as SimpleTextOutputMode;
-use r_efi::protocols::simple_text_output::Protocol as SimpleTextOutputProtocol;
+use r_efi::{
+    efi::{Boolean, Char16, Event, Handle, Status},
+    protocols::{
+        simple_text_input::{InputKey, Protocol as SimpleTextInputProtocol},
+        simple_text_output::{Mode as SimpleTextOutputMode, Protocol as SimpleTextOutputProtocol},
+    },
+};
 
 use super::{HandleType, HandleWrapper};
 
