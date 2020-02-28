@@ -52,7 +52,7 @@ pub extern "win64" fn stdout_output_string(
     message: *mut Char16,
 ) -> Status {
     use core::fmt::Write;
-    let mut logger = crate::logger::LOGGER.lock();
+    let mut serial = crate::serial::SERIAL.borrow_mut();
     let mut string_end = false;
 
     loop {
@@ -67,7 +67,7 @@ pub extern "win64" fn stdout_output_string(
             i += 1;
         }
         let s = unsafe { core::str::from_utf8_unchecked(&output) };
-        logger.write_str(s).unwrap();
+        serial.write_str(s).unwrap();
         if string_end {
             break;
         }

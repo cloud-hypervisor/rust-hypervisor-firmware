@@ -17,32 +17,29 @@
 
 use core::fmt;
 
-use cpuio::Port;
-use spin::Mutex;
+use atomic_refcell::AtomicRefCell;
+use x86_64::instructions::port::PortWriteOnly;
 
-pub static LOGGER: Mutex<Logger> = Mutex::new(Logger {
-    port: unsafe { Port::new(0x3f8) },
-});
+pub static SERIAL: AtomicRefCell<Serial> = AtomicRefCell::new(Serial::new());
 
-pub struct Logger {
-    port: Port<u8>,
+pub struct Serial {
+    port: PortWriteOnly<u8>,
 }
 
-impl Logger {
-    pub fn write_byte(&mut self, byte: u8) {
-        self.port.write(byte)
-    }
-
-    pub fn write_string(&mut self, s: &str) {
-        for c in s.chars() {
-            self.write_byte(c as u8);
+impl Serial {
+    pub const fn new() -> Self {
+        // We use COM1 as it is the standard first serial port.
+        Self {
+            port: PortWriteOnly::new(0x3f8),
         }
     }
 }
 
-impl fmt::Write for Logger {
+impl fmt::Write for Serial {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.write_string(s);
+        for b in s.bytes() {
+            unsafe { self.port.write(b) }
+        }
         Ok(())
     }
 }
@@ -52,7 +49,7 @@ macro_rules! log {
     ($($arg:tt)*) => {{
         use core::fmt::Write;
         #[cfg(all(feature = "log-serial", not(test)))]
-        writeln!(&mut crate::logger::LOGGER.lock(), $($arg)*).unwrap();
+        writeln!(crate::serial::SERIAL.borrow_mut(), $($arg)*).unwrap();
         #[cfg(all(feature = "log-serial", test))]
         println!($($arg)*);
     }};

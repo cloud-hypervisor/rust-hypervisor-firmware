@@ -186,7 +186,7 @@ impl<'a> BlockWrapper<'a> {
         let last_block = unsafe { (*block).get_capacity() } - 1;
 
         let size = core::mem::size_of::<BlockWrapper>();
-        let (_status, new_address) = super::ALLOCATOR.lock().allocate_pages(
+        let (_status, new_address) = super::ALLOCATOR.borrow_mut().allocate_pages(
             AllocateType::AllocateAnyPages,
             MemoryType::LoaderData,
             ((size + super::PAGE_SIZE as usize - 1) / super::PAGE_SIZE as usize) as u64,

@@ -84,7 +84,7 @@ pub extern "win64" fn open(
 pub extern "win64" fn close(proto: *mut FileProtocol) -> Status {
     let wrapper = container_of!(proto, FileWrapper, proto);
     super::ALLOCATOR
-        .lock()
+        .borrow_mut()
         .free_pages(&wrapper as *const _ as u64)
 }
 
@@ -208,7 +208,7 @@ pub struct FileSystemWrapper<'a> {
 impl<'a> FileSystemWrapper<'a> {
     fn create_file(&self, root: bool) -> Option<*mut FileWrapper> {
         let size = core::mem::size_of::<FileWrapper>();
-        let (status, new_address) = super::ALLOCATOR.lock().allocate_pages(
+        let (status, new_address) = super::ALLOCATOR.borrow_mut().allocate_pages(
             AllocateType::AllocateAnyPages,
             MemoryType::LoaderData,
             ((size + super::PAGE_SIZE as usize - 1) / super::PAGE_SIZE as usize) as u64,

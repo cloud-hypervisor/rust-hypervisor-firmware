@@ -12,54 +12,58 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cpuio::Port;
+use atomic_refcell::AtomicRefCell;
+use x86_64::instructions::port::{PortReadOnly, PortWriteOnly};
 
 use crate::{
     mem,
     virtio::{Error as VirtioError, VirtioTransport},
 };
 
-const CONFIG_ADDRESS: u16 = 0xcf8;
-const CONFIG_DATA: u16 = 0xcfc;
-
 const MAX_DEVICES: u8 = 32;
 const MAX_FUNCTIONS: u8 = 8;
 
 const INVALID_VENDOR_ID: u16 = 0xffff;
 
-fn pci_config_read_u32(bus: u8, device: u8, func: u8, offset: u8) -> u32 {
-    assert_eq!(offset % 4, 0);
-    assert!(device < MAX_DEVICES);
-    assert!(func < MAX_FUNCTIONS);
+static PCI_CONFIG: AtomicRefCell<PciConfig> = AtomicRefCell::new(PciConfig::new());
 
-    let addr = u32::from(bus) << 16; // bus bits 23-16
-    let addr = addr | u32::from(device) << 11; // slot/device bits 15-11
-    let addr = addr | u32::from(func) << 8; // function bits 10-8
-    let addr = addr | u32::from(offset & 0xfc); // register 7-0
-    let addr = addr | 1u32 << 31; // enable bit 31
-
-    let mut config_address_port: Port<u32> = unsafe { Port::new(CONFIG_ADDRESS) };
-    config_address_port.write(addr);
-
-    let mut config_data_port: Port<u32> = unsafe { Port::new(CONFIG_DATA) };
-
-    config_data_port.read()
+struct PciConfig {
+    address_port: PortWriteOnly<u32>,
+    data_port: PortReadOnly<u32>,
 }
 
-fn pci_config_read_u8(bus: u8, device: u8, func: u8, offset: u8) -> u8 {
-    (pci_config_read_u32(bus, device, func, offset & !3) >> ((offset % 4) * 8)) as u8
-}
+impl PciConfig {
+    const fn new() -> Self {
+        // We use the legacy, port-based Configuration Access Mechanism (CAM).
+        Self {
+            address_port: PortWriteOnly::new(0xcf8),
+            data_port: PortReadOnly::new(0xcfc),
+        }
+    }
 
-fn pci_config_read_u16(bus: u8, device: u8, func: u8, offset: u8) -> u16 {
-    assert_eq!(offset % 2, 0);
-    (pci_config_read_u32(bus, device, func, offset & !3) >> ((offset % 4) * 8)) as u16
+    fn read(&mut self, bus: u8, device: u8, func: u8, offset: u8) -> u32 {
+        assert_eq!(offset % 4, 0);
+        assert!(device < MAX_DEVICES);
+        assert!(func < MAX_FUNCTIONS);
+
+        let addr = u32::from(bus) << 16; // bus bits 23-16
+        let addr = addr | u32::from(device) << 11; // slot/device bits 15-11
+        let addr = addr | u32::from(func) << 8; // function bits 10-8
+        let addr = addr | u32::from(offset & 0xfc); // register 7-0
+        let addr = addr | 1u32 << 31; // enable bit 31
+
+        // SAFETY: We have exclusive access to the ports, so the data read will
+        // correspond to the address written.
+        unsafe {
+            self.address_port.write(addr);
+            self.data_port.read()
+        }
+    }
 }
 
 fn get_device_details(bus: u8, device: u8, func: u8) -> (u16, u16) {
-    (
-        pci_config_read_u16(bus, device, func, 0),
-        pci_config_read_u16(bus, device, func, 2),
-    )
+    let data = PCI_CONFIG.borrow_mut().read(bus, device, func, 0);
+    ((data & 0xffff) as u16, (data >> 16) as u16)
 }
 
 pub fn print_bus() {
@@ -132,16 +136,27 @@ impl PciDevice {
         }
     }
 
-    fn config_read_u8(&self, offset: u8) -> u8 {
-        pci_config_read_u8(self.bus, self.device, self.func, offset)
+    fn read_u8(&self, offset: u8) -> u8 {
+        let offset32 = offset & 0b1111_1100;
+        let shift32 = offset & 0b0000_0011;
+
+        let data = self.read_u32(offset32);
+        (data >> (shift32 * 8)) as u8
     }
 
-    fn config_read_u16(&self, offset: u8) -> u16 {
-        pci_config_read_u16(self.bus, self.device, self.func, offset)
+    fn read_u16(&self, offset: u8) -> u16 {
+        assert_eq!(offset % 2, 0);
+        let offset32 = offset & 0b1111_1100;
+        let shift32 = offset & 0b0000_0011;
+
+        let data = self.read_u32(offset32);
+        (data >> (shift32 * 8)) as u16
     }
 
-    fn config_read_u32(&self, offset: u8) -> u32 {
-        pci_config_read_u32(self.bus, self.device, self.func, offset)
+    fn read_u32(&self, offset: u8) -> u32 {
+        PCI_CONFIG
+            .borrow_mut()
+            .read(self.bus, self.device, self.func, offset)
     }
 
     fn init(&mut self) {
@@ -165,7 +180,7 @@ impl PciDevice {
         //0x24 offset is last bar
         while current_bar_offset < 0x24 {
             #[allow(clippy::blacklisted_name)]
-            let bar = self.config_read_u32(current_bar_offset);
+            let bar = self.read_u32(current_bar_offset);
 
             // lsb is 1 for I/O space bars
             if bar & 1 == 1 {
@@ -184,7 +199,7 @@ impl PciDevice {
                         current_bar_offset += 4;
 
                         #[allow(clippy::blacklisted_name)]
-                        let bar = self.config_read_u32(current_bar_offset);
+                        let bar = self.read_u32(current_bar_offset);
                         self.bars[current_bar].address += u64::from(bar) << 32;
                     }
                     _ => panic!("Unsupported BAR type"),
@@ -254,7 +269,7 @@ impl VirtioTransport for VirtioPciTransport {
         self.device.init();
 
         // Read status register
-        let status = self.device.config_read_u16(0x06);
+        let status = self.device.read_u16(0x06);
 
         // bit 4 of status is capability bit
         if status & 1 << 4 == 0 {
@@ -263,11 +278,11 @@ impl VirtioTransport for VirtioPciTransport {
         }
 
         // capabilities list offset is at 0x34
-        let mut cap_next = self.device.config_read_u8(0x34);
+        let mut cap_next = self.device.read_u8(0x34);
 
         while cap_next < 0xff && cap_next > 0 {
             // vendor specific capability
-            if self.device.config_read_u8(cap_next) == 0x09 {
+            if self.device.read_u8(cap_next) == 0x09 {
                 // These offsets are into the following structure:
                 // struct virtio_pci_cap {
                 //         u8 cap_vndr;    /* Generic PCI field: PCI_CAP_ID_VNDR */
@@ -279,11 +294,11 @@ impl VirtioTransport for VirtioPciTransport {
                 //         le32 offset;    /* Offset within bar. */
                 //         le32 length;    /* Length of the structure, in bytes. */
                 // };
-                let cfg_type = self.device.config_read_u8(cap_next + 3);
+                let cfg_type = self.device.read_u8(cap_next + 3);
                 #[allow(clippy::blacklisted_name)]
-                let bar = self.device.config_read_u8(cap_next + 4);
-                let offset = self.device.config_read_u32(cap_next + 8);
-                let length = self.device.config_read_u32(cap_next + 12);
+                let bar = self.device.read_u8(cap_next + 4);
+                let offset = self.device.read_u32(cap_next + 8);
+                let length = self.device.read_u32(cap_next + 12);
 
                 if cfg_type == VirtioPciCapabilityType::CommonConfig as u8 {
                     self.region = mem::MemoryRegion::new(
@@ -302,7 +317,7 @@ impl VirtioTransport for VirtioPciTransport {
                     //         struct virtio_pci_cap cap;
                     //         le32 notify_off_multiplier; /* Multiplier for queue_notify_off. */
                     // };
-                    self.notify_off_multiplier = self.device.config_read_u32(cap_next + 16);
+                    self.notify_off_multiplier = self.device.read_u32(cap_next + 16);
                 }
 
                 if cfg_type == VirtioPciCapabilityType::DeviceConfig as u8 {
@@ -312,7 +327,7 @@ impl VirtioTransport for VirtioPciTransport {
                     );
                 }
             }
-            cap_next = self.device.config_read_u8(cap_next + 1)
+            cap_next = self.device.read_u8(cap_next + 1)
         }
 
         Ok(())
