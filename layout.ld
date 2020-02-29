@@ -13,10 +13,6 @@ ram_max = 2M;
 /* Our stack grows down from ram_max. TODO: Add a guard for stack overflows. */
 stack_size = 64K;
 
-/* Pagetable locations loaded by Firecracker/cloud-hypervisor */
-pml4t = 0x9000;
-pml3t = 0xa000;
-
 SECTIONS
 {
 	/* Mapping in the program headers makes it easier to mmap the whole file. */
@@ -31,12 +27,6 @@ SECTIONS
 	} :text
 
 	firmware_ram_size = . - ram_min;
-
-	/* Memory for identity mapping, keep synced with ADDRESS_SPACE_GIB */
-	address_space_gib = 4;
-	. = ALIGN(4K);
-	pml2ts = .;
-	. += 4K * address_space_gib;
 
 	ASSERT((. <= ram_max - stack_size), "firmware size too big for RAM region")
 
