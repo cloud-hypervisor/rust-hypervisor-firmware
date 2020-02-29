@@ -2,9 +2,7 @@ ENTRY(ram64_start)
 
 PHDRS
 {
-  rodata PT_LOAD FILEHDR PHDRS ;
-  data   PT_LOAD               ;
-  text   PT_LOAD               ;
+  program PT_LOAD FILEHDR PHDRS ;
 }
 
 /* Loaders like to put stuff in low memory (< 1M), so we don't use it. */
@@ -19,12 +17,10 @@ SECTIONS
 	. = ram_min;
 	. += SIZEOF_HEADERS;
 
-	.rodata : { *(.rodata .rodata.*)            } :rodata
-	.data   : { *(.data .data.*) *(.bss .bss.*) } :data
-	.text   : {
-		*(.text .text.*)
-		*(.ram64)
-	} :text
+	.rodata : { *(.rodata .rodata.*) } :program
+	.text   : { *(.text .text.*)     } :program
+	.data   : { *(.data .data.*)     } :program
+	.bss    : { *(.bss .bss.*)       } :program
 
 	firmware_ram_size = . - ram_min;
 

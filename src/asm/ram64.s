@@ -1,4 +1,4 @@
-.section .ram64, "ax"
+.section .text, "ax"
 .global ram64_start
 .code64
 
