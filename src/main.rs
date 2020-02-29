@@ -31,6 +31,8 @@ mod serial;
 #[macro_use]
 mod common;
 
+#[cfg(not(test))]
+mod asm;
 mod block;
 mod bzimage;
 mod efi;
@@ -42,9 +44,6 @@ mod part;
 mod pci;
 mod pe;
 mod virtio;
-
-#[cfg(not(test))]
-global_asm!(include_str!("asm/ram64.s"));
 
 #[cfg(all(not(test), feature = "log-panic"))]
 #[panic_handler]
