@@ -52,7 +52,7 @@ pub extern "win64" fn stdout_output_string(
     message: *mut Char16,
 ) -> Status {
     use core::fmt::Write;
-    let mut serial = crate::serial::SERIAL.borrow_mut();
+    let mut serial = crate::serial::Serial;
     let mut string_end = false;
 
     loop {
