@@ -20,25 +20,16 @@ use core::fmt;
 use atomic_refcell::AtomicRefCell;
 use x86_64::instructions::port::PortWriteOnly;
 
-pub static SERIAL: AtomicRefCell<Serial> = AtomicRefCell::new(Serial::new());
+// We use COM1 as it is the standard first serial port.
+static PORT: AtomicRefCell<PortWriteOnly<u8>> = AtomicRefCell::new(PortWriteOnly::new(0x3f8));
 
-pub struct Serial {
-    port: PortWriteOnly<u8>,
-}
-
-impl Serial {
-    pub const fn new() -> Self {
-        // We use COM1 as it is the standard first serial port.
-        Self {
-            port: PortWriteOnly::new(0x3f8),
-        }
-    }
-}
+pub struct Serial;
 
 impl fmt::Write for Serial {
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        let mut port = PORT.borrow_mut();
         for b in s.bytes() {
-            unsafe { self.port.write(b) }
+            unsafe { port.write(b) }
         }
         Ok(())
     }
@@ -49,7 +40,7 @@ macro_rules! log {
     ($($arg:tt)*) => {{
         use core::fmt::Write;
         #[cfg(all(feature = "log-serial", not(test)))]
-        writeln!(crate::serial::SERIAL.borrow_mut(), $($arg)*).unwrap();
+        writeln!(crate::serial::Serial, $($arg)*).unwrap();
         #[cfg(all(feature = "log-serial", test))]
         println!($($arg)*);
     }};
