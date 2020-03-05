@@ -156,7 +156,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
 pub extern "C" fn rust64_start() -> ! {
     log!("\nStarting..");
     enable_sse();
-    paging::MANAGER.borrow_mut().setup();
+    paging::setup();
 
     pci::print_bus();
 
