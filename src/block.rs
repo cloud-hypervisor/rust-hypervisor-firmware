@@ -69,10 +69,10 @@ pub struct VirtioBlockDevice<'a> {
 #[repr(align(64))]
 #[derive(Default)]
 struct DriverState {
+    next_head: usize,
     descriptors: [Desc; QUEUE_SIZE],
     avail: AvailRing,
     used: UsedRing,
-    next_head: usize,
 }
 
 pub enum Error {
