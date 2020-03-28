@@ -23,20 +23,21 @@ pub struct LoaderConfig {
     pub cmdline: [u8; 4096],
 }
 
+#[derive(Debug)]
 pub enum Error {
-    FileError,
-    BzImageError,
+    FileError(fat::Error),
+    BzImageError(bzimage::Error),
 }
 
 impl From<fat::Error> for Error {
-    fn from(_: fat::Error) -> Error {
-        Error::FileError
+    fn from(e: fat::Error) -> Error {
+        Error::FileError(e)
     }
 }
 
 impl From<bzimage::Error> for Error {
-    fn from(_: bzimage::Error) -> Error {
-        Error::BzImageError
+    fn from(e: bzimage::Error) -> Error {
+        Error::BzImageError(e)
     }
 }
 
