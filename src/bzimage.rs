@@ -143,7 +143,7 @@ pub fn load_kernel(f: &mut dyn Read) -> Result<u64, Error> {
     f.read(&mut buf[0..512])?;
     f.read(&mut buf[512..])?;
 
-    let setup = crate::mem::MemoryRegion::from_slice(&buf[..]);
+    let setup = crate::mem::MemoryRegion::from_bytes(&mut buf[..]);
 
     if setup.read_u16(0x1fe) != 0xAA55 {
         return Err(Error::MagicMissing);
