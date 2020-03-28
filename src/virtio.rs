@@ -13,6 +13,7 @@
 // limitations under the License.
 
 /// Virtio related errors
+#[derive(Debug)]
 pub enum Error {
     VirtioUnsupportedDevice,
     VirtioLegacyOnly,

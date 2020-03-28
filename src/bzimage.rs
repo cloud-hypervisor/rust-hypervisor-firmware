@@ -14,16 +14,17 @@
 
 use crate::fat::{self, Read};
 
+#[derive(Debug)]
 pub enum Error {
-    FileError,
+    FileError(fat::Error),
     KernelOld,
     MagicMissing,
     NotRelocatable,
 }
 
 impl From<fat::Error> for Error {
-    fn from(_: fat::Error) -> Error {
-        Error::FileError
+    fn from(e: fat::Error) -> Error {
+        Error::FileError(e)
     }
 }
 
@@ -85,7 +86,7 @@ pub fn load_initrd(f: &mut dyn Read) -> Result<(), Error> {
             let mut data: [u8; 512] = [0; 512];
             match f.read(&mut data) {
                 Err(crate::fat::Error::EndOfFile) => break,
-                Err(_) => return Err(Error::FileError),
+                Err(e) => return Err(Error::FileError(e)),
                 Ok(_) => {}
             }
             let dst = initrd_region.as_mut_slice(u64::from(offset), u64::from(bytes_remaining));
@@ -96,7 +97,7 @@ pub fn load_initrd(f: &mut dyn Read) -> Result<(), Error> {
         let dst = initrd_region.as_mut_slice(u64::from(offset), 512);
         match f.read(dst) {
             Err(crate::fat::Error::EndOfFile) => break,
-            Err(_) => return Err(Error::FileError),
+            Err(e) => return Err(Error::FileError(e)),
             Ok(_) => {}
         }
 
@@ -202,7 +203,7 @@ pub fn load_kernel(f: &mut dyn Read) -> Result<u64, Error> {
                 // 0x200 is the startup_64 offset
                 return Ok(u64::from(KERNEL_LOCATION) + 0x200);
             }
-            Err(_) => return Err(Error::FileError),
+            Err(e) => return Err(Error::FileError(e)),
             Ok(_) => {}
         };
 
