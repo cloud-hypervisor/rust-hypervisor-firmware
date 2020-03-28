@@ -34,6 +34,7 @@ mod common;
 #[cfg(not(test))]
 mod asm;
 mod block;
+mod boot;
 mod bzimage;
 mod efi;
 mod fat;
