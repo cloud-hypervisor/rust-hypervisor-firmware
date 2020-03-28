@@ -14,6 +14,7 @@
 
 use crate::{
     bzimage,
+    common::ascii_strip,
     fat::{self, Read},
 };
 
@@ -102,10 +103,6 @@ fn parse_entry(f: &mut fat::File) -> Result<LoaderConfig, fat::Error> {
     }
 
     Ok(loader_config)
-}
-
-fn ascii_strip(s: &[u8]) -> &str {
-    unsafe { core::str::from_utf8_unchecked(&s) }.trim_matches(char::from(0))
 }
 
 const ENTRY_DIRECTORY: &str = "/loader/entries/";
