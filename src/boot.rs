@@ -1,6 +1,10 @@
 use core::mem;
 
-use crate::common;
+use crate::{
+    common,
+    fat::{Error, Read},
+    mem::MemoryRegion,
+};
 
 // Common data needed for all boot paths
 pub trait Info {
@@ -141,6 +145,26 @@ pub struct Header {
     pub pref_address: u64,
     pub init_size: u32,
     pub handover_offset: u32,
+}
+
+impl Header {
+    // Read a kernel header from the first two sectors of a file
+    pub fn from_file(f: &mut dyn Read) -> Result<Self, Error> {
+        let mut data: [u8; 1024] = [0; 1024];
+        let mut region = MemoryRegion::from_bytes(&mut data);
+
+        f.seek(0)?;
+        f.load_file(&mut region)?;
+
+        #[repr(C)]
+        struct HeaderData {
+            before: [u8; HEADER_START],
+            hdr: Header,
+            after: [u8; 1024 - HEADER_END],
+        }
+        // SAFETY: Struct consists entirely of primitive integral types.
+        Ok(unsafe { mem::transmute::<_, HeaderData>(data) }.hdr)
+    }
 }
 
 // Right now the stucts below are unused, so we only need them to be the correct

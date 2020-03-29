@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::block::SectorRead;
+use crate::{block::SectorRead, mem::MemoryRegion};
 
 #[repr(packed)]
 struct Header {
@@ -244,6 +244,24 @@ pub trait Read {
     fn read(&mut self, data: &mut [u8]) -> Result<u32, Error>;
     fn seek(&mut self, offset: u32) -> Result<(), Error>;
     fn get_size(&self) -> u32;
+
+    // Loads the remainder of the file into the specified memory region
+    fn load_file(&mut self, mem: &mut MemoryRegion) -> Result<(), Error> {
+        let mut chunks = mem.as_bytes().chunks_exact_mut(512);
+        for chunk in chunks.by_ref() {
+            self.read(chunk)?;
+        }
+        let last = chunks.into_remainder();
+        if last.is_empty() {
+            return Ok(());
+        }
+        // Use tmp buffer for last, partial sector
+        let mut dst = [0; 512];
+        let bytes = self.read(&mut dst)? as usize;
+        assert_eq!(bytes, last.len());
+        last.copy_from_slice(&dst[..bytes]);
+        Ok(())
+    }
 }
 
 impl<'a> Read for File<'a> {
