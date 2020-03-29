@@ -11,13 +11,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use atomic_refcell::AtomicRefCell;
 
-use crate::fat::{self, Read};
+use crate::{
+    boot::{E820Entry, Header, Info, Params},
+    fat::{self, Read},
+    mem::MemoryRegion,
+};
 
 #[derive(Debug)]
 pub enum Error {
     FileError(fat::Error),
-    KernelOld,
+    NoInitrdMemory,
     MagicMissing,
     NotRelocatable,
 }
@@ -28,185 +33,145 @@ impl From<fat::Error> for Error {
     }
 }
 
-// From firecracker
-/// Kernel command line start address.
-const CMDLINE_START: usize = 0x4b000;
-/// Kernel command line start address maximum size.
-const CMDLINE_MAX_SIZE: usize = 0x10000;
-/// The 'zero page', a.k.a linux kernel bootparams.
-pub const ZERO_PAGE_START: usize = 0x7000;
+const KERNEL_LOCATION: u64 = 0x20_0000;
 
-const KERNEL_LOCATION: u32 = 0x20_0000;
+#[repr(transparent)]
+pub struct Kernel(Params);
 
-const E820_RAM: u32 = 1;
-
-#[repr(C, packed)]
-struct E820Entry {
-    addr: u64,
-    size: u64,
-    entry_type: u32,
-}
-
-pub fn load_initrd(f: &mut dyn Read) -> Result<(), Error> {
-    let mut zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
-
-    let mut max_load_address = u64::from(zero_page.read_u32(0x22c));
-    if max_load_address == 0 {
-        max_load_address = 0x37ff_ffff;
+impl Kernel {
+    pub fn new(info: &dyn Info) -> Self {
+        let mut kernel = Self(Params::default());
+        kernel.0.acpi_rsdp_addr = info.rsdp_addr();
+        kernel.0.set_entries(info);
+        kernel
     }
 
-    let e820_count = zero_page.read_u8(0x1e8);
-    let e820_table = zero_page.as_mut_slice::<E820Entry>(0x2d0, u64::from(e820_count));
+    pub fn load_kernel(&mut self, f: &mut dyn Read) -> Result<(), Error> {
+        self.0.hdr = Header::from_file(f)?;
 
-    // Search E820 table for highest usable ram location that is below the limit.
-    let mut top_of_usable_ram = 0;
-    for entry in e820_table {
-        if entry.entry_type == E820_RAM {
-            let m = entry.addr + entry.size - 1;
-            if m > top_of_usable_ram && m < max_load_address {
-                top_of_usable_ram = m;
-            }
+        if self.0.hdr.boot_flag != 0xAA55 || self.0.hdr.header != *b"HdrS" {
+            return Err(Error::MagicMissing);
         }
-    }
-
-    if top_of_usable_ram > max_load_address {
-        top_of_usable_ram = max_load_address;
-    }
-
-    // Align address to 2MiB boundary as we use 2 MiB pages
-    let initrd_address = (top_of_usable_ram - u64::from(f.get_size())) & !((2 << 20) - 1);
-    let mut initrd_region = crate::mem::MemoryRegion::new(initrd_address, u64::from(f.get_size()));
-
-    let mut offset = 0;
-    while offset < f.get_size() {
-        let bytes_remaining = f.get_size() - offset;
-
-        // Use intermediata buffer for last, partial sector
-        if bytes_remaining < 512 {
-            let mut data: [u8; 512] = [0; 512];
-            match f.read(&mut data) {
-                Err(crate::fat::Error::EndOfFile) => break,
-                Err(e) => return Err(Error::FileError(e)),
-                Ok(_) => {}
-            }
-            let dst = initrd_region.as_mut_slice(u64::from(offset), u64::from(bytes_remaining));
-            dst.copy_from_slice(&data[0..bytes_remaining as usize]);
-            break;
+        // Check relocatable
+        if self.0.hdr.version < 0x205 || self.0.hdr.relocatable_kernel == 0 {
+            return Err(Error::NotRelocatable);
         }
 
-        let dst = initrd_region.as_mut_slice(u64::from(offset), 512);
-        match f.read(dst) {
-            Err(crate::fat::Error::EndOfFile) => break,
-            Err(e) => return Err(Error::FileError(e)),
-            Ok(_) => {}
-        }
+        // Skip over the setup sectors
+        let setup_sects = match self.0.hdr.setup_sects {
+            0 => 4,
+            n => n as u32,
+        };
+        let setup_bytes = (setup_sects + 1) * 512;
+        let remaining_bytes = f.get_size() - setup_bytes;
 
-        offset += 512;
+        let mut region = MemoryRegion::new(KERNEL_LOCATION, remaining_bytes as u64);
+        f.seek(setup_bytes)?;
+        f.load_file(&mut region)?;
+
+        // Fill out "write/modify" fields
+        self.0.hdr.type_of_loader = 0xff; // Unknown Loader
+        self.0.hdr.code32_start = KERNEL_LOCATION as u32; // Where we load the kernel
+        self.0.hdr.cmd_line_ptr = CMDLINE_START as u32; // Where we load the cmdline
+        Ok(())
     }
 
-    // initrd pointer/size
-    zero_page.write_u32(0x218, initrd_address as u32);
-    zero_page.write_u32(0x21c, f.get_size());
-    Ok(())
-}
+    // Compute the load address for the initial ramdisk
+    fn initrd_addr(&self, size: u64) -> Option<u64> {
+        let initrd_addr_max = match self.0.hdr.initrd_addr_max {
+            0 => 0x37FF_FFFF,
+            a => a as u64,
+        };
+        let max_start = (initrd_addr_max + 1) - size;
 
-pub fn append_commandline(addition: &str) -> Result<(), Error> {
-    let mut cmdline_region =
-        crate::mem::MemoryRegion::new(CMDLINE_START as u64, CMDLINE_MAX_SIZE as u64);
-    let zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
-
-    let cmdline = cmdline_region.as_mut_slice::<u8>(0, CMDLINE_MAX_SIZE as u64);
-
-    // Use the actual string length but limit to the orgiginal incoming size
-    let orig_len = zero_page.read_u32(0x238) as usize;
-
-    let orig_cmdline = unsafe {
-        core::str::from_utf8_unchecked(&cmdline[0..orig_len]).trim_matches(char::from(0))
-    };
-    let orig_len = orig_cmdline.len();
-
-    cmdline[orig_len] = b' ';
-    cmdline[orig_len + 1..orig_len + 1 + addition.len()].copy_from_slice(addition.as_bytes());
-    cmdline[orig_len + 1 + addition.len()] = 0;
-
-    // Commandline pointer/size
-    zero_page.write_u32(0x228, CMDLINE_START as u32);
-    zero_page.write_u32(0x238, (orig_len + addition.len() + 1) as u32);
-
-    Ok(())
-}
-
-pub fn load_kernel(f: &mut dyn Read) -> Result<u64, Error> {
-    f.seek(0)?;
-
-    let mut buf: [u8; 1024] = [0; 1024];
-
-    f.read(&mut buf[0..512])?;
-    f.read(&mut buf[512..])?;
-
-    let setup = crate::mem::MemoryRegion::from_bytes(&mut buf[..]);
-
-    if setup.read_u16(0x1fe) != 0xAA55 {
-        return Err(Error::MagicMissing);
-    }
-
-    if setup.read_u32(0x202) != 0x5372_6448 {
-        return Err(Error::MagicMissing);
-    }
-
-    // Need for relocation
-    if setup.read_u16(0x206) < 0x205 {
-        return Err(Error::KernelOld);
-    }
-
-    // Check relocatable
-    if setup.read_u8(0x234) == 0 {
-        return Err(Error::NotRelocatable);
-    }
-
-    let header_start = 0x1f1 as usize;
-    let header_end = 0x202 + buf[0x0201] as usize;
-
-    // Reuse the zero page that we were originally given
-    // TODO: Zero and fill it ourself but will need to save E820 details
-    let mut zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
-
-    let dst = zero_page.as_mut_slice(header_start as u64, (header_end - header_start) as u64);
-    dst.copy_from_slice(&buf[header_start..header_end]);
-
-    // Unknown loader
-    zero_page.write_u8(0x210, 0xff);
-
-    // Where we will load the kernel into
-    zero_page.write_u32(0x214, KERNEL_LOCATION);
-
-    let mut setup_sects = buf[header_start] as usize;
-
-    if setup_sects == 0 {
-        setup_sects = 4;
-    }
-
-    setup_sects += 1; // Include the boot sector
-
-    let setup_bytes = setup_sects * 512; // Use to start reading the main image
-
-    let mut load_offset = u64::from(KERNEL_LOCATION);
-
-    f.seek(setup_bytes as u32)?;
-
-    loop {
-        let mut dst = crate::mem::MemoryRegion::new(load_offset, 512);
-        let dst = dst.as_mut_slice(0, 512);
-
-        match f.read(dst) {
-            Err(crate::fat::Error::EndOfFile) => {
-                // 0x200 is the startup_64 offset
-                return Ok(u64::from(KERNEL_LOCATION) + 0x200);
+        let mut option_addr = None;
+        for i in 0..self.0.num_entries() {
+            let entry = self.0.entry(i);
+            if entry.entry_type != E820Entry::RAM_TYPE {
+                continue;
             }
-            Err(e) => return Err(Error::FileError(e)),
-            Ok(_) => {}
+            let addr = entry.addr + entry.size - size;
+            // Align address to 2MiB boundary as we use 2 MiB pages
+            let addr = addr & !((2 << 20) - 1);
+            // The ramdisk must fit in the region completely
+            if addr > max_start || addr < entry.addr {
+                continue;
+            }
+            // Use the largest address we can find
+            if let Some(load_addr) = option_addr {
+                if load_addr >= addr {
+                    continue;
+                }
+            }
+            option_addr = Some(addr)
+        }
+        option_addr
+    }
+
+    pub fn load_initrd(&mut self, f: &mut dyn Read) -> Result<(), Error> {
+        let size = f.get_size() as u64;
+        let addr = match self.initrd_addr(size) {
+            Some(addr) => addr,
+            None => return Err(Error::NoInitrdMemory),
         };
 
-        load_offset += 512;
+        let mut region = MemoryRegion::new(addr, size);
+        f.seek(0)?;
+        f.load_file(&mut region)?;
+
+        // initrd pointer/size
+        self.0.hdr.ramdisk_image = addr as u32;
+        self.0.hdr.ramdisk_size = size as u32;
+        Ok(())
+    }
+
+    pub fn append_cmdline(&mut self, addition: &[u8]) {
+        if !addition.is_empty() {
+            CMDLINE.borrow_mut().append(addition);
+            assert!(CMDLINE.borrow().len() < self.0.hdr.cmdline_size);
+        }
+    }
+
+    pub fn boot(&mut self) {
+        // 0x200 is the startup_64 offset
+        let jump_address = self.0.hdr.code32_start as u64 + 0x200;
+        // Rely on x86 C calling convention where second argument is put into %rsi register
+        let ptr = jump_address as *const ();
+        let code: extern "C" fn(usize, usize) = unsafe { core::mem::transmute(ptr) };
+        (code)(0 /* dummy value */, &mut self.0 as *mut _ as usize);
+    }
+}
+
+// This is the highest region at which we can load the kernel command line.
+const CMDLINE_START: u64 = 0x4b000;
+const CMDLINE_MAX_LEN: u64 = 0x10000;
+
+static CMDLINE: AtomicRefCell<CmdLine> = AtomicRefCell::new(CmdLine::new());
+
+struct CmdLine {
+    region: MemoryRegion,
+    length: usize, // Does not include null pointer
+}
+
+impl CmdLine {
+    const fn new() -> Self {
+        Self {
+            region: MemoryRegion::new(CMDLINE_START, CMDLINE_MAX_LEN),
+            length: 0,
+        }
+    }
+
+    const fn len(&self) -> u32 {
+        self.length as u32
+    }
+
+    fn append(&mut self, args: &[u8]) {
+        let bytes = self.region.as_bytes();
+        bytes[self.length] = b' ';
+        self.length += 1;
+
+        bytes[self.length..self.length + args.len()].copy_from_slice(args);
+        self.length += args.len();
+        bytes[self.length] = 0;
     }
 }
