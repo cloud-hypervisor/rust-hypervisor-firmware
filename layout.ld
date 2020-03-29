@@ -22,6 +22,7 @@ SECTIONS
 	data_start = .;
 	.rodata : { *(.rodata .rodata.*) } :ram
 	.text   : { *(.text .text.*)     }
+	.text32 : { *(.text32)           }
 	.data   : { *(.data .data.*)     }
 	data_size = . - data_start;
 
