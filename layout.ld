@@ -3,6 +3,7 @@ ENTRY(linux64_start)
 PHDRS
 {
   ram  PT_LOAD FILEHDR PHDRS ;
+  note PT_NOTE               ;
 }
 
 /* Loaders like to put stuff in low memory (< 1M), so we don't use it. */
@@ -13,9 +14,10 @@ stack_size = 64K;
 
 SECTIONS
 {
-	/* Mapping the program headers into RAM makes the file smaller. */
+	/* Mapping the program headers and note into RAM makes the file smaller. */
 	. = ram_min;
 	. += SIZEOF_HEADERS;
+	.note : { *(.note) } :note :ram
 
 	/* These sections are mapped into RAM from the file. Omitting :ram from
 	   later sections avoids emitting empty sections in the final binary.     */
