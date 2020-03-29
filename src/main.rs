@@ -153,9 +153,16 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice) -> bool {
     true
 }
 
-#[cfg_attr(not(test), no_mangle)]
-pub extern "C" fn rust64_start() -> ! {
-    log!("\nStarting..");
+#[no_mangle]
+pub extern "C" fn rust64_start(_rdi: *const (), rsi: Option<&boot::Params>) -> ! {
+    if let Some(boot_params) = rsi {
+        log!("\nBooting via Linux Boot Protocol");
+        run(boot_params)
+    }
+    panic!("Unable to determine boot protocol")
+}
+
+fn run(info: &dyn boot::Info) -> ! {
     enable_sse();
     paging::setup();
 
