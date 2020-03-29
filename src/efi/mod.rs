@@ -27,6 +27,8 @@ use r_efi::{
     },
 };
 
+use crate::boot;
+
 mod alloc;
 mod block;
 mod console;
@@ -574,29 +576,13 @@ extern "win64" fn image_unload(_: Handle) -> Status {
     efi::Status::UNSUPPORTED
 }
 
-/// The 'zero page', a.k.a linux kernel bootparams.
-pub const ZERO_PAGE_START: usize = 0x7000;
-
-const E820_RAM: u32 = 1;
-
-#[repr(C, packed)]
-struct E820Entry {
-    addr: u64,
-    size: u64,
-    entry_type: u32,
-}
-
 const PAGE_SIZE: u64 = 4096;
 
 // Populate allocator from E820, fixed ranges for the firmware and the loaded binary.
-fn populate_allocator(image_address: u64, image_size: u64) {
-    let mut zero_page = crate::mem::MemoryRegion::new(ZERO_PAGE_START as u64, 4096);
-
-    let e820_count = zero_page.read_u8(0x1e8);
-    let e820_table = zero_page.as_mut_slice::<E820Entry>(0x2d0, u64::from(e820_count));
-
-    for entry in e820_table {
-        if entry.entry_type == E820_RAM {
+fn populate_allocator(info: &dyn boot::Info, image_address: u64, image_size: u64) {
+    for i in 0..info.num_entries() {
+        let entry = info.entry(i);
+        if entry.entry_type == boot::E820Entry::RAM_TYPE {
             ALLOCATOR.borrow_mut().add_initial_allocation(
                 MemoryType::ConventionalMemory,
                 entry.size / PAGE_SIZE,
@@ -633,6 +619,7 @@ pub fn efi_exec(
     address: u64,
     loaded_address: u64,
     loaded_size: u64,
+    info: &dyn boot::Info,
     fs: &crate::fat::Filesystem,
     block: *const crate::block::VirtioBlockDevice,
 ) {
@@ -715,7 +702,7 @@ pub fn efi_exec(
     };
 
     let vendor_data = 0u32;
-    let acpi_rsdp_ptr = unsafe { *((ZERO_PAGE_START + 0x70) as u64 as *const u64) };
+    let acpi_rsdp_ptr = info.rsdp_addr();
 
     let mut ct = if acpi_rsdp_ptr != 0 {
         efi::ConfigurationTable {
@@ -765,7 +752,7 @@ pub fn efi_exec(
         configuration_table: &mut ct,
     };
 
-    populate_allocator(loaded_address, loaded_size);
+    populate_allocator(info, loaded_address, loaded_size);
 
     let efi_part_id = unsafe { block::populate_block_wrappers(&mut BLOCK_WRAPPERS, block) };
 
