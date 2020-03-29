@@ -13,7 +13,8 @@
 // limitations under the License.
 
 use crate::{
-    bzimage,
+    boot,
+    bzimage::{self, Kernel},
     common::ascii_strip,
     fat::{self, Read},
 };
@@ -121,7 +122,7 @@ fn default_entry_path(fs: &fat::Filesystem) -> Result<[u8; 260], fat::Error> {
     Ok(entry_path)
 }
 
-pub fn load_default_entry(fs: &fat::Filesystem) -> Result<u64, Error> {
+pub fn load_default_entry(fs: &fat::Filesystem, info: &dyn boot::Info) -> Result<Kernel, Error> {
     let default_entry_path = default_entry_path(&fs)?;
     let default_entry_path = ascii_strip(&default_entry_path);
 
@@ -132,19 +133,20 @@ pub fn load_default_entry(fs: &fat::Filesystem) -> Result<u64, Error> {
     let initrd_path = ascii_strip(&entry.initrd_path);
     let cmdline = ascii_strip(&entry.cmdline);
 
+    let mut kernel = Kernel::new(info);
+
     let mut bzimage_file = fs.open(bzimage_path)?;
-    let jump_address = bzimage::load_kernel(&mut bzimage_file)?;
+    kernel.load_kernel(&mut bzimage_file)?;
 
     if !initrd_path.is_empty() {
         let mut initrd_file = fs.open(initrd_path)?;
-        bzimage::load_initrd(&mut initrd_file)?;
+        kernel.load_initrd(&mut initrd_file)?;
     }
 
-    if !cmdline.is_empty() {
-        bzimage::append_commandline(cmdline)?
-    }
+    kernel.append_cmdline(info.cmdline());
+    kernel.append_cmdline(cmdline.as_bytes());
 
-    Ok(jump_address)
+    Ok(kernel)
 }
 
 #[cfg(test)]
