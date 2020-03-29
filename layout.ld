@@ -1,4 +1,4 @@
-ENTRY(ram64_start)
+ENTRY(linux64_start)
 
 PHDRS
 {
