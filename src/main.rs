@@ -44,6 +44,7 @@ mod paging;
 mod part;
 mod pci;
 mod pe;
+mod pvh;
 mod virtio;
 
 #[cfg(all(not(test), feature = "log-panic"))]
