@@ -2,7 +2,7 @@ ENTRY(ram64_start)
 
 PHDRS
 {
-  program PT_LOAD FILEHDR PHDRS ;
+  ram  PT_LOAD FILEHDR PHDRS ;
 }
 
 /* Loaders like to put stuff in low memory (< 1M), so we don't use it. */
@@ -13,16 +13,26 @@ stack_size = 64K;
 
 SECTIONS
 {
-	/* Mapping in the program headers makes it easier to mmap the whole file. */
+	/* Mapping the program headers into RAM makes the file smaller. */
 	. = ram_min;
 	. += SIZEOF_HEADERS;
 
-	.rodata : { *(.rodata .rodata.*) } :program
-	.text   : { *(.text .text.*)     } :program
-	.data   : { *(.data .data.*)     } :program
-	.bss    : { *(.bss .bss.*)       } :program
+	/* These sections are mapped into RAM from the file. Omitting :ram from
+	   later sections avoids emitting empty sections in the final binary.     */
+	data_start = .;
+	.rodata : { *(.rodata .rodata.*) } :ram
+	.text   : { *(.text .text.*)     }
+	.data   : { *(.data .data.*)     }
+	data_size = . - data_start;
 
-	firmware_ram_size = . - ram_min;
+	/* The BSS section isn't mapped from any file data. It is simply zeroed
+	   in RAM. So our file size should be computed from here.                 */
+	file_size = . - ram_min;
+	.bss : {
+		bss_start = .;
+		*(.bss .bss.*)
+		bss_size = . - bss_start;
+	}
 
 	ASSERT((. <= ram_max - stack_size), "firmware size too big for RAM region")
 
