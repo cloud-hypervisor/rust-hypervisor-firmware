@@ -105,7 +105,6 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn boot::Info
 
     match loader::load_default_entry(&f, info) {
         Ok(mut kernel) => {
-            device.reset();
             log!("Jumping to kernel");
             kernel.boot();
             return true;
@@ -133,7 +132,6 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn boot::Info
         }
     };
 
-    device.reset();
     log!("Executable loaded");
     efi::efi_exec(entry_addr, 0x20_0000, size, info, &f, device);
     true

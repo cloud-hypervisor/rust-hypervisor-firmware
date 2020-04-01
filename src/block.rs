@@ -123,10 +123,6 @@ impl<'a> VirtioBlockDevice<'a> {
         }
     }
 
-    pub fn reset(&self) {
-        self.transport.reset()
-    }
-
     pub fn init(&mut self) -> Result<(), VirtioError> {
         const VIRTIO_SUBSYSTEM_BLOCK: u32 = 0x2;
         const VIRTIO_F_VERSION_1: u64 = 1 << 32;
