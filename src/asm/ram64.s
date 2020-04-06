@@ -7,8 +7,8 @@ linux64_start:
     xorq %rdi, %rdi
 
 ram64_start:
-    # Setup the stack (at the end of our RAM region)
-    movq $ram_max, %rsp
+    # Initialize the stack pointer (Rust code always uses the stack)
+    movq $stack_start, %rsp
 
     # PVH start_info is in %rdi, the first paramter of the System V ABI.
     # BootParams are in %rsi, the second paramter of the System V ABI.
