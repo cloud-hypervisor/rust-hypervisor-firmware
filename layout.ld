@@ -8,9 +8,6 @@ PHDRS
 
 /* Loaders like to put stuff in low memory (< 1M), so we don't use it. */
 ram_min = 1M;
-ram_max = 2M;
-/* Our stack grows down from ram_max. TODO: Add a guard for stack overflows. */
-stack_size = 64K;
 
 SECTIONS
 {
@@ -28,16 +25,18 @@ SECTIONS
 	.data   : { *(.data .data.*)     }
 	data_size = . - data_start;
 
-	/* The BSS section isn't mapped from any file data. It is simply zeroed
-	   in RAM. So our file size should be computed from here.                 */
-	file_size = . - ram_min;
+	/* The BSS section isn't mapped from file data. It is just zeroed in RAM. */
 	.bss : {
 		bss_start = .;
 		*(.bss .bss.*)
 		bss_size = . - bss_start;
 	}
 
-	ASSERT((. <= ram_max - stack_size), "firmware size too big for RAM region")
+	/* Our stack grows down and is page-algined. TODO: Add stack guard pages. */
+	.stack (NOLOAD) : ALIGN(4K) { . += 64K; }
+	stack_start = .;
+	/* ram32.s only maps the first 2 MiB, and that must include the stack.    */
+	ASSERT((. <= 2M), "Stack overflows initial identity-mapped memory region")
 
 	/* Match edk2's GccBase.lds DISCARD section */
 	/DISCARD/ : {
