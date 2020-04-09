@@ -38,6 +38,7 @@ mod boot;
 mod bzimage;
 mod efi;
 mod fat;
+mod gdt;
 mod loader;
 mod mem;
 mod paging;

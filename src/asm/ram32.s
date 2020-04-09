@@ -41,6 +41,6 @@ enable_paging:
 jump_to_64bit:
     # We are now in 32-bit compatibility mode. To enter 64-bit mode, we need to
     # load a 64-bit code segment into our GDT.
-    lgdtl gdt64_ptr
+    lgdtl GDT64_PTR
     # Set CS to a 64-bit segment and jump to 64-bit code.
-    ljmpl $(code64_desc - gdt64_start), $ram64_start
+    ljmpl $0x08, $ram64_start

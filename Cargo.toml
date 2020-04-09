@@ -24,6 +24,7 @@ log-serial = []
 log-panic = ["log-serial"]
 
 [dependencies]
+bitflags = "1.2"
 x86_64 = "0.9"
 atomic_refcell = "0.1"
 r-efi = "2.1.0"
