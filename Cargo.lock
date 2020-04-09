@@ -20,6 +20,7 @@ name = "hypervisor-fw"
 version = "0.1.0"
 dependencies = [
  "atomic_refcell 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "r-efi 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "x86_64 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
