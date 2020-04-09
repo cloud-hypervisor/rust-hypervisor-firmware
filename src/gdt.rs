@@ -26,6 +26,14 @@ bitflags::bitflags! {
         const COMMON = Self::ACCESSED.bits | Self::USER_SEGMENT.bits | Self::PRESENT.bits;
         // BIT32 must be 0, all other bits (not yet mentioned) are ignored.
         const CODE64 = Self::COMMON.bits | Self::EXECUTABLE.bits | Self::BIT64.bits;
+
+        // All 32-bit segments have base = 0, limit = 4G = (0xF_FFFF + 1)*4K
+        const MAX_LIMIT = Self::LIMIT_0_15.bits | Self::LIMIT_16_19.bits | Self::GRANULARITY.bits;
+        const COMMON32 = Self::COMMON.bits | Self::MAX_LIMIT.bits | Self::BIT32.bits;
+        // We set READABLE because the ROM code reads data via cs.
+        const CODE32 = Self::COMMON32.bits | Self::READABLE.bits | Self::EXECUTABLE.bits;
+        // We set WRITABLE so the ROM code can write ROM data into RAM.
+        const DATA32 = Self::COMMON32.bits | Self::WRITABLE.bits;
     }
 }
 
@@ -51,3 +59,7 @@ impl Pointer {
 #[no_mangle]
 static GDT64_PTR: Pointer = Pointer::new(&GDT64);
 static GDT64: [Descriptor; 2] = [Descriptor::empty(), Descriptor::CODE64];
+
+#[no_mangle]
+static GDT32_PTR: Pointer = Pointer::new(&GDT32);
+static GDT32: [Descriptor; 3] = [Descriptor::empty(), Descriptor::CODE32, Descriptor::DATA32];
