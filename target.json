@@ -16,9 +16,6 @@
   "code-model": "small",
   "relocation-model": "static",
   "pre-link-args": {
-    "ld.lld": [
-      "-s",
-      "--script=layout.ld"
-    ]
+    "ld.lld": ["--script=layout.ld"]
   }
 }
