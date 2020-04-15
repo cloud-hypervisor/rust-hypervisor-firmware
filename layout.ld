@@ -32,7 +32,7 @@ SECTIONS
 		bss_size = . - bss_start;
 	}
 
-	/* Our stack grows down and is page-algined. TODO: Add stack guard pages. */
+	/* Our stack grows down and is page-aligned. TODO: Add stack guard pages. */
 	.stack (NOLOAD) : ALIGN(4K) { . += 64K; }
 	stack_start = .;
 	/* ram32.s only maps the first 2 MiB, and that must include the stack.    */
