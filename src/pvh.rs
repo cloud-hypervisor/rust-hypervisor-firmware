@@ -67,6 +67,8 @@ const XEN_ELFNOTE_PHYS32_ENTRY: u32 = 18;
 type Name = [u8; 4];
 type Desc = unsafe extern "C" fn();
 
+// We make sure our ELF Note has an alignment of 4 for maximum compatibility.
+// Some software (QEMU) calculates padding incorectly if alignment != 4.
 #[repr(C, packed(4))]
 struct Note {
     name_size: u32,
