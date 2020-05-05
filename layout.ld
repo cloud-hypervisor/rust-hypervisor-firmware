@@ -1,14 +1,16 @@
 ENTRY(rust64_start) /* This firmware doesn't use the ELF entrypoint */
 
+/* Loaders like to put stuff in low memory (< 1M), so we don't use it. */
+ram_min = 1M;
+/* ram32.s only maps the first 2 MiB, which must include our whole program. */
+ram_max = 2M;
+
 PHDRS
 {
   ram  PT_LOAD FILEHDR PHDRS ;
   note PT_NOTE               ;
-  rom  PT_LOAD               ;
+  rom  PT_LOAD AT(ram_max)   ;
 }
-
-/* Loaders like to put stuff in low memory (< 1M), so we don't use it. */
-ram_min = 1M;
 
 SECTIONS
 {
@@ -37,8 +39,7 @@ SECTIONS
   /* Our stack grows down and is page-aligned. TODO: Add stack guard pages. */
   .stack (NOLOAD) : ALIGN(4K) { . += 64K; }
   stack_start = .;
-  /* ram32.s only maps the first 2 MiB, and that must include the stack. */
-  ASSERT((. <= 2M), "Stack overflows initial identity-mapped memory region")
+  ASSERT((. <= ram_max), "Stack overflows initial identity-mapped region")
 
   /* This is correct because all of the code sections have alignment 16. */
   rom_size = ALIGN(SIZEOF(.gdt32), 16) + ALIGN(SIZEOF(.rom32), 16)
