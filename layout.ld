@@ -11,48 +11,48 @@ ram_min = 1M;
 
 SECTIONS
 {
-	/* Mapping the program headers and note into RAM makes the file smaller. */
-	. = ram_min;
-	. += SIZEOF_HEADERS;
-	.note : { *(.note) } :note :ram
+  /* Mapping the program headers and note into RAM makes the file smaller. */
+  . = ram_min;
+  . += SIZEOF_HEADERS;
+  .note : { *(.note) } :note :ram
 
-	/* These sections are mapped into RAM from the file. Omitting :ram from
-	   later sections avoids emitting empty sections in the final binary.     */
-	data_start = .;
-	.rodata : { *(.rodata .rodata.*) } :ram
-	.text   : { *(.text .text.*)     }
-	.text32 : { *(.text32)           }
-	.data   : { *(.data .data.*)     }
-	data_size = . - data_start;
+  /* These sections are mapped into RAM from the file. Omitting :ram from
+     later sections avoids emitting empty sections in the final binary.       */
+  data_start = .;
+  .rodata : { *(.rodata .rodata.*) } :ram
+  .text   : { *(.text .text.*)     }
+  .text32 : { *(.text32)           }
+  .data   : { *(.data .data.*)     }
+  data_size = . - data_start;
 
-	/* The BSS section isn't mapped from file data. It is just zeroed in RAM. */
-	.bss : {
-		bss_start = .;
-		*(.bss .bss.*)
-		bss_size = . - bss_start;
-	}
+  /* The BSS section isn't mapped from file data. It is just zeroed in RAM. */
+  .bss : {
+    bss_start = .;
+    *(.bss .bss.*)
+    bss_size = . - bss_start;
+  }
 
-	/* Our stack grows down and is page-aligned. TODO: Add stack guard pages. */
-	.stack (NOLOAD) : ALIGN(4K) { . += 64K; }
-	stack_start = .;
-	/* ram32.s only maps the first 2 MiB, and that must include the stack.    */
-	ASSERT((. <= 2M), "Stack overflows initial identity-mapped memory region")
+  /* Our stack grows down and is page-aligned. TODO: Add stack guard pages. */
+  .stack (NOLOAD) : ALIGN(4K) { . += 64K; }
+  stack_start = .;
+  /* ram32.s only maps the first 2 MiB, and that must include the stack. */
+  ASSERT((. <= 2M), "Stack overflows initial identity-mapped memory region")
 
-	/* Match edk2's GccBase.lds DISCARD section */
-	/DISCARD/ : {
-		*(.note.GNU-stack)
-		*(.gnu_debuglink)
-		*(.interp)
-		*(.dynsym)
-		*(.dynstr)
-		*(.dynamic)
-		*(.hash .gnu.hash)
-		*(.comment)
-		*(COMMON)
-	}
-	/* Strip symbols from the output binary (comment out to get symbols) */
-	/DISCARD/ : {
-		*(.symtab)
-		*(.strtab)
-	}
+  /* Match edk2's GccBase.lds DISCARD section */
+  /DISCARD/ : {
+    *(.note.GNU-stack)
+    *(.gnu_debuglink)
+    *(.interp)
+    *(.dynsym)
+    *(.dynstr)
+    *(.dynamic)
+    *(.hash .gnu.hash)
+    *(.comment)
+    *(COMMON)
+  }
+  /* Strip symbols from the output binary (comment out to get symbols) */
+  /DISCARD/ : {
+    *(.symtab)
+    *(.strtab)
+  }
 }
