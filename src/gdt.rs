@@ -60,6 +60,10 @@ impl Pointer {
 static GDT64_PTR: Pointer = Pointer::new(&GDT64);
 static GDT64: [Descriptor; 2] = [Descriptor::empty(), Descriptor::CODE64];
 
+// Our 32-bit GDT lives in ROM, so it can be directly used by the ROM code. We
+// should never reference or access this GDT when we are running in RAM.
 #[no_mangle]
+#[link_section = ".gdt32"]
 static GDT32_PTR: Pointer = Pointer::new(&GDT32);
+#[link_section = ".gdt32"]
 static GDT32: [Descriptor; 3] = [Descriptor::empty(), Descriptor::CODE32, Descriptor::DATA32];
