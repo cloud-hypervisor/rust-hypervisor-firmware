@@ -38,18 +38,6 @@ SECTIONS
   /* ram32.s only maps the first 2 MiB, and that must include the stack. */
   ASSERT((. <= 2M), "Stack overflows initial identity-mapped memory region")
 
-  /* Match edk2's GccBase.lds DISCARD section */
-  /DISCARD/ : {
-    *(.note.GNU-stack)
-    *(.gnu_debuglink)
-    *(.interp)
-    *(.dynsym)
-    *(.dynstr)
-    *(.dynamic)
-    *(.hash .gnu.hash)
-    *(.comment)
-    *(COMMON)
-  }
   /* Strip symbols from the output binary (comment out to get symbols) */
   /DISCARD/ : {
     *(.symtab)
