@@ -18,20 +18,15 @@
 use core::fmt;
 
 use atomic_refcell::AtomicRefCell;
-use x86_64::instructions::port::PortWriteOnly;
+use uart_16550::SerialPort;
 
 // We use COM1 as it is the standard first serial port.
-static PORT: AtomicRefCell<PortWriteOnly<u8>> = AtomicRefCell::new(PortWriteOnly::new(0x3f8));
+pub static PORT: AtomicRefCell<SerialPort> = AtomicRefCell::new(unsafe { SerialPort::new(0x3f8) });
 
 pub struct Serial;
-
 impl fmt::Write for Serial {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        let mut port = PORT.borrow_mut();
-        for b in s.bytes() {
-            unsafe { port.write(b) }
-        }
-        Ok(())
+        PORT.borrow_mut().write_str(s)
     }
 }
 
