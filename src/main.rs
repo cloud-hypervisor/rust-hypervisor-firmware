@@ -140,6 +140,8 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn boot::Info
 
 #[no_mangle]
 pub extern "C" fn rust64_start(rdi: Option<&pvh::StartInfo>, rsi: Option<&boot::Params>) -> ! {
+    serial::PORT.borrow_mut().init();
+
     if let Some(start_info) = rdi {
         log!("\nBooting via PVH Boot Protocol");
         run(start_info)
