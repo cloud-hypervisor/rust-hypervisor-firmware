@@ -62,9 +62,9 @@ $ pushd $CLOUDH
 $ sudo setcap cap_net_admin+ep ./cloud-hypervisor/target/release/cloud-hypervisor
 $ ./cloud-hypervisor/target/release/cloud-hypervisor \
 	--kernel ./target/target/release/hypervisor-fw \
-	--disk ./clear-29160-kvm.img \
-	--cpus 4 \
-	--memory 512 \
+	--disk path=./clear-29160-kvm.img \
+	--cpus boot=4 \
+	--memory size=512M \
 	--net "tap=,mac=,ip=,mask=" \
 	--rng
 $ popd
