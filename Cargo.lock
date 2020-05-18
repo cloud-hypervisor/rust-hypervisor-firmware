@@ -4,55 +4,53 @@
 name = "atomic_refcell"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bc31dce067eab974c815a9deb95f6217806de7b53685d7fc31f8ccf3fb2539f"
 
 [[package]]
 name = "bit_field"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed8765909f9009617974ab6b7d332625b320b33c326b1e9321382ef1999b5d56"
 
 [[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
 name = "hypervisor-fw"
 version = "0.1.0"
 dependencies = [
- "atomic_refcell 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "r-efi 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "uart_16550 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "x86_64 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "atomic_refcell",
+ "bitflags",
+ "r-efi",
+ "uart_16550",
+ "x86_64",
 ]
 
 [[package]]
 name = "r-efi"
-version = "2.1.0"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b4aceea558d694eb2d5a0d9f3a94f30b8f9a7d4469983ddea62077716364788"
 
 [[package]]
 name = "uart_16550"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b5e5e7b79b55e1aa57b0ab994490d876d9c2f5b18c7716628155207e0e4b197"
 dependencies = [
- "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "x86_64 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bitflags",
+ "x86_64",
 ]
 
 [[package]]
 name = "x86_64"
-version = "0.9.5"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df453cbef6f9a3f703c1866338da79ae8e98a86f7ccd90bca92e6f1583720941"
 dependencies = [
- "bit_field 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bit_field",
+ "bitflags",
 ]
-
-[metadata]
-"checksum atomic_refcell 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "3bc31dce067eab974c815a9deb95f6217806de7b53685d7fc31f8ccf3fb2539f"
-"checksum bit_field 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ed8765909f9009617974ab6b7d332625b320b33c326b1e9321382ef1999b5d56"
-"checksum bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
-"checksum r-efi 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8f2c7f9e57367053a4c9d2f235e715b7a4fa8b774b78eb3e477b2345dc2bb33d"
-"checksum uart_16550 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "e983688170873ec9a3f21a6afc751fb706cf02836ed9d28a68d2e247dff7ae52"
-"checksum x86_64 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)" = "4e6a3f047ad0844d3b4794f34d1095aefb918241064663d4163db8c7d4a76edf"
