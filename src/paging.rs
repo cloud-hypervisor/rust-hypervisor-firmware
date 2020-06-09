@@ -1,5 +1,5 @@
 use x86_64::{
-    registers::control::Cr3,
+    registers::control::{Cr3, Cr4, Cr4Flags},
     structures::paging::{PageSize, PageTable, PageTableFlags, PhysFrame, Size2MiB},
     PhysAddr,
 };
@@ -8,6 +8,8 @@ use x86_64::{
 const ADDRESS_SPACE_GIB: usize = 4;
 
 // Put the Page Tables in static muts to make linking easier
+#[no_mangle]
+static mut L5_TABLE: PageTable = PageTable::new();
 #[no_mangle]
 static mut L4_TABLE: PageTable = PageTable::new();
 #[no_mangle]
@@ -18,7 +20,8 @@ static mut L2_TABLES: [PageTable; ADDRESS_SPACE_GIB] = [PageTable::new(); ADDRES
 pub fn setup() {
     // SAFETY: This function is idempontent and only writes to static memory and
     // CR3. Thus, it is safe to run multiple times or on multiple threads.
-    let (l4, l3, l2s) = unsafe { (&mut L4_TABLE, &mut L3_TABLE, &mut L2_TABLES) };
+    let (l5, l4, l3, l2s) =
+        unsafe { (&mut L5_TABLE, &mut L4_TABLE, &mut L3_TABLE, &mut L2_TABLES) };
     log!("Setting up {} GiB identity mapping", ADDRESS_SPACE_GIB);
     let pt_flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
@@ -39,13 +42,31 @@ pub fn setup() {
     // Point L4 at L3
     l4[0].set_addr(phys_addr(l3), pt_flags);
 
-    // Point Cr3 at L4
-    let (cr3_frame, cr3_flags) = Cr3::read();
-    let l4_frame = PhysFrame::from_start_address(phys_addr(l4)).unwrap();
-    if cr3_frame != l4_frame {
-        unsafe { Cr3::write(l4_frame, cr3_flags) };
+    if unsafe { core::arch::x86_64::__cpuid(7).ecx } & (1 << 16) != 0 {
+        // Point L5 at L4
+        l5[0].set_addr(phys_addr(l4), pt_flags);
+        // Point Cr3 at L5
+        let (cr3_frame, cr3_flags) = Cr3::read();
+        let l5_frame = PhysFrame::from_start_address(phys_addr(l5)).unwrap();
+        if cr3_frame != l5_frame {
+            unsafe { Cr3::write(l5_frame, cr3_flags) };
+        }
+        let mut cr4 = Cr4::read();
+        cr4.insert(Cr4Flags::L5_PAGING);
+        unsafe {
+            Cr4::write(cr4);
+        }
+        log!("Page tables setup (5 levels)");
+    } else {
+        // Point Cr3 at L4
+        let (cr3_frame, cr3_flags) = Cr3::read();
+        let l4_frame = PhysFrame::from_start_address(phys_addr(l4)).unwrap();
+        if cr3_frame != l4_frame {
+            unsafe { Cr3::write(l4_frame, cr3_flags) };
+        }
+
+        log!("Page tables setup (4 levels)");
     }
-    log!("Page tables setup");
 }
 
 // Map a virtual address to a PhysAddr (assumes identity mapping)
