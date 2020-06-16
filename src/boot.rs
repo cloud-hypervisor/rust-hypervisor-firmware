@@ -8,6 +8,8 @@ use crate::{
 
 // Common data needed for all boot paths
 pub trait Info {
+    // Name of for this boot protocol
+    fn name(&self) -> &str;
     // Starting address of the Root System Descriptor Pointer
     fn rsdp_addr(&self) -> u64;
     // The kernel command line (not including null terminator)
@@ -86,6 +88,9 @@ impl Params {
 }
 
 impl Info for Params {
+    fn name(&self) -> &str {
+        "Linux Boot Protocol"
+    }
     fn rsdp_addr(&self) -> u64 {
         self.acpi_rsdp_addr
     }
