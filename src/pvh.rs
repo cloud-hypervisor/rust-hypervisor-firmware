@@ -31,6 +31,9 @@ struct MemMapEntry {
 }
 
 impl Info for StartInfo {
+    fn name(&self) -> &str {
+        "PVH Boot Protocol"
+    }
     fn rsdp_addr(&self) -> u64 {
         self.rsdp_paddr
     }
