@@ -1,4 +1,4 @@
-ENTRY(linux64_start)
+ENTRY(rust64_start) /* This firmware doesn't use the ELF entrypoint */
 
 PHDRS
 {

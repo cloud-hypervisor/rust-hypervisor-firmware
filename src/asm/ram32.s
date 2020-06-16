@@ -4,8 +4,6 @@
 ram32_start:
     # Stash the PVH start_info struct in %rdi.
     movl %ebx, %edi
-    # Zero out %rsi, its value is unspecificed in the PVH Boot Protocol.
-    xorl %esi, %esi
 
 setup_page_tables:
     # First L2 entry identity maps [0, 2 MiB)
@@ -42,5 +40,8 @@ jump_to_64bit:
     # We are now in 32-bit compatibility mode. To enter 64-bit mode, we need to
     # load a 64-bit code segment into our GDT.
     lgdtl GDT64_PTR
-    # Set CS to a 64-bit segment and jump to 64-bit code.
-    ljmpl $0x08, $ram64_start
+    # Initialize the stack pointer (Rust code always uses the stack)
+    movl $stack_start, %esp
+    # Set CS to a 64-bit segment and jump to 64-bit Rust code.
+    # PVH start_info is in %rdi, the first paramter of the System V ABI.
+    ljmpl $0x08, $rust64_start
