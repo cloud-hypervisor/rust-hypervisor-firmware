@@ -22,6 +22,7 @@ log-serial = []
 # Log panics to serial output. Disabling this (without disabling log-serial)
 # gets you most of the code size reduction, without losing _all_ debugging.
 log-panic = ["log-serial"]
+integration_tests = []
 
 [dependencies]
 bitflags = "1.2"
@@ -29,3 +30,10 @@ x86_64 = "0.11"
 atomic_refcell = "0.1"
 r-efi = "2.1.0"
 uart_16550 = "0.2.7"
+
+[dev-dependencies]
+dirs = "2.0.2"
+rand = "0.7.3"
+ssh2 = "0.8.1"
+tempdir = "0.3.7"
+tempfile = "3.1.0"
