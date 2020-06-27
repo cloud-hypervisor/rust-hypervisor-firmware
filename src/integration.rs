@@ -26,7 +26,7 @@ mod tests {
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
     use std::thread;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     static COUNTER: AtomicUsize = AtomicUsize::new(6);
 
@@ -178,9 +178,10 @@ mod tests {
     }
 
     fn prepare_os_disk(tmp_dir: &TempDir, image_name: &str) -> String {
-        let src_osdisk = dirs::home_dir()
-            .expect("Expect getting home directory to succeed")
-            .join("workloads")
+        let src_osdisk = std::env::current_dir()
+            .unwrap()
+            .join("resources")
+            .join("images")
             .join(image_name);
         let dest_osdisk = tmp_dir.path().join(image_name);
         fs::copy(&src_osdisk, &dest_osdisk).expect("Expect copying OS disk to succeed");
@@ -281,7 +282,7 @@ mod tests {
     }
 
     fn spawn_ch(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
-        let mut c = Command::new("./cloud-hypervisor");
+        let mut c = Command::new("./resources/cloud-hypervisor");
         c.args(&[
             "--console",
             "off",
@@ -341,7 +342,7 @@ mod tests {
     type HypervisorSpawn = fn(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child;
 
     fn test_boot(image_name: &str, cloud_init: &dyn CloudInit, spawn: HypervisorSpawn) {
-        let tmp_dir = TempDir::new("rhfw").expect("Expect creating temporary directory to succeed");
+        let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
         let net = GuestNetworkConfig::new(COUNTER.fetch_add(1, Ordering::SeqCst) as u8);
         let ci = cloud_init.prepare(&tmp_dir, &net);
         let os = prepare_os_disk(&tmp_dir, image_name);
