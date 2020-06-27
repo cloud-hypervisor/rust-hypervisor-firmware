@@ -2,3 +2,5 @@ clear-*-kvm.img*
 fat*.img
 target
 test_data
+resources/cloud-hypervisor
+resources/images
