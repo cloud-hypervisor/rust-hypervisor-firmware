@@ -32,7 +32,7 @@ r-efi = "2.1.0"
 uart_16550 = "0.2.7"
 
 [dev-dependencies]
-dirs = "2.0.2"
+dirs = "3.0.0"
 rand = "0.7.3"
 ssh2 = "0.8.1"
 tempdir = "0.3.7"
