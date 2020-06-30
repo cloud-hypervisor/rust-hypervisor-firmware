@@ -33,5 +33,5 @@ uart_16550 = "0.2.7"
 
 [dev-dependencies]
 rand = "0.7.3"
-ssh2 = "0.8.1"
+ssh2 = "0.8.2"
 tempfile = "3.1.0"
