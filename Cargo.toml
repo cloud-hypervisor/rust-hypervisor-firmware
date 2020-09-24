@@ -26,7 +26,7 @@ integration_tests = []
 
 [dependencies]
 bitflags = "1.2"
-x86_64 = "0.11"
+x86_64 = "0.12"
 atomic_refcell = "0.1"
 r-efi = "2.1.0"
 uart_16550 = "0.2.7"
