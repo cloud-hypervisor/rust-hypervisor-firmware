@@ -61,8 +61,8 @@ fn default_entry_file(f: &mut fat::File) -> Result<[u8; 260], fat::Error> {
 
     let conf = unsafe { core::str::from_utf8_unchecked(&data) };
     for line in conf.lines() {
-        if line.starts_with("default") {
-            let entry = line["default".len()..].trim();
+        if let Some(entry) = line.strip_prefix("default") {
+            let entry = entry.trim();
             entry_file_name[0..entry.len()].copy_from_slice(entry.as_bytes());
         }
     }
@@ -89,16 +89,16 @@ fn parse_entry(f: &mut fat::File) -> Result<LoaderConfig, fat::Error> {
 
     let conf = unsafe { core::str::from_utf8_unchecked(&data) };
     for line in conf.lines() {
-        if line.starts_with("linux") {
-            let entry = line["linux".len()..].trim();
+        if let Some(entry) = line.strip_prefix("linux") {
+            let entry = entry.trim();
             loader_config.bzimage_path[0..entry.len()].copy_from_slice(entry.as_bytes());
         }
-        if line.starts_with("options") {
-            let entry = line["options".len()..].trim();
+        if let Some(entry) = line.strip_prefix("options") {
+            let entry = entry.trim();
             loader_config.cmdline[0..entry.len()].copy_from_slice(entry.as_bytes());
         }
-        if line.starts_with("initrd") {
-            let entry = line["initrd".len()..].trim();
+        if let Some(entry) = line.strip_prefix("initrd") {
+            let entry = entry.trim();
             loader_config.initrd_path[0..entry.len()].copy_from_slice(entry.as_bytes());
         }
     }
