@@ -3,7 +3,7 @@ set -xeuf
 
 source "${CARGO_HOME:-$HOME/.cargo}/env"
 
-XBUILD_VERSION="0.5.34"
+XBUILD_VERSION="0.6.2"
 cargo install cargo-xbuild --version $XBUILD_VERSION
 
 rustup component add rust-src
