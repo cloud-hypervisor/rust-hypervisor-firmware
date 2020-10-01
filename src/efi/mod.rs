@@ -730,6 +730,8 @@ pub fn efi_exec(
         }
     };
 
+    let mut stdin = console::STDIN;
+    let mut stdout = console::STDOUT;
     let mut st = efi::SystemTable {
         hdr: efi::TableHeader {
             signature: efi::SYSTEM_TABLE_SIGNATURE,
@@ -741,11 +743,11 @@ pub fn efi_exec(
         firmware_vendor: core::ptr::null_mut(), // TODO,
         firmware_revision: 0,
         console_in_handle: console::STDIN_HANDLE,
-        con_in: &mut console::STDIN,
+        con_in: &mut stdin,
         console_out_handle: console::STDOUT_HANDLE,
-        con_out: &mut console::STDOUT,
+        con_out: &mut stdout,
         standard_error_handle: console::STDERR_HANDLE,
-        std_err: &mut console::STDOUT,
+        std_err: &mut stdout,
         runtime_services: &mut rs,
         boot_services: &mut bs,
         number_of_table_entries: 1,
