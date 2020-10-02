@@ -3,11 +3,8 @@ set -xeuf
 
 source "${CARGO_HOME:-$HOME/.cargo}/env"
 
-XBUILD_VERSION="0.6.2"
-cargo install cargo-xbuild --version $XBUILD_VERSION
-
 rustup component add rust-src
-cargo xbuild --release --target target.json
+cargo build --release --target target.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
 
 CH_VERSION="v0.8.0"
 CH_URL="https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/$CH_VERSION/cloud-hypervisor"
