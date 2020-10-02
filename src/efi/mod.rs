@@ -379,7 +379,11 @@ pub extern "win64" fn locate_handle(
     Status::UNSUPPORTED
 }
 
-pub extern "win64" fn locate_device_path(_: *mut Guid, _: *mut *mut c_void) -> Status {
+pub extern "win64" fn locate_device_path(
+    _: *mut Guid,
+    _: *mut *mut DevicePathProtocol,
+    _: *mut *mut c_void,
+) -> Status {
     Status::NOT_FOUND
 }
 
@@ -390,7 +394,7 @@ pub extern "win64" fn install_configuration_table(_: *mut Guid, _: *mut c_void) 
 pub extern "win64" fn load_image(
     _: Boolean,
     _: Handle,
-    _: *mut c_void,
+    _: *mut DevicePathProtocol,
     _: *mut c_void,
     _: usize,
     _: *mut Handle,
@@ -429,7 +433,7 @@ pub extern "win64" fn set_watchdog_timer(_: usize, _: u64, _: usize, _: *mut Cha
 pub extern "win64" fn connect_controller(
     _: Handle,
     _: *mut Handle,
-    _: *mut c_void,
+    _: *mut DevicePathProtocol,
     _: Boolean,
 ) -> Status {
     Status::UNSUPPORTED
