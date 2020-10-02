@@ -14,15 +14,15 @@ install:
   - rustup component add clippy
   - rustup component add rustfmt
   - rustup component add rust-src
-  - cargo install cargo-xbuild
   - sudo apt-get install -y mtools
   - wget https://download.clearlinux.org/releases/28660/clear/clear-28660-kvm.img.xz
   - unxz clear-28660-kvm.img.xz
   - ./make-test-disks.sh
 
 script:
-  - cargo xbuild --release --target target.json
-  - cargo xclippy --target target.json
+  - cargo build --target target.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
+  - cargo build --release --target target.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
+  - cargo clippy --target target.json -Zbuild-std=core
   - cargo clippy --all-targets --all-features
   - cargo fmt --all -- --check
   - cargo test
