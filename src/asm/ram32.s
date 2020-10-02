@@ -1,4 +1,5 @@
 .section .text32, "ax"
+.global ram32_start
 .code32
 
 ram32_start:

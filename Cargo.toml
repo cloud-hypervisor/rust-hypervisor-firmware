@@ -8,7 +8,6 @@ edition = "2018"
 # needed here to make "cargo check" and "cargo clippy" run without errors.
 [profile.dev]
 panic = "abort"
-lto = true
 
 [profile.release]
 panic = "abort"
