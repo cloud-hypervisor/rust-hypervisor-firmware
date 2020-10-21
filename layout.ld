@@ -1,4 +1,4 @@
-ENTRY(rust64_start) /* This firmware doesn't use the ELF entrypoint */
+ENTRY(ram32_start) /* coreboot uses the ELF entrypoint */
 
 PHDRS
 {
