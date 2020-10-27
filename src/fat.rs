@@ -209,12 +209,18 @@ impl<'a> Directory<'a> {
                     let lfn_seq = ((lfns[i].seq & 0x1f) as usize) - 1;
                     let lfn_block = &mut long_entry[lfn_seq * 13..(lfn_seq + 1) * 13];
 
+                    // Need explicit copy to avoid borrowing packed structure
+                    let name = lfns[i].name;
                     let s = &mut lfn_block[0..5];
-                    s.copy_from_slice(unsafe { &lfns[i].name[..] });
+                    s.copy_from_slice(&name);
+
+                    let name2 = lfns[i].name2;
                     let s = &mut lfn_block[5..11];
-                    s.copy_from_slice(unsafe { &lfns[i].name2[..] });
+                    s.copy_from_slice(&name2);
+
+                    let name3 = lfns[i].name3;
                     let s = &mut lfn_block[11..13];
-                    s.copy_from_slice(unsafe { &lfns[i].name3[..] });
+                    s.copy_from_slice(&name3);
 
                     continue;
                 }
