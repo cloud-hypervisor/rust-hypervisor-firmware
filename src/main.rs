@@ -36,6 +36,7 @@ mod asm;
 mod block;
 mod boot;
 mod bzimage;
+mod coreboot;
 mod efi;
 mod fat;
 mod gdt;
@@ -141,16 +142,31 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn boot::Info
 }
 
 #[no_mangle]
+#[cfg(not(feature = "coreboot"))]
 pub extern "C" fn rust64_start(rdi: &pvh::StartInfo) -> ! {
-    main(rdi)
-}
-
-fn main(info: &dyn boot::Info) -> ! {
     serial::PORT.borrow_mut().init();
-    log!("\nBooting with {}", info.name());
 
     enable_sse();
     paging::setup();
+
+    main(rdi)
+}
+
+#[no_mangle]
+#[cfg(feature = "coreboot")]
+pub extern "C" fn rust64_start() -> ! {
+    serial::PORT.borrow_mut().init();
+
+    enable_sse();
+    paging::setup();
+
+    let info = coreboot::StartInfo::default();
+
+    main(&info)
+}
+
+fn main(info: &dyn boot::Info) -> ! {
+    log!("\nBooting with {}", info.name());
 
     pci::print_bus();
 

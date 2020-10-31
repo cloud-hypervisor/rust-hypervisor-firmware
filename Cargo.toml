@@ -22,6 +22,7 @@ log-serial = []
 # gets you most of the code size reduction, without losing _all_ debugging.
 log-panic = ["log-serial"]
 integration_tests = []
+coreboot = []
 
 [dependencies]
 bitflags = "1.2"
