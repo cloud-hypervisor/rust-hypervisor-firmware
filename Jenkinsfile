@@ -28,6 +28,11 @@ pipeline {
                                                 sh "./run_integration_tests.sh"
                                         }
                                 }
+                                stage ('Run coreboot integration tests') {
+                                        steps {
+                                                sh "./run_coreboot_integration_tests.sh"
+                                        }
+                                }
                         }
                 }
         }
