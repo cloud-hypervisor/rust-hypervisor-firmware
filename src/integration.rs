@@ -302,15 +302,25 @@ mod tests {
             .expect("Expect launching Cloud Hypervisor to succeed")
     }
 
-    fn spawn_qemu(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+    struct Firmware<'a> {
+        fw_type: &'a str,
+        path: &'a str,
+    }
+
+    fn spawn_qemu_common<'a>(
+        fw: &'a Firmware,
+        os: &str,
+        ci: &str,
+        net: &GuestNetworkConfig,
+    ) -> Child {
         let mut c = Command::new("qemu-system-x86_64");
         c.args(&[
             "-machine",
             "q35,accel=kvm",
             "-cpu",
             "host,-vmx",
-            "-kernel",
-            "target/target/release/hypervisor-fw",
+            fw.fw_type,
+            fw.path,
             "-display",
             "none",
             "-nodefaults",
@@ -337,6 +347,24 @@ mod tests {
 
         eprintln!("Spawning: {:?}", c);
         c.spawn().expect("Expect launching QEMU to succeed")
+    }
+
+    #[cfg(not(feature = "coreboot"))]
+    fn spawn_qemu(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+        let fw = Firmware {
+            fw_type: "-kernel",
+            path: "target/target/release/hypervisor-fw",
+        };
+        spawn_qemu_common(&fw, os, ci, net)
+    }
+
+    #[cfg(feature = "coreboot")]
+    fn spawn_qemu(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+        let fw = Firmware {
+            fw_type: "-bios",
+            path: "resources/coreboot/coreboot/build/coreboot.rom",
+        };
+        spawn_qemu_common(&fw, os, ci, net)
     }
 
     type HypervisorSpawn = fn(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child;
@@ -381,16 +409,19 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "coreboot"))]
     fn test_boot_ch_bionic() {
         test_boot(BIONIC_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
     }
 
     #[test]
+    #[cfg(not(feature = "coreboot"))]
     fn test_boot_ch_focal() {
         test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
     }
 
     #[test]
+    #[cfg(not(feature = "coreboot"))]
     fn test_boot_ch_clear() {
         test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_ch)
     }
