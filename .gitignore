@@ -4,3 +4,4 @@ target
 test_data
 resources/cloud-hypervisor
 resources/images
+resources/coreboot/coreboot
