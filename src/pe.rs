@@ -47,7 +47,7 @@ impl<'a> Loader<'a> {
         }
     }
 
-    pub fn load(&mut self, address: u64) -> Result<(u64, u64), Error> {
+    pub fn load(&mut self, load_addr: u64) -> Result<(u64, u64, u64), Error> {
         let mut data: [u8; 1024] = [0; 1024];
 
         match self.file.read(&mut data[0..512]) {
@@ -102,6 +102,12 @@ impl<'a> Loader<'a> {
         let entry_point = optional_region.read_u32(16);
 
         self.image_base = optional_region.read_u64(24);
+        let address = if self.image_base != 0 {
+            // The image has desired load address
+            self.image_base
+        } else {
+            load_addr
+        };
         self.image_size = optional_region.read_u32(56);
         let size_of_headers = optional_region.read_u32(60);
 
@@ -210,7 +216,11 @@ impl<'a> Loader<'a> {
             }
         }
 
-        Ok((address + u64::from(entry_point), u64::from(self.image_size)))
+        Ok((
+            address + u64::from(entry_point),
+            address,
+            u64::from(self.image_size),
+        ))
     }
 }
 
@@ -235,8 +245,9 @@ mod tests {
             alloc::alloc(layout)
         };
 
-        let (a, size) = l.load(fake_mem as u64).expect("expect loading success");
-        assert_eq!(a, fake_mem as u64 + 0x4000);
+        let (entry, addr, size) = l.load(fake_mem as u64).expect("expect loading success");
+        assert_eq!(entry, fake_mem as u64 + 0x4000);
+        assert_eq!(addr, fake_mem as u64);
         assert_eq!(size, 110_592);
     }
 }
