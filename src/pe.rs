@@ -194,7 +194,7 @@ impl<'a> Loader<'a> {
                     // Read details for block
                     let page_rva = reloc_region.read_u32(offset);
                     let block_size = reloc_region.read_u32(offset + 4);
-                    let mut block_offset = 0;
+                    let mut block_offset = 8;
                     while block_offset < block_size {
                         let entry = reloc_region.read_u16(offset + u64::from(block_offset));
 
