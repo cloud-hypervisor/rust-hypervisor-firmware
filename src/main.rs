@@ -128,7 +128,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn boot::Info
 
     let mut l = pe::Loader::new(&mut file);
     let load_addr = 0x20_0000;
-    let (entry_addr, size) = match l.load(load_addr) {
+    let (entry_addr, load_addr, size) = match l.load(load_addr) {
         Ok(load_info) => load_info,
         Err(err) => {
             log!("Error loading executable: {:?}", err);
@@ -137,7 +137,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn boot::Info
     };
 
     log!("Executable loaded");
-    efi::efi_exec(entry_addr, 0x20_0000, size, info, &f, device);
+    efi::efi_exec(entry_addr, load_addr, size, info, &f, device);
     true
 }
 
