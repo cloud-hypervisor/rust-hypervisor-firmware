@@ -172,6 +172,8 @@ impl<'a> Loader<'a> {
             }
         }
 
+        let base_diff = address as i64 - self.image_base as i64;
+
         for section in sections {
             if &section.name[0..6] == b".reloc" {
                 let section_size = core::cmp::min(section.raw_size, section.virt_size);
@@ -196,7 +198,7 @@ impl<'a> Loader<'a> {
                         if entry_type == 10 {
                             let location = u64::from(page_rva + u32::from(entry_offset));
                             let value = loaded_region.read_u64(location);
-                            loaded_region.write_u64(location, value + (address - self.image_base));
+                            loaded_region.write_u64(location, (value as i64 + base_diff) as u64);
                         }
 
                         block_offset += 2;
