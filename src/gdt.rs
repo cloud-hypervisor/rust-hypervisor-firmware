@@ -25,7 +25,8 @@ bitflags::bitflags! {
         // We set ACCESSED in advance to avoid writing to the descriptor.
         const COMMON = Self::ACCESSED.bits | Self::USER_SEGMENT.bits | Self::PRESENT.bits;
         // BIT32 must be 0, all other bits (not yet mentioned) are ignored.
-        const CODE64 = Self::COMMON.bits | Self::EXECUTABLE.bits | Self::BIT64.bits;
+        const CODE64 = Self::COMMON.bits | Self::READABLE.bits | Self::EXECUTABLE.bits | Self::BIT64.bits;
+        const DATA64 = Self::COMMON.bits | Self::WRITABLE.bits | Self::BIT64.bits;
     }
 }
 
@@ -50,4 +51,4 @@ impl Pointer {
 // Our 64-bit GDT lives in RAM, so it can be accessed like any other global.
 #[no_mangle]
 static GDT64_PTR: Pointer = Pointer::new(&GDT64);
-static GDT64: [Descriptor; 2] = [Descriptor::empty(), Descriptor::CODE64];
+static GDT64: [Descriptor; 3] = [Descriptor::empty(), Descriptor::CODE64, Descriptor::DATA64];
