@@ -43,6 +43,13 @@ jump_to_64bit:
     lgdtl GDT64_PTR
     # Initialize the stack pointer (Rust code always uses the stack)
     movl $stack_start, %esp
+    # Set segment registers to a 64-bit segment.
+    movw $0x10, %ax
+    movw %ax, %ds
+    movw %ax, %es
+    movw %ax, %gs
+    movw %ax, %fs
+    movw %ax, %ss
     # Set CS to a 64-bit segment and jump to 64-bit Rust code.
     # PVH start_info is in %rdi, the first paramter of the System V ABI.
     ljmpl $0x08, $rust64_start
