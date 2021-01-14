@@ -51,6 +51,7 @@ mod part;
 mod pci;
 mod pe;
 mod pvh;
+mod rtc;
 mod virtio;
 
 #[cfg(all(not(test), feature = "log-panic"))]

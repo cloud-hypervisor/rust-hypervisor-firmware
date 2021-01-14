@@ -38,9 +38,9 @@ pub fn mdelay(ms: u64) {
 }
 
 #[allow(dead_code)]
-pub fn wait_while<F>(ms: u64, cond: F) -> bool
+pub fn wait_while<F>(ms: u64, mut cond: F) -> bool
 where
-    F: Fn() -> bool,
+    F: FnMut() -> bool,
 {
     let mut us = ms * 1000;
     while cond() && us > 0 {
@@ -51,9 +51,9 @@ where
 }
 
 #[allow(dead_code)]
-pub fn wait_until<F>(ms: u64, cond: F) -> bool
+pub fn wait_until<F>(ms: u64, mut cond: F) -> bool
 where
-    F: Fn() -> bool,
+    F: FnMut() -> bool,
 {
     let mut us = ms * 1000;
     while !cond() && us > 0 {
