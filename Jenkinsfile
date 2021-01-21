@@ -15,7 +15,7 @@ pipeline {
                                 }
                                 stage ('Install system packages') {
                                         steps {
-                                                sh "sudo apt-get -y install build-essential mtools qemu-system-x86 libssl-dev pkg-config"
+                                                sh "sudo apt-get -y install build-essential mtools qemu-system-x86 libssl-dev pkg-config m4 bison flex zlib1g-dev"
                                         }
                                 }
                                 stage ('Install Rust') {
