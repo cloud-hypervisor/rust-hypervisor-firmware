@@ -68,6 +68,7 @@ version = "0.1.0"
 dependencies = [
  "atomic_refcell",
  "bitflags",
+ "linked_list_allocator",
  "r-efi",
  "rand",
  "ssh2",
@@ -106,6 +107,15 @@ dependencies = [
  "libc",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "linked_list_allocator"
+version = "0.8.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "822add9edb1860698b79522510da17bef885171f75aa395cff099d770c609c24"
+dependencies = [
+ "spinning_top",
 ]
 
 [[package]]
@@ -247,6 +257,15 @@ name = "smallvec"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbee7696b84bbf3d89a1c2eccff0850e3047ed46bfcd2e92c29a2d074d57e252"
+
+[[package]]
+name = "spinning_top"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "047031d6df5f5ae0092c97aa4f6bb04cfc9c081b4cd4cb9cdb38657994279a00"
+dependencies = [
+ "lock_api",
+]
 
 [[package]]
 name = "ssh2"

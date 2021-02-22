@@ -30,6 +30,7 @@ x86_64 = "0.13.1"
 atomic_refcell = "0.1"
 r-efi = "3.2.0"
 uart_16550 = "0.2.10"
+linked_list_allocator = "0.8.11"
 
 [dev-dependencies]
 rand = "0.8.2"

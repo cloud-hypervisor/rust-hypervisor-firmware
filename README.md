@@ -24,7 +24,7 @@ all the way into the OS.
 
 To compile:
 
-cargo build --release --target target.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
+cargo build --release --target target.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
 
 The result will be in:
 

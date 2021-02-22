@@ -20,9 +20,9 @@ install:
   - ./make-test-disks.sh
 
 script:
-  - cargo build --target target.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
-  - cargo build --release --target target.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
-  - cargo clippy --target target.json -Zbuild-std=core
+  - cargo build --target target.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+  - cargo build --release --target target.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+  - cargo clippy --target target.json -Zbuild-std=core,alloc
   - cargo clippy --all-targets --all-features
   - cargo fmt --all -- --check
   - cargo test
