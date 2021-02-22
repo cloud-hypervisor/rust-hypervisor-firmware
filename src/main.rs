@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![feature(alloc_error_handler)]
 #![feature(global_asm, const_in_array_repeat_expressions)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]

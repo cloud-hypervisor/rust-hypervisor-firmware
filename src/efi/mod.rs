@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::{ffi::c_void, mem::transmute};
+use core::{alloc as heap_alloc, ffi::c_void, mem::transmute};
 
 use atomic_refcell::AtomicRefCell;
+use linked_list_allocator::LockedHeap;
 use r_efi::{
     efi::{
         self, AllocateType, Boolean, CapsuleHeader, Char16, Event, EventNotify, Guid, Handle,
@@ -51,6 +52,16 @@ struct HandleWrapper {
 }
 
 pub static ALLOCATOR: AtomicRefCell<Allocator> = AtomicRefCell::new(Allocator::new());
+
+#[cfg(not(test))]
+#[global_allocator]
+pub static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
+
+#[cfg(not(test))]
+#[alloc_error_handler]
+fn heap_alloc_error_handler(layout: heap_alloc::Layout) -> ! {
+    panic!("heap allocation error: {:?}", layout);
+}
 
 static mut RS: efi::RuntimeServices = efi::RuntimeServices {
     hdr: efi::TableHeader {
@@ -722,6 +733,7 @@ extern "win64" fn image_unload(_: Handle) -> Status {
 }
 
 const PAGE_SIZE: u64 = 4096;
+const HEAP_SIZE: usize = 256 * 1024 * 1024;
 
 // Populate allocator from E820, fixed ranges for the firmware and the loaded binary.
 fn populate_allocator(info: &dyn boot::Info, image_address: u64, image_size: u64) {
@@ -752,7 +764,27 @@ fn populate_allocator(info: &dyn boot::Info, image_address: u64, image_size: u64
         image_size / PAGE_SIZE,
         image_address,
     );
+
+    // Initialize heap allocator
+    init_heap_allocator(HEAP_SIZE);
 }
+
+#[cfg(not(test))]
+fn init_heap_allocator(size: usize) {
+    let (status, heap_start) = ALLOCATOR.borrow_mut().allocate_pages(
+        AllocateType::AllocateAnyPages,
+        MemoryType::BootServicesCode,
+        size as u64 / PAGE_SIZE,
+        0,
+    );
+    assert!(status == Status::SUCCESS);
+    unsafe {
+        HEAP_ALLOCATOR.lock().init(heap_start as usize, size);
+    }
+}
+
+#[cfg(test)]
+fn init_heap_allocator(_: usize) {}
 
 #[repr(C)]
 struct LoadedImageWrapper {

@@ -4,7 +4,7 @@ set -xeuf
 source "${CARGO_HOME:-$HOME/.cargo}/env"
 
 rustup component add rust-src
-cargo build --release --target target.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem --features "coreboot"
+cargo build --release --target target.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem --features "coreboot"
 
 FW_BIN="$(pwd)/target/target/release/hypervisor-fw"
 
