@@ -213,7 +213,7 @@ impl<'a> FileSystemWrapper<'a> {
             AllocateType::AllocateAnyPages,
             MemoryType::LoaderData,
             ((size + super::PAGE_SIZE as usize - 1) / super::PAGE_SIZE as usize) as u64,
-            0 as u64,
+            0_u64,
         );
 
         if status == Status::SUCCESS {
