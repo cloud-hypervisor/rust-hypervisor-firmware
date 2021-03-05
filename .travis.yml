@@ -2,7 +2,7 @@ dist: xenial
 language: rust
 
 rust:
-  - nightly-2020-10-01
+  - nightly-2021-03-04
 env:
   - RUSTFLAGS="-D warnings"
 
