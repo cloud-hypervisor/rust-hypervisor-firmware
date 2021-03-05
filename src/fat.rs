@@ -676,7 +676,7 @@ mod tests {
                             Err(super::Error::EndOfFile) => {
                                 break;
                             }
-                            Err(e) => panic!(e),
+                            Err(e) => panic!("{:?}", e),
                         }
                     }
 
@@ -714,7 +714,7 @@ mod tests {
                             Err(super::Error::EndOfFile) => {
                                 break;
                             }
-                            Err(e) => panic!(e),
+                            Err(e) => panic!("{:?}", e),
                         }
                     }
 
@@ -731,7 +731,7 @@ mod tests {
                             Err(super::Error::EndOfFile) => {
                                 break;
                             }
-                            Err(e) => panic!(e),
+                            Err(e) => panic!("{:?}", e),
                         }
                     }
 
@@ -749,7 +749,7 @@ mod tests {
                                 Err(super::Error::EndOfFile) => {
                                     break;
                                 }
-                                Err(e) => panic!(e),
+                                Err(e) => panic!("{:?}", e),
                             }
                         }
                         assert_eq!(bytes_so_far, f.size);
@@ -770,10 +770,10 @@ mod tests {
                         assert_eq!(f.sectors, 1_046_528);
                         assert_eq!(f.fat_type, super::FatType::FAT16);
                     }
-                    Err(e) => panic!(e),
+                    Err(e) => panic!("{:?}", e),
                 }
             }
-            Err(e) => panic!(e),
+            Err(e) => panic!("{:?}", e),
         }
     }
 
@@ -789,10 +789,10 @@ mod tests {
                         assert_eq!(file.active_cluster, 166);
                         assert_eq!(file.size, 92789);
                     }
-                    Err(e) => panic!(e),
+                    Err(e) => panic!("{:?}", e),
                 }
             }
-            Err(e) => panic!(e),
+            Err(e) => panic!("{:?}", e),
         }
     }
 
