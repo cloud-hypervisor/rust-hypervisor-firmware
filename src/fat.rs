@@ -104,6 +104,7 @@ pub struct Filesystem<'a> {
     first_fat_sector: u32,
     first_data_sector: u32,
     data_sector_count: u32,
+    #[allow(unused)]
     data_cluster_count: u32,
     root_cluster: u32, // FAT32 only
 }
