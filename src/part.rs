@@ -199,7 +199,7 @@ pub mod tests {
                 assert_eq!(start, 2048);
                 assert_eq!(end, 1_048_575);
             }
-            Err(e) => panic!(e),
+            Err(e) => panic!("{:?}", e),
         }
     }
 }
