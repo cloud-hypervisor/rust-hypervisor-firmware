@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #![feature(alloc_error_handler)]
-#![feature(global_asm, const_in_array_repeat_expressions)]
+#![feature(global_asm)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(unused_imports, dead_code))]
