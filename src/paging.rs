@@ -6,6 +6,7 @@ use x86_64::{
 
 // Amount of memory we identity map in setup(), max 512 GiB.
 const ADDRESS_SPACE_GIB: usize = 4;
+const TABLE: PageTable = PageTable::new();
 
 // Put the Page Tables in static muts to make linking easier
 #[no_mangle]
@@ -13,7 +14,7 @@ static mut L4_TABLE: PageTable = PageTable::new();
 #[no_mangle]
 static mut L3_TABLE: PageTable = PageTable::new();
 #[no_mangle]
-static mut L2_TABLES: [PageTable; ADDRESS_SPACE_GIB] = [PageTable::new(); ADDRESS_SPACE_GIB];
+static mut L2_TABLES: [PageTable; ADDRESS_SPACE_GIB] = [TABLE; ADDRESS_SPACE_GIB];
 
 pub fn setup() {
     // SAFETY: This function is idempontent and only writes to static memory and
