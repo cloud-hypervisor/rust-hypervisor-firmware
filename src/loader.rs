@@ -109,8 +109,10 @@ fn parse_entry(f: &mut fat::File) -> Result<LoaderConfig, fat::Error> {
 const ENTRY_DIRECTORY: &str = "/loader/entries/";
 
 fn default_entry_path(fs: &fat::Filesystem) -> Result<[u8; 260], fat::Error> {
-    let mut f = fs.open("/loader/loader.conf")?;
-
+    let mut f = match fs.open("/loader/loader.conf")? {
+        fat::Node::File(f) => f,
+        _ => return Err(fat::Error::NotFound),
+    };
     let default_entry = default_entry_file(&mut f)?;
     let default_entry = ascii_strip(&default_entry);
 
@@ -126,7 +128,10 @@ pub fn load_default_entry(fs: &fat::Filesystem, info: &dyn boot::Info) -> Result
     let default_entry_path = default_entry_path(&fs)?;
     let default_entry_path = ascii_strip(&default_entry_path);
 
-    let mut f = fs.open(default_entry_path)?;
+    let mut f = match fs.open(default_entry_path)? {
+        fat::Node::File(f) => f,
+        _ => return Err(Error::FileError(fat::Error::NotFound)),
+    };
     let entry = parse_entry(&mut f)?;
 
     let bzimage_path = ascii_strip(&entry.bzimage_path);
@@ -153,6 +158,7 @@ pub fn load_default_entry(fs: &fat::Filesystem, info: &dyn boot::Info) -> Result
 mod tests {
     use crate::fat::Read;
     use crate::part::tests::FakeDisk;
+    use core::convert::TryInto;
 
     #[test]
     fn test_default_entry() {
@@ -161,7 +167,7 @@ mod tests {
         let mut fs = crate::fat::Filesystem::new(&d, start, end);
         fs.init().expect("Error initialising filesystem");
 
-        let mut f = fs.open("/loader/loader.conf").unwrap();
+        let mut f: crate::fat::File = fs.open("/loader/loader.conf").unwrap().try_into().unwrap();
         let s = super::default_entry_file(&mut f).unwrap();
         let s = super::ascii_strip(&s);
         assert_eq!(s, "Clear-linux-kvm-5.0.6-318");
@@ -174,7 +180,7 @@ mod tests {
             format!("/loader/entries/{}", s).as_str()
         );
 
-        let mut f = fs.open(default_entry_path).unwrap();
+        let mut f: crate::fat::File = fs.open(default_entry_path).unwrap().try_into().unwrap();
         let entry = super::parse_entry(&mut f).unwrap();
         let s = super::ascii_strip(&entry.bzimage_path);
         assert_eq!(s, "/EFI/org.clearlinux/kernel-org.clearlinux.kvm.5.0.6-318");
