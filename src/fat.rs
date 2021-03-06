@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::{block::SectorRead, mem::MemoryRegion};
+use core::convert::TryFrom;
 
 #[repr(packed)]
 struct Header {
@@ -124,6 +125,45 @@ enum FileType {
     Directory,
 }
 
+pub enum Node<'a> {
+    File(File<'a>),
+    Directory(Directory<'a>),
+}
+
+impl<'a> From<File<'a>> for Node<'a> {
+    fn from(from: File<'a>) -> Node<'a> {
+        Node::File(from)
+    }
+}
+
+impl<'a> From<Directory<'a>> for Node<'a> {
+    fn from(from: Directory<'a>) -> Node<'a> {
+        Node::Directory(from)
+    }
+}
+
+impl<'a> TryFrom<Node<'a>> for File<'a> {
+    type Error = ();
+
+    fn try_from(from: Node<'a>) -> Result<Self, Self::Error> {
+        match from {
+            Node::File(f) => Ok(f),
+            _ => Err(()),
+        }
+    }
+}
+
+impl<'a> TryFrom<Node<'a>> for Directory<'a> {
+    type Error = ();
+
+    fn try_from(from: Node<'a>) -> Result<Self, Self::Error> {
+        match from {
+            Node::Directory(d) => Ok(d),
+            _ => Err(()),
+        }
+    }
+}
+
 pub struct File<'a> {
     filesystem: &'a Filesystem<'a>,
     start_cluster: u32,
@@ -133,6 +173,7 @@ pub struct File<'a> {
     position: u32,
 }
 
+#[derive(Copy, Clone)]
 pub struct Directory<'a> {
     filesystem: &'a Filesystem<'a>,
     cluster: Option<u32>,
@@ -151,6 +192,34 @@ fn ucs2_to_ascii(input: &[u16]) -> [u8; 255] {
         i += 1;
     }
     output
+}
+
+pub fn is_absolute_path(path: &str) -> bool {
+    if path.starts_with('/') || path.starts_with('\\') {
+        return true;
+    }
+    false
+}
+
+impl<'a> Read for Node<'a> {
+    fn read(&mut self, data: &mut [u8]) -> Result<u32, Error> {
+        match self {
+            Self::File(file) => file.read(data),
+            Self::Directory(_) => Err(Error::Unsupported),
+        }
+    }
+    fn seek(&mut self, position: u32) -> Result<(), Error> {
+        match self {
+            Self::File(file) => file.seek(position),
+            Self::Directory(directory) => directory.seek(position),
+        }
+    }
+    fn get_size(&self) -> u32 {
+        match self {
+            Self::File(file) => file.get_size(),
+            Self::Directory(_) => 512_u32,
+        }
+    }
 }
 
 impl<'a> Directory<'a> {
@@ -244,6 +313,17 @@ impl<'a> Directory<'a> {
             self.sector += 1;
             self.offset = 0;
         }
+    }
+    pub fn open(&self, path: &str) -> Result<Node, Error> {
+        let root = self.filesystem.root().unwrap();
+        let dir = if is_absolute_path(path) { &root } else { self };
+        self.filesystem.open_from(dir, path)
+    }
+
+    pub fn seek(&mut self, offset: u32) -> Result<(), Error> {
+        assert_eq!(offset, 0);
+        self.offset = 0;
+        Ok(())
     }
 }
 
@@ -367,7 +447,7 @@ impl<'a> SectorRead for Filesystem<'a> {
 // In the FAT directory entry the "." isn't stored and any gaps are padded with " ".
 fn compare_short_name(name: &str, de: &DirectoryEntry) -> bool {
     // 8.3 (plus 1 for the separator)
-    if name.len() > 12 {
+    if crate::common::ascii_length(name) > 12 {
         return false;
     }
 
@@ -376,6 +456,10 @@ fn compare_short_name(name: &str, de: &DirectoryEntry) -> bool {
         // Handle cases which are 11 long but not 8.3 (e.g "loader.conf")
         if i == 11 {
             return false;
+        }
+
+        if *a == b'\0' {
+            break;
         }
 
         // Jump to the extension
@@ -555,7 +639,7 @@ impl<'a> Filesystem<'a> {
         ((cluster - 2) * self.sectors_per_cluster) + self.first_data_sector
     }
 
-    fn root(&self) -> Result<Directory, Error> {
+    pub fn root(&self) -> Result<Directory, Error> {
         match self.fat_type {
             FatType::FAT12 | FatType::FAT16 => {
                 let root_directory_start = self.first_data_sector - self.root_dir_sectors;
@@ -596,20 +680,39 @@ impl<'a> Filesystem<'a> {
         })
     }
 
-    pub fn open(&self, path: &str) -> Result<File, Error> {
-        assert_eq!(path.find('/').or_else(|| path.find('\\')), Some(0));
+    pub fn open(&self, path: &str) -> Result<Node, Error> {
+        // path must be absolute path
+        assert_eq!(is_absolute_path(path), true);
+        self.open_from(&self.root().unwrap(), path)
+    }
 
-        let mut residual = path;
+    fn open_from(&self, from: &Directory, path: &str) -> Result<Node, Error> {
+        let len = crate::common::ascii_length(path);
+        assert!(len < 256);
+        let mut p = [0_u8; 256];
+        let mut residual = if !is_absolute_path(path) {
+            p[0] = b'/';
+            p[1..1 + len].clone_from_slice(path[..len].as_bytes());
+            core::str::from_utf8(&p).unwrap()
+        } else {
+            path
+        };
 
-        let mut current_dir = self.root().unwrap();
+        let mut current_dir = *from;
         loop {
+            current_dir.seek(0)?;
+
             // sub is the directory or file name
             // residual is what is left
             let sub = match &residual[1..]
                 .find('/')
                 .or_else(|| (&residual[1..]).find('\\'))
             {
-                None => &residual[1..],
+                None => {
+                    let sub = &residual[1..];
+                    residual = "";
+                    sub
+                }
                 Some(x) => {
                     // +1 due to above find working on substring
                     let sub = &residual[1..=*x];
@@ -630,10 +733,15 @@ impl<'a> Filesystem<'a> {
                         if compare_name(sub, &de) {
                             match de.file_type {
                                 FileType::Directory => {
+                                    if residual.is_empty() {
+                                        return Ok(self.get_directory(de.cluster).unwrap().into());
+                                    }
                                     current_dir = self.get_directory(de.cluster).unwrap();
                                     break;
                                 }
-                                FileType::File => return self.get_file(de.cluster, de.size),
+                                FileType::File => {
+                                    return Ok(self.get_file(de.cluster, de.size).unwrap().into())
+                                }
                             }
                         }
                     }
@@ -647,6 +755,7 @@ impl<'a> Filesystem<'a> {
 mod tests {
     use super::Read;
     use crate::part::tests::FakeDisk;
+    use core::convert::TryInto;
 
     #[test]
     fn test_fat_file_reads() {
@@ -662,7 +771,11 @@ mod tests {
                     let mut fs = crate::fat::Filesystem::new(&d, 0, len);
                     fs.init().expect("Error initialising filesystem");
                     let path = format!("/A/B/C/{}", v);
-                    let mut f = fs.open(&path).expect("Error opening file");
+                    let mut f: crate::fat::File = fs
+                        .open(&path)
+                        .expect("Error opening file")
+                        .try_into()
+                        .unwrap();
 
                     assert_eq!(f.size, v);
 
@@ -700,7 +813,11 @@ mod tests {
                     let mut fs = crate::fat::Filesystem::new(&d, 0, len);
                     fs.init().expect("Error initialising filesystem");
                     let path = format!("/A/B/C/{}", v);
-                    let mut f = fs.open(&path).expect("Error opening file");
+                    let mut f: crate::fat::File = fs
+                        .open(&path)
+                        .expect("Error opening file")
+                        .try_into()
+                        .unwrap();
 
                     assert_eq!(f.size, v);
 
@@ -785,7 +902,12 @@ mod tests {
                 let mut f = crate::fat::Filesystem::new(&d, start, end);
                 match f.init() {
                     Ok(()) => {
-                        let file = f.open("\\EFI\\BOOT\\BOOTX64.EFI").unwrap();
+                        let file: crate::fat::File = f
+                            .open("\\EFI\\BOOT\\BOOTX64.EFI")
+                            .unwrap()
+                            .try_into()
+                            .unwrap();
+
                         assert_eq!(file.active_cluster, 166);
                         assert_eq!(file.size, 92789);
                     }

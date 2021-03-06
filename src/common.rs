@@ -64,6 +64,17 @@ pub fn ucs2_as_ascii_length(input: *const u16) -> usize {
     len
 }
 
+pub fn ascii_length(input: &str) -> usize {
+    let mut len = 0;
+    for c in input.chars() {
+        if c == '\0' {
+            break;
+        }
+        len += 1;
+    }
+    len
+}
+
 pub fn ucs2_to_ascii(input: *const u16, output: &mut [u8]) {
     let mut i: usize = 0;
     assert!(output.len() >= ucs2_as_ascii_length(input));
