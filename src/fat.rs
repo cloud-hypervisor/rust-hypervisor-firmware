@@ -201,6 +201,35 @@ pub fn is_absolute_path(path: &str) -> bool {
     false
 }
 
+fn name_to_str(input: &str, output: &mut [u8]) {
+    let pat: &[_] = &[' ', '\0'];
+    let input = input.trim_matches(pat);
+    let len = crate::common::ascii_length(input);
+    assert!(len <= output.len());
+    if input == "." || input == ".." || len > 12 {
+        output[..len].clone_from_slice(input.as_bytes());
+        return;
+    }
+
+    let mut i = 0;
+    for b in output.iter_mut() {
+        *b = match input.as_bytes()[i] {
+            b'\0' => break,
+            b' ' => {
+                i = 8;
+                b'.'
+            }
+            c => {
+                i += 1;
+                c
+            }
+        };
+        if i >= len {
+            break;
+        }
+    }
+}
+
 impl<'a> Read for Node<'a> {
     fn read(&mut self, data: &mut [u8]) -> Result<u32, Error> {
         match self {
@@ -312,6 +341,26 @@ impl<'a> Directory<'a> {
             }
             self.sector += 1;
             self.offset = 0;
+        }
+    }
+
+    pub fn next_node(&mut self) -> Result<(Node, [u8; 11]), Error> {
+        let de = self.next_entry()?;
+        let mut name = [0_u8; 11];
+        name_to_str(core::str::from_utf8(&de.name).unwrap(), &mut name);
+
+        match de.file_type {
+            FileType::Directory => Ok((
+                self.filesystem.get_directory(de.cluster).unwrap().into(),
+                name,
+            )),
+            FileType::File => Ok((
+                self.filesystem
+                    .get_file(de.cluster, de.size)
+                    .unwrap()
+                    .into(),
+                name,
+            )),
         }
     }
 
@@ -988,5 +1037,21 @@ mod tests {
         assert!(super::compare_short_name("X.abc", &de));
         de.name.copy_from_slice(b"ABCDEFGHIJK");
         assert!(super::compare_short_name("abcdefgh.ijk", &de));
+    }
+
+    #[test]
+    fn test_name_to_str() {
+        let mut s = [0_u8; 11];
+        super::name_to_str("X       ABC", &mut s);
+        assert_eq!(crate::common::ascii_strip(&s), "X.ABC");
+        let mut s = [0_u8; 11];
+        super::name_to_str(".", &mut s);
+        assert_eq!(crate::common::ascii_strip(&s), ".");
+        let mut s = [0_u8; 11];
+        super::name_to_str("..", &mut s);
+        assert_eq!(crate::common::ascii_strip(&s), "..");
+        let mut s = [0_u8; 11];
+        super::name_to_str("ABCDEFGHIJK", &mut s);
+        assert_eq!(crate::common::ascii_strip(&s), "ABCDEFGHIJK");
     }
 }
