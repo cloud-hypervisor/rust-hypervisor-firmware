@@ -179,8 +179,18 @@ pub extern "win64" fn get_position(_: *mut FileProtocol, _: *mut u64) -> Status 
     Status::UNSUPPORTED
 }
 
-pub extern "win64" fn set_position(_: *mut FileProtocol, _: u64) -> Status {
-    Status::UNSUPPORTED
+pub extern "win64" fn set_position(file: *mut FileProtocol, position: u64) -> Status {
+    // Seeking to end of file is not supported
+    if position == 0xFFFFFFFFFFFFFFFF {
+        return Status::UNSUPPORTED;
+    }
+    use crate::fat::Read;
+    let wrapper = container_of_mut!(file, FileWrapper, proto);
+    match unsafe { (*wrapper).node.seek(position as u32) } {
+        Err(crate::fat::Error::Unsupported) => Status::UNSUPPORTED,
+        Err(_) => Status::DEVICE_ERROR,
+        Ok(()) => Status::SUCCESS,
+    }
 }
 
 #[repr(C)]
