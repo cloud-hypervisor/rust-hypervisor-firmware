@@ -864,14 +864,6 @@ pub fn efi_exec(
         },
         file::FileDevicePathProtocol {
             device_path: DevicePathProtocol {
-                r#type: r_efi::protocols::device_path::TYPE_MEDIA,
-                sub_type: 4, // Media Path type file
-                length: [132, 0],
-            },
-            filename: [0; 64],
-        },
-        file::FileDevicePathProtocol {
-            device_path: DevicePathProtocol {
                 r#type: r_efi::protocols::device_path::TYPE_END,
                 sub_type: 0xff, // End of full path
                 length: [4, 0],
@@ -880,8 +872,7 @@ pub fn efi_exec(
         },
     ];
 
-    crate::common::ascii_to_ucs2("\\EFI\\BOOT", &mut file_paths[0].filename);
-    crate::common::ascii_to_ucs2("BOOTX64.EFI", &mut file_paths[1].filename);
+    crate::common::ascii_to_ucs2("\\EFI\\BOOT\\BOOTX64.EFI", &mut file_paths[0].filename);
 
     let wrapped_fs = file::FileSystemWrapper::new(fs, efi_part_id);
 
