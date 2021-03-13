@@ -371,7 +371,9 @@ impl<'a> Directory<'a> {
     }
 
     pub fn seek(&mut self, offset: u32) -> Result<(), Error> {
-        assert_eq!(offset, 0);
+        if offset != 0 {
+            return Err(Error::Unsupported);
+        }
         self.offset = 0;
         Ok(())
     }
