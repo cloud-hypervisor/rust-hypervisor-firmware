@@ -25,14 +25,14 @@ integration_tests = []
 coreboot = []
 
 [dependencies]
-bitflags = "1.2"
+bitflags = "1.2.1"
 x86_64 = "0.13.2"
-atomic_refcell = "0.1"
+atomic_refcell = "0.1.6"
 r-efi = "3.2.0"
 uart_16550 = "0.2.12"
 linked_list_allocator = "0.8.11"
 
 [dev-dependencies]
-rand = "0.8.2"
-ssh2 = "0.9.0"
+rand = "0.8.3"
+ssh2 = "0.9.1"
 tempfile = "3.2.0"
