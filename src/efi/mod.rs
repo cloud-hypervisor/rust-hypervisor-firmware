@@ -612,8 +612,17 @@ pub extern "win64" fn load_image(
     Status::SUCCESS
 }
 
-pub extern "win64" fn start_image(_: Handle, _: *mut usize, _: *mut *mut Char16) -> Status {
-    Status::UNSUPPORTED
+pub extern "win64" fn start_image(
+    image_handle: Handle,
+    _: *mut usize,
+    _: *mut *mut Char16,
+) -> Status {
+    let wrapped_handle = image_handle as *const LoadedImageWrapper;
+    let address = unsafe { (*wrapped_handle).entry_point };
+    let ptr = address as *const ();
+    let code: extern "win64" fn(Handle, *mut efi::SystemTable) -> Status =
+        unsafe { core::mem::transmute(ptr) };
+    (code)(image_handle, unsafe { &mut ST })
 }
 
 pub extern "win64" fn exit(_: Handle, _: Status, _: usize, _: *mut Char16) -> Status {
