@@ -496,13 +496,14 @@ impl<'a> SectorRead for Filesystem<'a> {
 // Do a case-insensitive match on the name with the 8.3 format that you get from FAT.
 // In the FAT directory entry the "." isn't stored and any gaps are padded with " ".
 fn compare_short_name(name: &str, de: &DirectoryEntry) -> bool {
+    let name = name.trim_matches(char::from(0));
     // 8.3 (plus 1 for the separator)
     if crate::common::ascii_length(name) > 12 {
         return false;
     }
 
     let mut i = 0;
-    for (_, a) in name.as_bytes().iter().enumerate() {
+    for a in name.as_bytes().iter() {
         // Handle cases which are 11 long but not 8.3 (e.g "loader.conf")
         if i == 11 {
             return false;
