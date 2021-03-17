@@ -314,6 +314,7 @@ impl<'a> Directory<'a> {
             self.offset = 0;
         }
     }
+
     pub fn open(&self, path: &str) -> Result<Node, Error> {
         let root = self.filesystem.root().unwrap();
         let dir = if is_absolute_path(path) { &root } else { self };
