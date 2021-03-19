@@ -12,7 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::{alloc as heap_alloc, ffi::c_void, mem::transmute};
+use core::{
+    alloc as heap_alloc,
+    ffi::c_void,
+    mem::{size_of, transmute},
+    ptr::null_mut,
+};
 
 use atomic_refcell::AtomicRefCell;
 use linked_list_allocator::LockedHeap;
@@ -72,7 +77,7 @@ static mut RS: efi::RuntimeServices = efi::RuntimeServices {
     hdr: efi::TableHeader {
         signature: efi::RUNTIME_SERVICES_SIGNATURE,
         revision: efi::RUNTIME_SERVICES_REVISION,
-        header_size: core::mem::size_of::<efi::RuntimeServices>() as u32,
+        header_size: size_of::<efi::RuntimeServices>() as u32,
         crc32: 0, // TODO
         reserved: 0,
     },
@@ -96,7 +101,7 @@ static mut BS: efi::BootServices = efi::BootServices {
     hdr: efi::TableHeader {
         signature: efi::BOOT_SERVICES_SIGNATURE,
         revision: efi::BOOT_SERVICES_REVISION,
-        header_size: core::mem::size_of::<efi::BootServices>() as u32,
+        header_size: size_of::<efi::BootServices>() as u32,
         crc32: 0, // TODO
         reserved: 0,
     },
@@ -143,33 +148,33 @@ static mut BS: efi::BootServices = efi::BootServices {
     copy_mem,
     set_mem,
     create_event_ex,
-    reserved: core::ptr::null_mut(),
+    reserved: null_mut(),
 };
 
 static mut ST: efi::SystemTable = efi::SystemTable {
     hdr: efi::TableHeader {
         signature: efi::SYSTEM_TABLE_SIGNATURE,
         revision: (2 << 16) | (80),
-        header_size: core::mem::size_of::<efi::SystemTable>() as u32,
+        header_size: size_of::<efi::SystemTable>() as u32,
         crc32: 0, // TODO
         reserved: 0,
     },
-    firmware_vendor: core::ptr::null_mut(), // TODO,
+    firmware_vendor: null_mut(), // TODO,
     firmware_revision: 0,
     console_in_handle: console::STDIN_HANDLE,
-    con_in: core::ptr::null_mut(),
+    con_in: null_mut(),
     console_out_handle: console::STDOUT_HANDLE,
-    con_out: core::ptr::null_mut(),
+    con_out: null_mut(),
     standard_error_handle: console::STDERR_HANDLE,
-    std_err: core::ptr::null_mut(),
-    runtime_services: core::ptr::null_mut(),
-    boot_services: core::ptr::null_mut(),
+    std_err: null_mut(),
+    runtime_services: null_mut(),
+    boot_services: null_mut(),
     number_of_table_entries: 0,
-    configuration_table: core::ptr::null_mut(),
+    configuration_table: null_mut(),
 };
 
 static mut BLOCK_WRAPPERS: block::BlockWrappers = block::BlockWrappers {
-    wrappers: [core::ptr::null_mut(); 16],
+    wrappers: [null_mut(); 16],
     count: 0,
 };
 
@@ -258,7 +263,7 @@ pub extern "win64" fn get_variable(
     vendor_guid: *mut Guid,
     attributes: *mut u32,
     data_size: *mut usize,
-    data: *mut core::ffi::c_void,
+    data: *mut c_void,
 ) -> Status {
     VARIABLES
         .borrow_mut()
@@ -365,7 +370,7 @@ pub extern "win64" fn get_memory_map(
     descriptor_version: *mut u32,
 ) -> Status {
     let count = ALLOCATOR.borrow().get_descriptor_count();
-    let map_size = core::mem::size_of::<MemoryDescriptor>() * count;
+    let map_size = size_of::<MemoryDescriptor>() * count;
     if unsafe { *memory_map_size } < map_size {
         unsafe {
             *memory_map_size = map_size;
@@ -376,11 +381,11 @@ pub extern "win64" fn get_memory_map(
     let out =
         unsafe { core::slice::from_raw_parts_mut(out as *mut alloc::MemoryDescriptor, count) };
     let count = ALLOCATOR.borrow().get_descriptors(out);
-    let map_size = core::mem::size_of::<MemoryDescriptor>() * count;
+    let map_size = size_of::<MemoryDescriptor>() * count;
     unsafe {
         *memory_map_size = map_size;
         *descriptor_version = efi::MEMORY_DESCRIPTOR_VERSION;
-        *descriptor_size = core::mem::size_of::<MemoryDescriptor>();
+        *descriptor_size = size_of::<MemoryDescriptor>();
         *key = ALLOCATOR.borrow().get_map_key();
     }
 
@@ -486,14 +491,7 @@ pub extern "win64" fn handle_protocol(
     guid: *mut Guid,
     out: *mut *mut c_void,
 ) -> Status {
-    open_protocol(
-        handle,
-        guid,
-        out,
-        core::ptr::null_mut(),
-        core::ptr::null_mut(),
-        0,
-    )
+    open_protocol(handle, guid, out, null_mut(), null_mut(), 0)
 }
 
 pub extern "win64" fn register_protocol_notify(
@@ -513,14 +511,13 @@ pub extern "win64" fn locate_handle(
 ) -> Status {
     if unsafe { *guid } == block::PROTOCOL_GUID {
         let count = unsafe { BLOCK_WRAPPERS.count };
-        if unsafe { *size } < core::mem::size_of::<Handle>() * count {
-            unsafe { *size = core::mem::size_of::<Handle>() * count };
+        if unsafe { *size } < size_of::<Handle>() * count {
+            unsafe { *size = size_of::<Handle>() * count };
             return Status::BUFFER_TOO_SMALL;
         }
 
-        let handles = unsafe {
-            core::slice::from_raw_parts_mut(handles, *size / core::mem::size_of::<Handle>())
-        };
+        let handles =
+            unsafe { core::slice::from_raw_parts_mut(handles, *size / size_of::<Handle>()) };
 
         let wrappers_as_handles: &[Handle] = unsafe {
             core::slice::from_raw_parts_mut(
@@ -532,7 +529,7 @@ pub extern "win64" fn locate_handle(
 
         handles[0..count].copy_from_slice(wrappers_as_handles);
 
-        unsafe { *size = core::mem::size_of::<Handle>() * count };
+        unsafe { *size = size_of::<Handle>() * count };
 
         return Status::SUCCESS;
     }
@@ -803,8 +800,8 @@ fn extract_path(device_path: &DevicePathProtocol, path: &mut [u8]) {
     let mut dp = device_path;
     loop {
         if dp.r#type == r_efi::protocols::device_path::TYPE_MEDIA && dp.sub_type == 0x04 {
-            let ptr = (dp as *const _ as u64 + core::mem::size_of::<DevicePathProtocol>() as u64)
-                as *const u16;
+            let ptr =
+                (dp as *const _ as u64 + size_of::<DevicePathProtocol>() as u64) as *const u16;
             crate::common::ucs2_to_ascii(ptr, path);
             return;
         }
@@ -887,10 +884,10 @@ fn new_image_handle(
     load_size: u64,
     entry_addr: u64,
 ) -> *mut LoadedImageWrapper {
-    let mut file_paths = core::ptr::null_mut();
+    let mut file_paths = null_mut();
     let status = allocate_pool(
         MemoryType::LoaderData,
-        core::mem::size_of::<DevicePaths>(),
+        size_of::<DevicePaths>(),
         &mut file_paths as *mut *mut c_void,
     );
     assert!(status == Status::SUCCESS);
@@ -916,10 +913,10 @@ fn new_image_handle(
 
     crate::common::ascii_to_ucs2(path, &mut file_paths[0].filename);
 
-    let mut image = core::ptr::null_mut();
+    let mut image = null_mut();
     allocate_pool(
         MemoryType::LoaderData,
-        core::mem::size_of::<LoadedImageWrapper>(),
+        size_of::<LoadedImageWrapper>(),
         &mut image as *mut *mut c_void,
     );
     assert!(status == Status::SUCCESS);
@@ -935,13 +932,13 @@ fn new_image_handle(
             device_handle,
             file_path: &mut file_paths[0].device_path, // Pointer to first path entry
             load_options_size: 0,
-            load_options: core::ptr::null_mut(),
+            load_options: null_mut(),
             image_base: load_addr as *mut _,
             image_size: load_size,
             image_code_type: efi::MemoryType::LoaderCode,
             image_data_type: efi::MemoryType::LoaderData,
             unload: image_unload,
-            reserved: core::ptr::null_mut(),
+            reserved: null_mut(),
         },
         entry_point: entry_addr,
     };
