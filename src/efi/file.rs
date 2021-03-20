@@ -261,7 +261,7 @@ struct FileWrapper<'a> {
 #[repr(C)]
 pub struct FileSystemWrapper<'a> {
     hw: super::HandleWrapper,
-    fs: &'a crate::fat::Filesystem<'a>,
+    pub fs: &'a crate::fat::Filesystem<'a>,
     pub proto: SimpleFileSystemProtocol,
     pub block_part_id: Option<u32>,
 }
