@@ -187,6 +187,16 @@ impl Allocator {
         Some(new)
     }
 
+    pub fn find_free_pages(
+        &mut self,
+        allocate_type: AllocateType,
+        page_count: u64,
+        address: u64,
+    ) -> Option<u64> {
+        self.find_free_memory(allocate_type, page_count, address)
+            .map(|dest| self.allocations[dest].descriptor.physical_start)
+    }
+
     pub fn allocate_pages(
         &mut self,
         allocate_type: AllocateType,
