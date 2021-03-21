@@ -899,7 +899,7 @@ fn populate_allocator(info: &dyn boot::Info, image_address: u64, image_size: u64
 fn init_heap_allocator(size: usize) {
     let (status, heap_start) = ALLOCATOR.borrow_mut().allocate_pages(
         AllocateType::AllocateAnyPages,
-        MemoryType::BootServicesCode,
+        MemoryType::RuntimeServicesData,
         size as u64 / PAGE_SIZE,
         0,
     );
