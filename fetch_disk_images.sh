@@ -14,7 +14,7 @@ if [ ! -f "$CLEAR_OS_IMAGE" ]; then
 fi
 
 BIONIC_OS_IMAGE_NAME="bionic-server-cloudimg-amd64.img"
-BIONIC_OS_IMAGE_URL="https://cloudhypervisorstorage.blob.core.windows.net/images/$BIONIC_OS_IMAGE_NAME"
+BIONIC_OS_IMAGE_URL="https://cloud-images.ubuntu.com/bionic/current/$BIONIC_OS_IMAGE_NAME"
 BIONIC_OS_IMAGE="$IMAGES_DIR/$BIONIC_OS_IMAGE_NAME"
 if [ ! -f "$BIONIC_OS_IMAGE" ]; then
     pushd $IMAGES_DIR
@@ -31,7 +31,7 @@ if [ ! -f "$BIONIC_OS_RAW_IMAGE" ]; then
 fi
 
 FOCAL_OS_IMAGE_NAME="focal-server-cloudimg-amd64.img"
-FOCAL_OS_IMAGE_URL="https://cloudhypervisorstorage.blob.core.windows.net/images/$FOCAL_OS_IMAGE_NAME"
+FOCAL_OS_IMAGE_URL="https://cloud-images.ubuntu.com/focal/current/$FOCAL_OS_IMAGE_NAME"
 FOCAL_OS_IMAGE="$IMAGES_DIR/$FOCAL_OS_IMAGE_NAME"
 if [ ! -f "$FOCAL_OS_IMAGE" ]; then
     pushd $IMAGES_DIR
