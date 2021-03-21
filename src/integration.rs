@@ -397,8 +397,7 @@ mod tests {
         test_boot(BIONIC_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
     }
 
-    // Does not currently work:
-    // #[test]
+    #[test]
     fn test_boot_qemu_focal() {
         test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
     }
