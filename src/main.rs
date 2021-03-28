@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #![feature(alloc_error_handler)]
-#![feature(global_asm)]
+#![feature(asm, global_asm)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(unused_imports, dead_code))]
@@ -38,6 +38,7 @@ mod block;
 mod boot;
 mod bzimage;
 mod coreboot;
+mod delay;
 mod efi;
 mod fat;
 mod gdt;
