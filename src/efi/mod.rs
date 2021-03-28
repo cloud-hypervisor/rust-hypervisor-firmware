@@ -656,8 +656,9 @@ pub extern "win64" fn get_next_monotonic_count(_: *mut u64) -> Status {
     Status::DEVICE_ERROR
 }
 
-pub extern "win64" fn stall(_: usize) -> Status {
-    Status::UNSUPPORTED
+pub extern "win64" fn stall(microseconds: usize) -> Status {
+    crate::delay::udelay(microseconds as u64);
+    Status::SUCCESS
 }
 
 pub extern "win64" fn set_watchdog_timer(_: usize, _: u64, _: usize, _: *mut Char16) -> Status {
