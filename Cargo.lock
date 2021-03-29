@@ -66,7 +66,7 @@ dependencies = [
 
 [[package]]
 name = "hypervisor-fw"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "atomic_refcell",
  "bitflags",
@@ -341,9 +341,9 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "x86_64"
-version = "0.13.3"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d9164ba09d4a6744b87c540d02556722080bd7689e92b6ff008b803b1460647"
+checksum = "894d2c498cf08af02f021d9664965167c36fc9b47e6da37d719fbc6ec3af3b51"
 dependencies = [
  "bit_field",
  "bitflags",
