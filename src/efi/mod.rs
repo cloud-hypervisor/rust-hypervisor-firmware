@@ -369,6 +369,22 @@ pub extern "win64" fn get_memory_map(
     descriptor_size: *mut usize,
     descriptor_version: *mut u32,
 ) -> Status {
+    if memory_map_size.is_null() {
+        return Status::INVALID_PARAMETER;
+    }
+
+    if !descriptor_size.is_null() {
+        unsafe {
+            *descriptor_size = size_of::<MemoryDescriptor>();
+        }
+    }
+
+    if !descriptor_version.is_null() {
+        unsafe {
+            *descriptor_version = efi::MEMORY_DESCRIPTOR_VERSION;
+        }
+    }
+
     let count = ALLOCATOR.borrow().get_descriptor_count();
     let map_size = size_of::<MemoryDescriptor>() * count;
     if unsafe { *memory_map_size } < map_size {
@@ -378,14 +394,16 @@ pub extern "win64" fn get_memory_map(
         return Status::BUFFER_TOO_SMALL;
     }
 
+    if key.is_null() {
+        return Status::INVALID_PARAMETER;
+    }
+
     let out =
         unsafe { core::slice::from_raw_parts_mut(out as *mut alloc::MemoryDescriptor, count) };
     let count = ALLOCATOR.borrow().get_descriptors(out);
     let map_size = size_of::<MemoryDescriptor>() * count;
     unsafe {
         *memory_map_size = map_size;
-        *descriptor_version = efi::MEMORY_DESCRIPTOR_VERSION;
-        *descriptor_size = size_of::<MemoryDescriptor>();
         *key = ALLOCATOR.borrow().get_map_key();
     }
 
