@@ -76,7 +76,7 @@ dependencies = [
  "ssh2",
  "tempfile",
  "uart_16550",
- "x86_64",
+ "x86_64 0.14.0",
 ]
 
 [[package]]
@@ -302,7 +302,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d45a3c9181dc9ba7d35d02b3c36d1604155289d935b7946510fb3d2f4b976d9"
 dependencies = [
  "bitflags",
- "x86_64",
+ "x86_64 0.13.6",
 ]
 
 [[package]]
@@ -310,6 +310,12 @@ name = "vcpkg"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b00bca6106a5e23f3eee943593759b7fcddb00554332e856d990c893966879fb"
+
+[[package]]
+name = "volatile"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4c2dbd44eb8b53973357e6e207e370f0c1059990df850aca1eca8947cf464f0"
 
 [[package]]
 name = "wasi"
@@ -341,10 +347,21 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "x86_64"
-version = "0.13.5"
+version = "0.13.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f00e138c487966a6efdb30416baff8f973d17c61c9560a6047c74f8828c46fe1"
+checksum = "021b49a4cb0a0d9490265cc169ca816014cbf61d3f3b75424815912977b81871"
 dependencies = [
  "bit_field",
  "bitflags",
+]
+
+[[package]]
+name = "x86_64"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c48c878623ca5318ce0d3fde56541e05c973e1683cfc19d5384db516999569dc"
+dependencies = [
+ "bit_field",
+ "bitflags",
+ "volatile",
 ]
