@@ -390,6 +390,7 @@ mod tests {
 
     const BIONIC_IMAGE_NAME: &str = "bionic-server-cloudimg-amd64-raw.img";
     const FOCAL_IMAGE_NAME: &str = "focal-server-cloudimg-amd64-raw.img";
+    const GROOVY_IMAGE_NAME: &str = "groovy-server-cloudimg-amd64-raw.img";
     const CLEAR_IMAGE_NAME: &str = "clear-31311-cloudguest.img";
 
     #[test]
@@ -400,6 +401,11 @@ mod tests {
     #[test]
     fn test_boot_qemu_focal() {
         test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
+    }
+
+    #[test]
+    fn test_boot_qemu_groovy() {
+        test_boot(GROOVY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
     }
 
     #[test]
@@ -417,6 +423,12 @@ mod tests {
     #[cfg(not(feature = "coreboot"))]
     fn test_boot_ch_focal() {
         test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
+    }
+
+    #[test]
+    #[cfg(not(feature = "coreboot"))]
+    fn test_boot_ch_groovy() {
+        test_boot(GROOVY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
     }
 
     #[test]
