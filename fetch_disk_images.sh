@@ -46,3 +46,21 @@ if [ ! -f "$FOCAL_OS_RAW_IMAGE" ]; then
     qemu-img convert -p -f qcow2 -O raw $FOCAL_OS_IMAGE_NAME $FOCAL_OS_RAW_IMAGE_NAME
     popd
 fi
+
+
+GROOVY_OS_IMAGE_NAME="groovy-server-cloudimg-amd64.img"
+GROOVY_OS_IMAGE_URL="https://cloud-images.ubuntu.com/groovy/current/$GROOVY_OS_IMAGE_NAME"
+GROOVY_OS_IMAGE="$IMAGES_DIR/$GROOVY_OS_IMAGE_NAME"
+if [ ! -f "$GROOVY_OS_IMAGE" ]; then
+    pushd $IMAGES_DIR
+    wget --quiet $GROOVY_OS_IMAGE_URL
+    popd
+fi
+
+GROOVY_OS_RAW_IMAGE_NAME="groovy-server-cloudimg-amd64-raw.img"
+GROOVY_OS_RAW_IMAGE="$IMAGES_DIR/$GROOVY_OS_RAW_IMAGE_NAME"
+if [ ! -f "$GROOVY_OS_RAW_IMAGE" ]; then
+    pushd $IMAGES_DIR
+    qemu-img convert -p -f qcow2 -O raw $GROOVY_OS_IMAGE_NAME $GROOVY_OS_RAW_IMAGE_NAME
+    popd
+fi
