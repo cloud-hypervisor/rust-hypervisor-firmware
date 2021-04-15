@@ -30,5 +30,5 @@ id -nGz "$USER" | grep -qzxF kvm || sudo adduser "$USER" kvm
 
 newgrp kvm << EOF
 export RUST_BACKTRACE=1
-cargo test --features "coreboot integration_tests"  -- --test-threads=1 test_boot
+cargo test --features "coreboot integration_tests"  -- test_boot
 EOF
