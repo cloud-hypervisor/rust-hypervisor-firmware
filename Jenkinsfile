@@ -24,6 +24,16 @@ pipeline {
                                                                 sh "nohup curl https://sh.rustup.rs -sSf | sh -s -- -y"
                                                         }
                                                 }
+                                                stage ('Download assets') {
+                                                        steps {
+                                                                sh "mkdir ./resources/images"
+                                                                azureDownload(storageCredentialId: 'ch-image-store',
+                                                                                          containerName: 'private-images',
+                                                                                          includeFilesPattern: 'windows-server-2019.raw',
+                                                                                          downloadType: 'container',
+                                                                                          downloadDirLoc: "./resources/images")
+                                                        }
+                                                }
                                                 stage('Run integration tests') {
                                                           steps {
                                                                   sh "./run_integration_tests.sh"
@@ -50,6 +60,16 @@ pipeline {
                                                 stage ('Install Rust') {
                                                         steps {
                                                                 sh "nohup curl https://sh.rustup.rs -sSf | sh -s -- -y"
+                                                        }
+                                                }
+                                                stage ('Download assets') {
+                                                        steps {
+                                                                sh "mkdir ./resources/images"
+                                                                azureDownload(storageCredentialId: 'ch-image-store',
+                                                                                          containerName: 'private-images',
+                                                                                          includeFilesPattern: 'windows-server-2019.raw',
+                                                                                          downloadType: 'container',
+                                                                                          downloadDirLoc: "./resources/images")
                                                         }
                                                 }
                                                 stage('Run integration tests') {

@@ -271,6 +271,12 @@ mod tests {
     }
 
     #[derive(Debug)]
+    struct PasswordAuth {
+        username: String,
+        password: String,
+    }
+
+    #[derive(Debug)]
     enum SSHCommandError {
         Connection(std::io::Error),
         Handshake(ssh2::Error),
@@ -279,7 +285,11 @@ mod tests {
         Command(ssh2::Error),
     }
 
-    fn ssh_command(ip: &str, command: &str) -> Result<String, SSHCommandError> {
+    fn ssh_command_with_auth(
+        ip: &str,
+        command: &str,
+        auth: &PasswordAuth,
+    ) -> Result<String, SSHCommandError> {
         const DEFAULT_SSH_RETRIES: u8 = 6;
         const DEFAULT_SSH_TIMEOUT: u8 = 10;
 
@@ -296,7 +306,7 @@ mod tests {
                 sess.set_tcp_stream(tcp);
                 sess.handshake().map_err(SSHCommandError::Handshake)?;
 
-                sess.userauth_password("cloud", "cloud123")
+                sess.userauth_password(&auth.username, &auth.password)
                     .map_err(SSHCommandError::Authentication)?;
                 assert!(sess.authenticated());
 
@@ -323,6 +333,17 @@ mod tests {
             thread::sleep(std::time::Duration::new((timeout * counter).into(), 0));
         }
         Ok(s)
+    }
+
+    fn ssh_command(ip: &str, command: &str) -> Result<String, SSHCommandError> {
+        ssh_command_with_auth(
+            ip,
+            command,
+            &PasswordAuth {
+                username: String::from("cloud"),
+                password: String::from("cloud123"),
+            },
+        )
     }
 
     fn spawn_ch(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
@@ -496,5 +517,141 @@ mod tests {
     #[cfg(not(feature = "coreboot"))]
     fn test_boot_ch_clear() {
         test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_ch)
+    }
+
+    const WINDOWS_IMAGE_NAME: &str = "windows-server-2019.raw";
+
+    fn windows_auth() -> PasswordAuth {
+        PasswordAuth {
+            username: String::from("administrator"),
+            password: String::from("Admin123"),
+        }
+    }
+
+    fn test_boot_qemu_windows_common(fw: &Firmware) {
+        let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
+        let net = GuestNetworkConfig::new(COUNTER.fetch_add(1, Ordering::SeqCst) as u8);
+        let os = prepare_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
+
+        prepare_tap(&net);
+
+        let mut c = Command::new("qemu-system-x86_64");
+        c.args(&[
+            "-machine",
+            "q35,accel=kvm",
+            "-cpu",
+            "host,-vmx",
+            fw.fw_type,
+            fw.path,
+            "-display",
+            "none",
+            "-nodefaults",
+            "-serial",
+            "stdio",
+            "-drive",
+            &format!("id=os,file={},if=none", os),
+            "-device",
+            "virtio-blk-pci,drive=os,disable-legacy=on",
+            "-m",
+            "4G",
+            "-netdev",
+            &format!(
+                "tap,id=net0,ifname={},script=no,downscript=no",
+                net.tap_name
+            ),
+            "-device",
+            &format!("virtio-net-pci,netdev=net0,mac={}", net.guest_mac),
+        ]);
+
+        let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
+        let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
+
+        eprintln!("Spawning: {:?}", c);
+        let mut child = c
+            .stdout(Stdio::from(stdout))
+            .stderr(Stdio::from(stderr))
+            .spawn()
+            .expect("Expect launching QEMU to succeed");
+
+        thread::sleep(std::time::Duration::from_secs(60));
+        let r = std::panic::catch_unwind(|| {
+            let auth = windows_auth();
+            ssh_command_with_auth(&net.guest_ip, "shutdown /s", &auth)
+                .expect("Expect SSH command to work");
+        });
+
+        child.kill().unwrap();
+        let output = child.wait_with_output().unwrap();
+
+        cleanup_tap(&net);
+
+        handle_child_output(&tmp_dir, r, &output);
+    }
+
+    #[test]
+    #[cfg(not(feature = "coreboot"))]
+    fn test_boot_qemu_windows() {
+        let fw = Firmware {
+            fw_type: "-kernel",
+            path: "target/target/release/hypervisor-fw",
+        };
+        test_boot_qemu_windows_common(&fw);
+    }
+
+    #[test]
+    #[cfg(feature = "coreboot")]
+    fn test_boot_qemu_windows() {
+        let fw = Firmware {
+            fw_type: "-bios",
+            path: "resources/coreboot/coreboot/build/coreboot.rom",
+        };
+        test_boot_qemu_windows_common(&fw);
+    }
+
+    #[test]
+    #[cfg(not(feature = "coreboot"))]
+    fn test_boot_ch_windows() {
+        let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
+        let os = prepare_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
+
+        let mut c = Command::new("./resources/cloud-hypervisor");
+        c.args(&[
+            "--cpus",
+            "boot=2,kvm_hyperv=on",
+            "--memory",
+            "size=4G",
+            "--console",
+            "off",
+            "--serial",
+            "tty",
+            "--kernel",
+            "target/target/release/hypervisor-fw",
+            "--disk",
+            &format!("path={}", os),
+            "--net",
+            "tap=",
+        ]);
+
+        let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
+        let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
+
+        eprintln!("Spawning: {:?}", c);
+        let mut child = c
+            .stdout(Stdio::from(stdout))
+            .stderr(Stdio::from(stderr))
+            .spawn()
+            .expect("Expect launching Cloud Hypervisor to succeed");
+
+        thread::sleep(std::time::Duration::from_secs(60));
+        let r = std::panic::catch_unwind(|| {
+            let auth = windows_auth();
+            ssh_command_with_auth("192.168.249.2", "shutdown /s", &auth)
+                .expect("Expect SSH command to work");
+        });
+
+        child.kill().unwrap();
+        let output = child.wait_with_output().unwrap();
+
+        handle_child_output(&tmp_dir, r, &output);
     }
 }
