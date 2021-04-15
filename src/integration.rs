@@ -535,4 +535,42 @@ mod tests {
         };
         test_boot_qemu_windows_common(&fw);
     }
+
+    #[test]
+    #[cfg(not(feature = "coreboot"))]
+    fn test_boot_ch_windows() {
+        let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
+        let os = prepare_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
+
+        let mut c = Command::new("./resources/cloud-hypervisor");
+        c.args(&[
+            "--cpus",
+            "boot=2,kvm_hyperv=on",
+            "--memory",
+            "size=4G",
+            "--console",
+            "off",
+            "--serial",
+            "tty",
+            "--kernel",
+            "target/target/release/hypervisor-fw",
+            "--disk",
+            &format!("path={}", os),
+            "--net",
+            "tap=",
+        ]);
+
+        eprintln!("Spawning: {:?}", c);
+        let mut child = c
+            .spawn()
+            .expect("Expect launching Cloud Hypervisor to succeed");
+
+        thread::sleep(std::time::Duration::from_secs(60));
+        let auth = windows_auth();
+        ssh_command_with_auth("192.168.249.2", "shutdown /s", &auth)
+            .expect("Expect SSH command to work");
+
+        child.kill().unwrap();
+        child.wait().unwrap();
+    }
 }
