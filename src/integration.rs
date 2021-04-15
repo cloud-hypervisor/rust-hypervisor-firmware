@@ -467,19 +467,12 @@ mod tests {
         }
     }
 
-    #[test]
-    #[cfg(feature = "coreboot")]
-    fn test_boot_qemu_windows() {
+    fn test_boot_qemu_windows_common<'a>(fw: &'a Firmware) {
         let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
         let net = GuestNetworkConfig::new(COUNTER.fetch_add(1, Ordering::SeqCst) as u8);
         let os = prepare_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
 
         prepare_tap(&net);
-
-        let fw = Firmware {
-            fw_type: "-bios",
-            path: "resources/coreboot/coreboot/build/coreboot.rom",
-        };
 
         let mut c = Command::new("qemu-system-x86_64");
         c.args(&[
@@ -521,5 +514,25 @@ mod tests {
         child.wait().unwrap();
 
         cleanup_tap(&net);
+    }
+
+    #[test]
+    #[cfg(not(feature = "coreboot"))]
+    fn test_boot_qemu_windows() {
+        let fw = Firmware {
+            fw_type: "-kernel",
+            path: "target/target/release/hypervisor-fw",
+        };
+        test_boot_qemu_windows_common(&fw);
+    }
+
+    #[test]
+    #[cfg(feature = "coreboot")]
+    fn test_boot_qemu_windows() {
+        let fw = Firmware {
+            fw_type: "-bios",
+            path: "resources/coreboot/coreboot/build/coreboot.rom",
+        };
+        test_boot_qemu_windows_common(&fw);
     }
 }
