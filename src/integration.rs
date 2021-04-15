@@ -467,7 +467,7 @@ mod tests {
         }
     }
 
-    fn test_boot_qemu_windows_common<'a>(fw: &'a Firmware) {
+    fn test_boot_qemu_windows_common(fw: &Firmware) {
         let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
         let net = GuestNetworkConfig::new(COUNTER.fetch_add(1, Ordering::SeqCst) as u8);
         let os = prepare_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
