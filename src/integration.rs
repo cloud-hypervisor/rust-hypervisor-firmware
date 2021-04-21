@@ -516,7 +516,7 @@ mod tests {
         cleanup_tap(&net);
     }
 
-    #[test]
+    // #[test]
     #[cfg(not(feature = "coreboot"))]
     fn test_boot_qemu_windows() {
         let fw = Firmware {
@@ -526,7 +526,7 @@ mod tests {
         test_boot_qemu_windows_common(&fw);
     }
 
-    #[test]
+    // #[test]
     #[cfg(feature = "coreboot")]
     fn test_boot_qemu_windows() {
         let fw = Firmware {
@@ -536,7 +536,7 @@ mod tests {
         test_boot_qemu_windows_common(&fw);
     }
 
-    #[test]
+    // #[test]
     #[cfg(not(feature = "coreboot"))]
     fn test_boot_ch_windows() {
         let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");

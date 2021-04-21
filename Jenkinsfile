@@ -24,6 +24,7 @@ pipeline {
                                                                 sh "nohup curl https://sh.rustup.rs -sSf | sh -s -- -y"
                                                         }
                                                 }
+                                                /*
                                                 stage ('Download assets') {
                                                         steps {
                                                                 sh "mkdir ./resources/images"
@@ -34,6 +35,7 @@ pipeline {
                                                                                           downloadDirLoc: "./resources/images")
                                                         }
                                                 }
+                                                */
                                                 stage('Run integration tests') {
                                                           steps {
                                                                   sh "./run_integration_tests.sh"
@@ -62,6 +64,7 @@ pipeline {
                                                                 sh "nohup curl https://sh.rustup.rs -sSf | sh -s -- -y"
                                                         }
                                                 }
+                                                /*
                                                 stage ('Download assets') {
                                                         steps {
                                                                 sh "mkdir ./resources/images"
@@ -72,6 +75,7 @@ pipeline {
                                                                                           downloadDirLoc: "./resources/images")
                                                         }
                                                 }
+                                                */
                                                 stage('Run integration tests') {
                                                           steps {
                                                                   sh "./run_coreboot_integration_tests.sh"
