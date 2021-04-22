@@ -858,6 +858,17 @@ fn extract_path(device_path: &DevicePathProtocol, path: &mut [u8]) {
     }
 }
 
+extern "C" {
+    #[link_name = "ram_min"]
+    static RAM_MIN: c_void;
+    #[link_name = "text_start"]
+    static TEXT_START: c_void;
+    #[link_name = "text_end"]
+    static TEXT_END: c_void;
+    #[link_name = "stack_start"]
+    static STACK_START: c_void;
+}
+
 const PAGE_SIZE: u64 = 4096;
 const HEAP_SIZE: usize = 256 * 1024 * 1024;
 
@@ -875,12 +886,33 @@ fn populate_allocator(info: &dyn boot::Info, image_address: u64, image_size: u64
         }
     }
 
+    let ram_min = unsafe { &RAM_MIN as *const _ as u64 };
+    let text_start = unsafe { &TEXT_START as *const _ as u64 };
+    let text_end = unsafe { &TEXT_END as *const _ as u64 };
+    let stack_start = unsafe { &STACK_START as *const _ as u64 };
+    assert!(ram_min % PAGE_SIZE == 0);
+    assert!(text_start % PAGE_SIZE == 0);
+    assert!(text_end % PAGE_SIZE == 0);
+    assert!(stack_start % PAGE_SIZE == 0);
+
     // Add ourselves
     ALLOCATOR.borrow_mut().allocate_pages(
         AllocateType::AllocateAddress,
         MemoryType::RuntimeServicesData,
-        1024 * 1024 / PAGE_SIZE,
-        1024 * 1024,
+        (text_start - ram_min) / PAGE_SIZE,
+        ram_min,
+    );
+    ALLOCATOR.borrow_mut().allocate_pages(
+        AllocateType::AllocateAddress,
+        MemoryType::RuntimeServicesCode,
+        (text_end - text_start) / PAGE_SIZE,
+        text_start,
+    );
+    ALLOCATOR.borrow_mut().allocate_pages(
+        AllocateType::AllocateAddress,
+        MemoryType::RuntimeServicesData,
+        (stack_start - text_end) / PAGE_SIZE,
+        text_end,
     );
 
     // Add the loaded binary
