@@ -43,7 +43,7 @@ impl Rtc {
         let mut month = self.read(0x08)?;
         let mut day = self.read(0x07)?;
 
-        if (self.read_cmos(0x0b) & 0x04) != 0 {
+        if (self.read_cmos(0x0b) & 0x04) == 0 {
             year = bcd2dec(year);
             month = bcd2dec(month);
             day = bcd2dec(day);
@@ -63,7 +63,7 @@ impl Rtc {
             second = bcd2dec(second);
         }
 
-        if (self.read_cmos(0x0b) & 0x02) == 0 && (hour & 0x80) != 0 {
+        if ((self.read_cmos(0x0b) & 0x02) == 0) && ((hour & 0x80) != 0) {
             hour = (hour & 0x7f) + 12 % 24;
         }
 
