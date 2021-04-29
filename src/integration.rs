@@ -20,13 +20,16 @@
 mod tests {
     use rand::Rng;
     use std::fs;
+    use std::io;
     use std::io::{Read, Write};
     use std::net::TcpStream;
-    use std::process::{Child, Command};
+    use std::os::unix::io::AsRawFd;
+    use std::process::{Child, Command, Stdio};
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
     use std::thread;
     use tempfile::TempDir;
+    use wait_timeout::ChildExt;
 
     static COUNTER: AtomicUsize = AtomicUsize::new(6);
 
@@ -226,6 +229,43 @@ mod tests {
             .success());
     }
 
+    fn handle_child_output(
+        r: Result<(), std::boxed::Box<dyn std::any::Any + std::marker::Send>>,
+        output: &std::process::Output,
+    ) {
+        use std::os::unix::process::ExitStatusExt;
+        if r.is_ok() && output.status.success() {
+            return;
+        }
+
+        match output.status.code() {
+            None => {
+                // Don't treat child.kill() as a problem
+                if output.status.signal() == Some(9) && r.is_ok() {
+                    return;
+                }
+                eprintln!(
+                    "==== child killed by signal: {} ====",
+                    output.status.signal().unwrap()
+                );
+            }
+            Some(code) => {
+                eprintln!("\n\n==== child exit code: {} ====", code);
+            }
+        }
+
+        eprintln!(
+            "\n\n==== Start child stdout ====\n\n{}\n\n==== End child stdout ====",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        eprintln!(
+            "\n\n==== Start child stderr ====\n\n{}\n\n==== End child stderr ====",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        panic!("Test failed")
+    }
+
     #[derive(Debug)]
     enum SSHCommandError {
         Connection(std::io::Error),
@@ -281,7 +321,7 @@ mod tests {
         Ok(s)
     }
 
-    fn spawn_ch(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+    fn spawn_ch(os: &str, ci: &str, net: &GuestNetworkConfig) -> io::Result<Child> {
         let mut c = Command::new("./resources/cloud-hypervisor");
         c.args(&[
             "--console",
@@ -298,8 +338,7 @@ mod tests {
         ]);
 
         eprintln!("Spawning: {:?}", c);
-        c.spawn()
-            .expect("Expect launching Cloud Hypervisor to succeed")
+        c.stderr(Stdio::piped()).stdout(Stdio::piped()).spawn()
     }
 
     struct Firmware<'a> {
@@ -312,7 +351,7 @@ mod tests {
         os: &str,
         ci: &str,
         net: &GuestNetworkConfig,
-    ) -> Child {
+    ) -> io::Result<Child> {
         let mut c = Command::new("qemu-system-x86_64");
         c.args(&[
             "-machine",
@@ -346,11 +385,11 @@ mod tests {
         ]);
 
         eprintln!("Spawning: {:?}", c);
-        c.spawn().expect("Expect launching QEMU to succeed")
+        c.stderr(Stdio::piped()).stdout(Stdio::piped()).spawn()
     }
 
     #[cfg(not(feature = "coreboot"))]
-    fn spawn_qemu(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+    fn spawn_qemu(os: &str, ci: &str, net: &GuestNetworkConfig) -> io::Result<Child> {
         let fw = Firmware {
             fw_type: "-kernel",
             path: "target/target/release/hypervisor-fw",
@@ -359,7 +398,7 @@ mod tests {
     }
 
     #[cfg(feature = "coreboot")]
-    fn spawn_qemu(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+    fn spawn_qemu(os: &str, ci: &str, net: &GuestNetworkConfig) -> io::Result<Child> {
         let fw = Firmware {
             fw_type: "-bios",
             path: "resources/coreboot/coreboot/build/coreboot.rom",
@@ -367,7 +406,7 @@ mod tests {
         spawn_qemu_common(&fw, os, ci, net)
     }
 
-    type HypervisorSpawn = fn(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child;
+    type HypervisorSpawn = fn(os: &str, ci: &str, net: &GuestNetworkConfig) -> io::Result<Child>;
 
     fn test_boot(image_name: &str, cloud_init: &dyn CloudInit, spawn: HypervisorSpawn) {
         let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
@@ -377,15 +416,21 @@ mod tests {
 
         prepare_tap(&net);
 
-        let mut child = spawn(&os, &ci, &net);
+        let mut child = spawn(&os, &ci, &net).unwrap();
 
-        thread::sleep(std::time::Duration::from_secs(20));
-        ssh_command(&net.guest_ip, "sudo shutdown -h now").expect("Expect SSH command to work");
+        thread::sleep(std::time::Duration::from_secs(50));
 
-        child.kill().unwrap();
-        child.wait().unwrap();
+        let r = std::panic::catch_unwind(|| {
+            ssh_command(&net.guest_ip, "sudo shutdown -h now").expect("Expect SSH Command to work");
+        });
+
+        let _ = child.wait_timeout(std::time::Duration::from_secs(20));
+        let _ = child.kill();
+        let output = child.wait_with_output().unwrap();
 
         cleanup_tap(&net);
+
+        handle_child_output(r, &output);
     }
 
     const BIONIC_IMAGE_NAME: &str = "bionic-server-cloudimg-amd64-raw.img";
