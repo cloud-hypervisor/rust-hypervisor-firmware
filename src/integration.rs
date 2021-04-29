@@ -22,7 +22,7 @@ mod tests {
     use std::fs;
     use std::io::{Read, Write};
     use std::net::TcpStream;
-    use std::process::{Child, Command};
+    use std::process::{Child, Command, Stdio};
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
     use std::thread;
@@ -226,6 +226,50 @@ mod tests {
             .success());
     }
 
+    fn handle_child_output(
+        tmp_dir: &TempDir,
+        r: Result<(), std::boxed::Box<dyn std::any::Any + std::marker::Send>>,
+        output: &std::process::Output,
+    ) {
+        use std::os::unix::process::ExitStatusExt;
+        if r.is_ok() && output.status.success() {
+            return;
+        }
+
+        match output.status.code() {
+            None => {
+                // Don't treat child.kill() as a problem
+                if output.status.signal() == Some(9) && r.is_ok() {
+                    return;
+                }
+                eprintln!(
+                    "==== child killed by signal: {} ====",
+                    output.status.signal().unwrap()
+                );
+            }
+            Some(code) => {
+                eprintln!("\n\n==== child exit code: {} ====", code);
+            }
+        }
+
+        let mut stdout = fs::File::open(tmp_dir.path().join("stdout")).unwrap();
+        let mut buf = String::new();
+        stdout.read_to_string(&mut buf).unwrap();
+        eprintln!(
+            "\n\n==== Start child stdout ====\n\n{}\n\n==== End child stdout ====",
+            buf
+        );
+        let mut stderr = fs::File::open(tmp_dir.path().join("stderr")).unwrap();
+        let mut buf = String::new();
+        stderr.read_to_string(&mut buf).unwrap();
+        eprintln!(
+            "\n\n==== Start child stderr ====\n\n{}\n\n==== End child stderr ====",
+            buf
+        );
+
+        panic!("Test failed")
+    }
+
     #[derive(Debug)]
     enum SSHCommandError {
         Connection(std::io::Error),
@@ -281,7 +325,7 @@ mod tests {
         Ok(s)
     }
 
-    fn spawn_ch(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+    fn spawn_ch(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
         let mut c = Command::new("./resources/cloud-hypervisor");
         c.args(&[
             "--console",
@@ -297,8 +341,13 @@ mod tests {
             &format!("tap={},mac={}", net.tap_name, net.guest_mac),
         ]);
 
+        let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
+        let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
+
         eprintln!("Spawning: {:?}", c);
-        c.spawn()
+        c.stdout(Stdio::from(stdout))
+            .stderr(Stdio::from(stderr))
+            .spawn()
             .expect("Expect launching Cloud Hypervisor to succeed")
     }
 
@@ -308,6 +357,7 @@ mod tests {
     }
 
     fn spawn_qemu_common<'a>(
+        tmp_dir: &TempDir,
         fw: &'a Firmware,
         os: &str,
         ci: &str,
@@ -345,29 +395,36 @@ mod tests {
             &format!("virtio-net-pci,netdev=net0,mac={}", net.guest_mac),
         ]);
 
+        let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
+        let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
+
         eprintln!("Spawning: {:?}", c);
-        c.spawn().expect("Expect launching QEMU to succeed")
+        c.stdout(Stdio::from(stdout))
+            .stderr(Stdio::from(stderr))
+            .spawn()
+            .expect("Expect launching QEMU to succeed")
     }
 
     #[cfg(not(feature = "coreboot"))]
-    fn spawn_qemu(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+    fn spawn_qemu(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
         let fw = Firmware {
             fw_type: "-kernel",
             path: "target/target/release/hypervisor-fw",
         };
-        spawn_qemu_common(&fw, os, ci, net)
+        spawn_qemu_common(tmp_dir, &fw, os, ci, net)
     }
 
     #[cfg(feature = "coreboot")]
-    fn spawn_qemu(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+    fn spawn_qemu(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
         let fw = Firmware {
             fw_type: "-bios",
             path: "resources/coreboot/coreboot/build/coreboot.rom",
         };
-        spawn_qemu_common(&fw, os, ci, net)
+        spawn_qemu_common(tmp_dir, &fw, os, ci, net)
     }
 
-    type HypervisorSpawn = fn(os: &str, ci: &str, net: &GuestNetworkConfig) -> Child;
+    type HypervisorSpawn =
+        fn(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child;
 
     fn test_boot(image_name: &str, cloud_init: &dyn CloudInit, spawn: HypervisorSpawn) {
         let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
@@ -377,15 +434,19 @@ mod tests {
 
         prepare_tap(&net);
 
-        let mut child = spawn(&os, &ci, &net);
+        let mut child = spawn(&tmp_dir, &os, &ci, &net);
 
         thread::sleep(std::time::Duration::from_secs(20));
-        ssh_command(&net.guest_ip, "sudo shutdown -h now").expect("Expect SSH command to work");
+        let r = std::panic::catch_unwind(|| {
+            ssh_command(&net.guest_ip, "sudo shutdown -h now").expect("Expect SSH Command to work");
+        });
 
         child.kill().unwrap();
-        child.wait().unwrap();
+        let output = child.wait_with_output().unwrap();
 
         cleanup_tap(&net);
+
+        handle_child_output(&tmp_dir, r, &output);
     }
 
     const BIONIC_IMAGE_NAME: &str = "bionic-server-cloudimg-amd64-raw.img";
