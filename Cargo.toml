@@ -23,6 +23,7 @@ log-serial = []
 log-panic = ["log-serial"]
 integration_tests = []
 coreboot = []
+efi-var = []
 
 [dependencies]
 bitflags = "1.2.1"
