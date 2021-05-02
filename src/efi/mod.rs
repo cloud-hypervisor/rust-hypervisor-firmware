@@ -291,9 +291,13 @@ pub extern "win64" fn get_variable(
     data_size: *mut usize,
     data: *mut c_void,
 ) -> Status {
-    VARIABLES
-        .borrow_mut()
-        .get(variable_name, vendor_guid, attributes, data_size, data)
+    if cfg!(feature = "efi-var") {
+        VARIABLES
+            .borrow_mut()
+            .get(variable_name, vendor_guid, attributes, data_size, data)
+    } else {
+        Status::NOT_FOUND
+    }
 }
 
 pub extern "win64" fn get_next_variable_name(
@@ -311,9 +315,13 @@ pub extern "win64" fn set_variable(
     data_size: usize,
     data: *mut c_void,
 ) -> Status {
-    VARIABLES
-        .borrow_mut()
-        .set(variable_name, vendor_guid, attributes, data_size, data)
+    if cfg!(feature = "efi-var") {
+        VARIABLES
+            .borrow_mut()
+            .set(variable_name, vendor_guid, attributes, data_size, data)
+    } else {
+        Status::UNSUPPORTED
+    }
 }
 
 pub extern "win64" fn get_next_high_mono_count(_: *mut u32) -> Status {
