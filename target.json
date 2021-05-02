@@ -14,7 +14,7 @@
   "features": "-mmx,-sse,+soft-float",
   "dynamic-linking-available": false,
   "code-model": "small",
-  "relocation-model": "static",
+  "relocation-model": "pic",
   "pre-link-args": {
     "ld.lld": ["--script=layout.ld"]
   }
