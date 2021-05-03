@@ -15,7 +15,10 @@
 #[macro_export]
 macro_rules! offset_of {
     ($container:ty, $field:ident) => {
-        unsafe { &(*(core::ptr::null() as *const $container)).$field as *const _ as usize }
+        #[allow(deref_nullptr)]
+        unsafe {
+            &(*(core::ptr::null() as *const $container)).$field as *const _ as usize
+        }
     };
 }
 
