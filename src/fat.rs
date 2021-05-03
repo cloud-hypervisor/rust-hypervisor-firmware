@@ -735,7 +735,7 @@ impl<'a> Filesystem<'a> {
 
     pub fn open(&self, path: &str) -> Result<Node, Error> {
         // path must be absolute path
-        assert_eq!(is_absolute_path(path), true);
+        assert!(is_absolute_path(path));
         self.open_from(&self.root().unwrap(), path)
     }
 
