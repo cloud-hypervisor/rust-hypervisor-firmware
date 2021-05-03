@@ -276,7 +276,7 @@ mod tests {
         );
 
         assert_eq!(status, efi::Status::SUCCESS);
-        assert_eq!(allocator.allocations.is_empty(), true);
+        assert!(allocator.allocations.is_empty());
 
         set_initial_variable(&mut allocator, &[1, 2, 3]);
 
@@ -291,7 +291,7 @@ mod tests {
         );
 
         assert_eq!(status, efi::Status::SUCCESS);
-        assert_eq!(allocator.allocations.is_empty(), true);
+        assert!(allocator.allocations.is_empty());
     }
 
     #[test]
