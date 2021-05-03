@@ -76,7 +76,7 @@ dependencies = [
  "ssh2",
  "tempfile",
  "uart_16550",
- "x86_64 0.14.0",
+ "x86_64",
 ]
 
 [[package]]
@@ -297,12 +297,12 @@ dependencies = [
 
 [[package]]
 name = "uart_16550"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d45a3c9181dc9ba7d35d02b3c36d1604155289d935b7946510fb3d2f4b976d9"
+checksum = "e09a33949dbbdeaa40f59d7ede389bba927c90b7ad411b91bb9617be3694267b"
 dependencies = [
  "bitflags",
- "x86_64 0.13.6",
+ "x86_64",
 ]
 
 [[package]]
@@ -344,16 +344,6 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
-
-[[package]]
-name = "x86_64"
-version = "0.13.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "021b49a4cb0a0d9490265cc169ca816014cbf61d3f3b75424815912977b81871"
-dependencies = [
- "bit_field",
- "bitflags",
-]
 
 [[package]]
 name = "x86_64"
