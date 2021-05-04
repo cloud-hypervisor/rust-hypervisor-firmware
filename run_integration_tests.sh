@@ -6,7 +6,7 @@ source "${CARGO_HOME:-$HOME/.cargo}/env"
 rustup component add rust-src
 cargo build --release --target target.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
 
-CH_VERSION="v0.13.0"
+CH_VERSION="v15.0"
 CH_URL="https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/$CH_VERSION/cloud-hypervisor"
 CH_PATH="./resources/cloud-hypervisor"
 if [ ! -f "$CH_PATH" ]; then
