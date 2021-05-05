@@ -1,6 +1,8 @@
 #!/bin/bash
 set -xeuf
 
+TARGET="${1:-linux}"
+
 source "${CARGO_HOME:-$HOME/.cargo}/env"
 
 rustup component add rust-src
@@ -30,5 +32,5 @@ id -nGz "$USER" | grep -qzxF kvm || sudo adduser "$USER" kvm
 
 newgrp kvm << EOF
 export RUST_BACKTRACE=1
-cargo test --features "coreboot integration_tests"  -- test_boot
+cargo test --features "coreboot integration_tests" "integration::tests::${TARGET}"
 EOF
