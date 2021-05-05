@@ -24,9 +24,14 @@ pipeline {
                                                                 sh "nohup curl https://sh.rustup.rs -sSf | sh -s -- -y"
                                                         }
                                                 }
+                                                stage('Run integration tests (Linux)') {
+                                                          steps {
+                                                                  sh "./run_integration_tests.sh linux"
+                                                          }
+                                                }
                                                 stage ('Download assets') {
                                                         steps {
-                                                                sh "mkdir ./resources/images"
+                                                                sh "mkdir -p ./resources/images"
                                                                 azureDownload(storageCredentialId: 'ch-image-store',
                                                                                           containerName: 'private-images',
                                                                                           includeFilesPattern: 'windows-server-2019.raw',
@@ -34,9 +39,9 @@ pipeline {
                                                                                           downloadDirLoc: "./resources/images")
                                                         }
                                                 }
-                                                stage('Run integration tests') {
+                                                stage('Run integration tests (Windows)') {
                                                           steps {
-                                                                  sh "./run_integration_tests.sh"
+                                                                  sh "./run_integration_tests.sh windows"
                                                           }
                                                 }
                                         }
@@ -62,9 +67,14 @@ pipeline {
                                                                 sh "nohup curl https://sh.rustup.rs -sSf | sh -s -- -y"
                                                         }
                                                 }
+                                                stage('Run integration tests (Linux)') {
+                                                          steps {
+                                                                  sh "./run_coreboot_integration_tests.sh linux"
+                                                          }
+                                                }
                                                 stage ('Download assets') {
                                                         steps {
-                                                                sh "mkdir ./resources/images"
+                                                                sh "mkdir -p ./resources/images"
                                                                 azureDownload(storageCredentialId: 'ch-image-store',
                                                                                           containerName: 'private-images',
                                                                                           includeFilesPattern: 'windows-server-2019.raw',
@@ -72,9 +82,9 @@ pipeline {
                                                                                           downloadDirLoc: "./resources/images")
                                                         }
                                                 }
-                                                stage('Run integration tests') {
+                                                stage('Run integration tests (Windows)') {
                                                           steps {
-                                                                  sh "./run_coreboot_integration_tests.sh"
+                                                                  sh "./run_coreboot_integration_tests.sh windows"
                                                           }
                                                 }
                                         }

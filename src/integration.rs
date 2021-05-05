@@ -346,312 +346,321 @@ mod tests {
         )
     }
 
-    fn spawn_ch(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
-        let mut c = Command::new("./resources/cloud-hypervisor");
-        c.args(&[
-            "--console",
-            "off",
-            "--serial",
-            "tty",
-            "--kernel",
-            "target/target/release/hypervisor-fw",
-            "--disk",
-            &format!("path={}", os),
-            &format!("path={}", ci),
-            "--net",
-            &format!("tap={},mac={}", net.tap_name, net.guest_mac),
-        ]);
-
-        let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
-        let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
-
-        eprintln!("Spawning: {:?}", c);
-        c.stdout(Stdio::from(stdout))
-            .stderr(Stdio::from(stderr))
-            .spawn()
-            .expect("Expect launching Cloud Hypervisor to succeed")
-    }
-
     struct Firmware<'a> {
         fw_type: &'a str,
         path: &'a str,
     }
 
-    fn spawn_qemu_common<'a>(
-        tmp_dir: &TempDir,
-        fw: &'a Firmware,
-        os: &str,
-        ci: &str,
-        net: &GuestNetworkConfig,
-    ) -> Child {
-        let mut c = Command::new("qemu-system-x86_64");
-        c.args(&[
-            "-machine",
-            "q35,accel=kvm",
-            "-cpu",
-            "host,-vmx",
-            fw.fw_type,
-            fw.path,
-            "-display",
-            "none",
-            "-nodefaults",
-            "-serial",
-            "stdio",
-            "-drive",
-            &format!("id=os,file={},if=none", os),
-            "-device",
-            "virtio-blk-pci,drive=os,disable-legacy=on",
-            "-drive",
-            &format!("id=ci,file={},if=none,format=raw", ci),
-            "-device",
-            "virtio-blk-pci,drive=ci,disable-legacy=on",
-            "-m",
-            "1G",
-            "-netdev",
-            &format!(
-                "tap,id=net0,ifname={},script=no,downscript=no",
-                net.tap_name
-            ),
-            "-device",
-            &format!("virtio-net-pci,netdev=net0,mac={}", net.guest_mac),
-        ]);
+    mod linux {
+        use crate::integration::tests::*;
 
-        let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
-        let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
+        fn spawn_ch(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+            let mut c = Command::new("./resources/cloud-hypervisor");
+            c.args(&[
+                "--console",
+                "off",
+                "--serial",
+                "tty",
+                "--kernel",
+                "target/target/release/hypervisor-fw",
+                "--disk",
+                &format!("path={}", os),
+                &format!("path={}", ci),
+                "--net",
+                &format!("tap={},mac={}", net.tap_name, net.guest_mac),
+            ]);
 
-        eprintln!("Spawning: {:?}", c);
-        c.stdout(Stdio::from(stdout))
-            .stderr(Stdio::from(stderr))
-            .spawn()
-            .expect("Expect launching QEMU to succeed")
-    }
+            let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
+            let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
 
-    #[cfg(not(feature = "coreboot"))]
-    fn spawn_qemu(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
-        let fw = Firmware {
-            fw_type: "-kernel",
-            path: "target/target/release/hypervisor-fw",
-        };
-        spawn_qemu_common(tmp_dir, &fw, os, ci, net)
-    }
+            eprintln!("Spawning: {:?}", c);
+            c.stdout(Stdio::from(stdout))
+                .stderr(Stdio::from(stderr))
+                .spawn()
+                .expect("Expect launching Cloud Hypervisor to succeed")
+        }
 
-    #[cfg(feature = "coreboot")]
-    fn spawn_qemu(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
-        let fw = Firmware {
-            fw_type: "-bios",
-            path: "resources/coreboot/coreboot/build/coreboot.rom",
-        };
-        spawn_qemu_common(tmp_dir, &fw, os, ci, net)
-    }
+        fn spawn_qemu_common<'a>(
+            tmp_dir: &TempDir,
+            fw: &'a Firmware,
+            os: &str,
+            ci: &str,
+            net: &GuestNetworkConfig,
+        ) -> Child {
+            let mut c = Command::new("qemu-system-x86_64");
+            c.args(&[
+                "-machine",
+                "q35,accel=kvm",
+                "-cpu",
+                "host,-vmx",
+                fw.fw_type,
+                fw.path,
+                "-display",
+                "none",
+                "-nodefaults",
+                "-serial",
+                "stdio",
+                "-drive",
+                &format!("id=os,file={},if=none", os),
+                "-device",
+                "virtio-blk-pci,drive=os,disable-legacy=on",
+                "-drive",
+                &format!("id=ci,file={},if=none,format=raw", ci),
+                "-device",
+                "virtio-blk-pci,drive=ci,disable-legacy=on",
+                "-m",
+                "1G",
+                "-netdev",
+                &format!(
+                    "tap,id=net0,ifname={},script=no,downscript=no",
+                    net.tap_name
+                ),
+                "-device",
+                &format!("virtio-net-pci,netdev=net0,mac={}", net.guest_mac),
+            ]);
 
-    type HypervisorSpawn =
-        fn(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child;
+            let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
+            let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
 
-    fn test_boot(image_name: &str, cloud_init: &dyn CloudInit, spawn: HypervisorSpawn) {
-        let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
-        let net = GuestNetworkConfig::new(COUNTER.fetch_add(1, Ordering::SeqCst) as u8);
-        let ci = cloud_init.prepare(&tmp_dir, &net);
-        let os = prepare_os_disk(&tmp_dir, image_name);
+            eprintln!("Spawning: {:?}", c);
+            c.stdout(Stdio::from(stdout))
+                .stderr(Stdio::from(stderr))
+                .spawn()
+                .expect("Expect launching QEMU to succeed")
+        }
 
-        prepare_tap(&net);
+        #[cfg(not(feature = "coreboot"))]
+        fn spawn_qemu(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+            let fw = Firmware {
+                fw_type: "-kernel",
+                path: "target/target/release/hypervisor-fw",
+            };
+            spawn_qemu_common(tmp_dir, &fw, os, ci, net)
+        }
 
-        let mut child = spawn(&tmp_dir, &os, &ci, &net);
+        #[cfg(feature = "coreboot")]
+        fn spawn_qemu(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+            let fw = Firmware {
+                fw_type: "-bios",
+                path: "resources/coreboot/coreboot/build/coreboot.rom",
+            };
+            spawn_qemu_common(tmp_dir, &fw, os, ci, net)
+        }
 
-        thread::sleep(std::time::Duration::from_secs(20));
-        let r = std::panic::catch_unwind(|| {
-            ssh_command(&net.guest_ip, "sudo shutdown -h now").expect("Expect SSH Command to work");
-        });
+        type HypervisorSpawn =
+            fn(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child;
 
-        child.kill().unwrap();
-        let output = child.wait_with_output().unwrap();
+        fn test_boot(image_name: &str, cloud_init: &dyn CloudInit, spawn: HypervisorSpawn) {
+            let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
+            let net = GuestNetworkConfig::new(COUNTER.fetch_add(1, Ordering::SeqCst) as u8);
+            let ci = cloud_init.prepare(&tmp_dir, &net);
+            let os = prepare_os_disk(&tmp_dir, image_name);
 
-        cleanup_tap(&net);
+            prepare_tap(&net);
 
-        handle_child_output(&tmp_dir, r, &output);
-    }
+            let mut child = spawn(&tmp_dir, &os, &ci, &net);
 
-    const BIONIC_IMAGE_NAME: &str = "bionic-server-cloudimg-amd64-raw.img";
-    const FOCAL_IMAGE_NAME: &str = "focal-server-cloudimg-amd64-raw.img";
-    const GROOVY_IMAGE_NAME: &str = "groovy-server-cloudimg-amd64-raw.img";
-    const CLEAR_IMAGE_NAME: &str = "clear-31311-cloudguest.img";
+            thread::sleep(std::time::Duration::from_secs(20));
+            let r = std::panic::catch_unwind(|| {
+                ssh_command(&net.guest_ip, "sudo shutdown -h now")
+                    .expect("Expect SSH Command to work");
+            });
 
-    #[test]
-    fn test_boot_qemu_bionic() {
-        test_boot(BIONIC_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
-    }
+            child.kill().unwrap();
+            let output = child.wait_with_output().unwrap();
 
-    #[test]
-    fn test_boot_qemu_focal() {
-        test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
-    }
+            cleanup_tap(&net);
 
-    #[test]
-    fn test_boot_qemu_groovy() {
-        test_boot(GROOVY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
-    }
+            handle_child_output(&tmp_dir, r, &output);
+        }
 
-    #[test]
-    fn test_boot_qemu_clear() {
-        test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_qemu)
-    }
+        const BIONIC_IMAGE_NAME: &str = "bionic-server-cloudimg-amd64-raw.img";
+        const FOCAL_IMAGE_NAME: &str = "focal-server-cloudimg-amd64-raw.img";
+        const GROOVY_IMAGE_NAME: &str = "groovy-server-cloudimg-amd64-raw.img";
+        const CLEAR_IMAGE_NAME: &str = "clear-31311-cloudguest.img";
 
-    #[test]
-    #[cfg(not(feature = "coreboot"))]
-    fn test_boot_ch_bionic() {
-        test_boot(BIONIC_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
-    }
+        #[test]
+        fn test_boot_qemu_bionic() {
+            test_boot(BIONIC_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
+        }
 
-    #[test]
-    #[cfg(not(feature = "coreboot"))]
-    fn test_boot_ch_focal() {
-        test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
-    }
+        #[test]
+        fn test_boot_qemu_focal() {
+            test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
+        }
 
-    #[test]
-    #[cfg(not(feature = "coreboot"))]
-    fn test_boot_ch_groovy() {
-        test_boot(GROOVY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
-    }
+        #[test]
+        fn test_boot_qemu_groovy() {
+            test_boot(GROOVY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
+        }
 
-    #[test]
-    #[cfg(not(feature = "coreboot"))]
-    fn test_boot_ch_clear() {
-        test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_ch)
-    }
+        #[test]
+        fn test_boot_qemu_clear() {
+            test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_qemu)
+        }
 
-    const WINDOWS_IMAGE_NAME: &str = "windows-server-2019.raw";
+        #[test]
+        #[cfg(not(feature = "coreboot"))]
+        fn test_boot_ch_bionic() {
+            test_boot(BIONIC_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
+        }
 
-    fn windows_auth() -> PasswordAuth {
-        PasswordAuth {
-            username: String::from("administrator"),
-            password: String::from("Admin123"),
+        #[test]
+        #[cfg(not(feature = "coreboot"))]
+        fn test_boot_ch_focal() {
+            test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
+        }
+
+        #[test]
+        #[cfg(not(feature = "coreboot"))]
+        fn test_boot_ch_groovy() {
+            test_boot(GROOVY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
+        }
+
+        #[test]
+        #[cfg(not(feature = "coreboot"))]
+        fn test_boot_ch_clear() {
+            test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_ch)
         }
     }
 
-    fn test_boot_qemu_windows_common(fw: &Firmware) {
-        let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
-        let net = GuestNetworkConfig::new(COUNTER.fetch_add(1, Ordering::SeqCst) as u8);
-        let os = prepare_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
+    mod windows {
+        use crate::integration::tests::*;
 
-        prepare_tap(&net);
+        const WINDOWS_IMAGE_NAME: &str = "windows-server-2019.raw";
 
-        let mut c = Command::new("qemu-system-x86_64");
-        c.args(&[
-            "-machine",
-            "q35,accel=kvm",
-            "-cpu",
-            "host,-vmx",
-            fw.fw_type,
-            fw.path,
-            "-display",
-            "none",
-            "-nodefaults",
-            "-serial",
-            "stdio",
-            "-drive",
-            &format!("id=os,file={},if=none", os),
-            "-device",
-            "virtio-blk-pci,drive=os,disable-legacy=on",
-            "-m",
-            "4G",
-            "-netdev",
-            &format!(
-                "tap,id=net0,ifname={},script=no,downscript=no",
-                net.tap_name
-            ),
-            "-device",
-            &format!("virtio-net-pci,netdev=net0,mac={}", net.guest_mac),
-        ]);
+        fn windows_auth() -> PasswordAuth {
+            PasswordAuth {
+                username: String::from("administrator"),
+                password: String::from("Admin123"),
+            }
+        }
 
-        let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
-        let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
+        fn test_boot_qemu_windows_common(fw: &Firmware) {
+            let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
+            let net = GuestNetworkConfig::new(COUNTER.fetch_add(1, Ordering::SeqCst) as u8);
+            let os = prepare_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
 
-        eprintln!("Spawning: {:?}", c);
-        let mut child = c
-            .stdout(Stdio::from(stdout))
-            .stderr(Stdio::from(stderr))
-            .spawn()
-            .expect("Expect launching QEMU to succeed");
+            prepare_tap(&net);
 
-        thread::sleep(std::time::Duration::from_secs(60));
-        let r = std::panic::catch_unwind(|| {
-            let auth = windows_auth();
-            ssh_command_with_auth(&net.guest_ip, "shutdown /s", &auth)
-                .expect("Expect SSH command to work");
-        });
+            let mut c = Command::new("qemu-system-x86_64");
+            c.args(&[
+                "-machine",
+                "q35,accel=kvm",
+                "-cpu",
+                "host,-vmx",
+                fw.fw_type,
+                fw.path,
+                "-display",
+                "none",
+                "-nodefaults",
+                "-serial",
+                "stdio",
+                "-drive",
+                &format!("id=os,file={},if=none", os),
+                "-device",
+                "virtio-blk-pci,drive=os,disable-legacy=on",
+                "-m",
+                "4G",
+                "-netdev",
+                &format!(
+                    "tap,id=net0,ifname={},script=no,downscript=no",
+                    net.tap_name
+                ),
+                "-device",
+                &format!("virtio-net-pci,netdev=net0,mac={}", net.guest_mac),
+            ]);
 
-        child.kill().unwrap();
-        let output = child.wait_with_output().unwrap();
+            let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
+            let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
 
-        cleanup_tap(&net);
+            eprintln!("Spawning: {:?}", c);
+            let mut child = c
+                .stdout(Stdio::from(stdout))
+                .stderr(Stdio::from(stderr))
+                .spawn()
+                .expect("Expect launching QEMU to succeed");
 
-        handle_child_output(&tmp_dir, r, &output);
-    }
+            thread::sleep(std::time::Duration::from_secs(60));
+            let r = std::panic::catch_unwind(|| {
+                let auth = windows_auth();
+                ssh_command_with_auth(&net.guest_ip, "shutdown /s", &auth)
+                    .expect("Expect SSH command to work");
+            });
 
-    #[test]
-    #[cfg(not(feature = "coreboot"))]
-    fn test_boot_qemu_windows() {
-        let fw = Firmware {
-            fw_type: "-kernel",
-            path: "target/target/release/hypervisor-fw",
-        };
-        test_boot_qemu_windows_common(&fw);
-    }
+            child.kill().unwrap();
+            let output = child.wait_with_output().unwrap();
 
-    #[test]
-    #[cfg(feature = "coreboot")]
-    fn test_boot_qemu_windows() {
-        let fw = Firmware {
-            fw_type: "-bios",
-            path: "resources/coreboot/coreboot/build/coreboot.rom",
-        };
-        test_boot_qemu_windows_common(&fw);
-    }
+            cleanup_tap(&net);
 
-    #[test]
-    #[cfg(not(feature = "coreboot"))]
-    fn test_boot_ch_windows() {
-        let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
-        let os = prepare_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
+            handle_child_output(&tmp_dir, r, &output);
+        }
 
-        let mut c = Command::new("./resources/cloud-hypervisor");
-        c.args(&[
-            "--cpus",
-            "boot=2,kvm_hyperv=on",
-            "--memory",
-            "size=4G",
-            "--console",
-            "off",
-            "--serial",
-            "tty",
-            "--kernel",
-            "target/target/release/hypervisor-fw",
-            "--disk",
-            &format!("path={}", os),
-            "--net",
-            "tap=",
-        ]);
+        #[test]
+        #[cfg(not(feature = "coreboot"))]
+        fn test_boot_qemu_windows() {
+            let fw = Firmware {
+                fw_type: "-kernel",
+                path: "target/target/release/hypervisor-fw",
+            };
+            test_boot_qemu_windows_common(&fw);
+        }
 
-        let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
-        let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
+        #[test]
+        #[cfg(feature = "coreboot")]
+        fn test_boot_qemu_windows() {
+            let fw = Firmware {
+                fw_type: "-bios",
+                path: "resources/coreboot/coreboot/build/coreboot.rom",
+            };
+            test_boot_qemu_windows_common(&fw);
+        }
 
-        eprintln!("Spawning: {:?}", c);
-        let mut child = c
-            .stdout(Stdio::from(stdout))
-            .stderr(Stdio::from(stderr))
-            .spawn()
-            .expect("Expect launching Cloud Hypervisor to succeed");
+        #[test]
+        #[cfg(not(feature = "coreboot"))]
+        fn test_boot_ch_windows() {
+            let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
+            let os = prepare_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
 
-        thread::sleep(std::time::Duration::from_secs(60));
-        let r = std::panic::catch_unwind(|| {
-            let auth = windows_auth();
-            ssh_command_with_auth("192.168.249.2", "shutdown /s", &auth)
-                .expect("Expect SSH command to work");
-        });
+            let mut c = Command::new("./resources/cloud-hypervisor");
+            c.args(&[
+                "--cpus",
+                "boot=2,kvm_hyperv=on",
+                "--memory",
+                "size=4G",
+                "--console",
+                "off",
+                "--serial",
+                "tty",
+                "--kernel",
+                "target/target/release/hypervisor-fw",
+                "--disk",
+                &format!("path={}", os),
+                "--net",
+                "tap=",
+            ]);
 
-        child.kill().unwrap();
-        let output = child.wait_with_output().unwrap();
+            let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
+            let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
 
-        handle_child_output(&tmp_dir, r, &output);
+            eprintln!("Spawning: {:?}", c);
+            let mut child = c
+                .stdout(Stdio::from(stdout))
+                .stderr(Stdio::from(stderr))
+                .spawn()
+                .expect("Expect launching Cloud Hypervisor to succeed");
+
+            thread::sleep(std::time::Duration::from_secs(60));
+            let r = std::panic::catch_unwind(|| {
+                let auth = windows_auth();
+                ssh_command_with_auth("192.168.249.2", "shutdown /s", &auth)
+                    .expect("Expect SSH command to work");
+            });
+
+            child.kill().unwrap();
+            let output = child.wait_with_output().unwrap();
+
+            handle_child_output(&tmp_dir, r, &output);
+        }
     }
 }
