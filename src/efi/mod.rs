@@ -179,24 +179,26 @@ static mut BLOCK_WRAPPERS: block::BlockWrappers = block::BlockWrappers {
     count: 0,
 };
 
-unsafe fn fixup_at_virtual(offset: u64) {
+fn convert_internal_pointer(descriptors: &[alloc::MemoryDescriptor], ptr: u64) -> Option<u64> {
+    for descriptor in descriptors.iter() {
+        let start = descriptor.physical_start;
+        let end = descriptor.physical_start + descriptor.number_of_pages * PAGE_SIZE;
+        if start <= ptr && ptr < end {
+            return Some(ptr - descriptor.physical_start + descriptor.virtual_start);
+        }
+    }
+    None
+}
+
+unsafe fn fixup_at_virtual(descriptors: &[alloc::MemoryDescriptor]) {
     let mut st = &mut ST;
     let mut rs = &mut RS;
 
-    let ptr = offset + (rs as *const efi::RuntimeServices) as u64;
-    st.runtime_services = transmute(ptr);
-
-    let ct = st.configuration_table;
-    let ptr = offset + (ct as *const efi::ConfigurationTable) as u64;
-    st.configuration_table = transmute(ptr);
-
-    let ptr = offset + (not_available as *const ()) as u64;
+    let ptr = convert_internal_pointer(descriptors, (not_available as *const ()) as u64).unwrap();
     rs.get_time = transmute(ptr);
     rs.set_time = transmute(ptr);
     rs.get_wakeup_time = transmute(ptr);
     rs.set_wakeup_time = transmute(ptr);
-    rs.set_virtual_address_map = transmute(ptr);
-    rs.convert_pointer = transmute(ptr);
     rs.get_variable = transmute(ptr);
     rs.set_variable = transmute(ptr);
     rs.get_next_variable_name = transmute(ptr);
@@ -204,6 +206,14 @@ unsafe fn fixup_at_virtual(offset: u64) {
     rs.update_capsule = transmute(ptr);
     rs.query_capsule_capabilities = transmute(ptr);
     rs.query_variable_info = transmute(ptr);
+
+    let ct = st.configuration_table;
+    let ptr = convert_internal_pointer(descriptors, (ct as *const _) as u64).unwrap();
+    st.configuration_table = transmute(ptr);
+
+    let rs = st.runtime_services;
+    let ptr = convert_internal_pointer(descriptors, (rs as *const _) as u64).unwrap();
+    st.runtime_services = transmute(ptr);
 }
 
 pub extern "win64" fn not_available() -> Status {
@@ -267,14 +277,8 @@ pub extern "win64" fn set_virtual_address_map(
         core::slice::from_raw_parts_mut(descriptors as *mut alloc::MemoryDescriptor, count)
     };
 
-    for descriptor in descriptors.iter() {
-        if descriptor.r#type == MemoryType::RuntimeServicesCode as u32 {
-            let offset = descriptor.virtual_start - descriptor.physical_start;
-            unsafe {
-                fixup_at_virtual(offset);
-            }
-            break;
-        }
+    unsafe {
+        fixup_at_virtual(descriptors);
     }
 
     ALLOCATOR.borrow_mut().update_virtual_addresses(descriptors)
