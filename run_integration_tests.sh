@@ -17,7 +17,9 @@ if [ ! -f "$CH_PATH" ]; then
     sudo setcap cap_net_admin+ep $CH_PATH
 fi
 
-bash ./fetch_disk_images.sh
+if [ "$TARGET" == "linux" ]; then
+  bash ./fetch_disk_images.sh
+fi
 
 # Add the user to the kvm group (if not already in it), so they can run VMs
 id -nGz "$USER" | grep -qzxF kvm || sudo adduser "$USER" kvm
