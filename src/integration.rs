@@ -597,6 +597,7 @@ mod tests {
         }
 
         #[test]
+        #[ignore] // Windows guest test on QEMU is not supported yet.
         #[cfg(not(feature = "coreboot"))]
         fn test_boot_qemu_windows() {
             let fw = Firmware {
@@ -607,6 +608,7 @@ mod tests {
         }
 
         #[test]
+        #[ignore] // Windows guest test on QEMU is not supported yet.
         #[cfg(feature = "coreboot")]
         fn test_boot_qemu_windows() {
             let fw = Firmware {
