@@ -3,7 +3,7 @@ pipeline {
         stages {
                 stage ('Build') {
                         parallel {
-                                stage ('CH/QEMU Tests') {
+                                stage ('Linux CH/QEMU Tests') {
                                         agent { node { label 'focal-fw' } }
                                         options {
                                                 timeout(time: 1, unit: 'HOURS')
@@ -29,24 +29,9 @@ pipeline {
                                                                   sh "./run_integration_tests.sh linux"
                                                           }
                                                 }
-                                                stage ('Download assets') {
-                                                        steps {
-                                                                sh "mkdir -p ./resources/images"
-                                                                azureDownload(storageCredentialId: 'ch-image-store',
-                                                                                          containerName: 'private-images',
-                                                                                          includeFilesPattern: 'windows-server-2019.raw',
-                                                                                          downloadType: 'container',
-                                                                                          downloadDirLoc: "./resources/images")
-                                                        }
-                                                }
-                                                stage('Run integration tests (Windows)') {
-                                                          steps {
-                                                                  sh "./run_integration_tests.sh windows"
-                                                          }
-                                                }
                                         }
                                 }
-                                stage ('coreboot QEMU Tests') {
+                                stage ('Linux coreboot QEMU Tests') {
                                         agent { node { label 'focal-fw' } }
                                         options {
                                                 timeout(time: 1, unit: 'HOURS')
@@ -67,10 +52,33 @@ pipeline {
                                                                 sh "nohup curl https://sh.rustup.rs -sSf | sh -s -- -y"
                                                         }
                                                 }
-                                                stage('Run integration tests (Linux)') {
+                                                stage('Run integration tests') {
                                                           steps {
                                                                   sh "./run_coreboot_integration_tests.sh linux"
                                                           }
+                                                }
+                                        }
+                                }
+                                stage ('Windows CH Tests') {
+                                        agent { node { label 'focal-fw' } }
+                                        options {
+                                                timeout(time: 1, unit: 'HOURS')
+                                        }
+                                        stages {
+                                                stage ('Checkout') {
+                                                        steps {
+                                                                checkout scm
+                                                        }
+                                                }
+                                                stage ('Install system packages') {
+                                                        steps {
+                                                                sh "sudo apt-get -y install build-essential mtools qemu-system-x86 libssl-dev pkg-config"
+                                                        }
+                                                }
+                                                stage ('Install Rust') {
+                                                        steps {
+                                                                sh "nohup curl https://sh.rustup.rs -sSf | sh -s -- -y"
+                                                        }
                                                 }
                                                 stage ('Download assets') {
                                                         steps {
@@ -82,9 +90,9 @@ pipeline {
                                                                                           downloadDirLoc: "./resources/images")
                                                         }
                                                 }
-                                                stage('Run integration tests (Windows)') {
+                                                stage('Run integration tests') {
                                                           steps {
-                                                                  sh "./run_coreboot_integration_tests.sh windows"
+                                                                  sh "./run_integration_tests.sh windows"
                                                           }
                                                 }
                                         }
