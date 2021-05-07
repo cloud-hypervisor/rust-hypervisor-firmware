@@ -26,7 +26,7 @@ coreboot = []
 
 [dependencies]
 bitflags = "1.2.1"
-x86_64 = "0.14.0"
+x86_64 = "0.14.1"
 atomic_refcell = "0.1.7"
 r-efi = "3.2.0"
 uart_16550 = "0.2.13"
