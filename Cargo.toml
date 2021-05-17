@@ -30,7 +30,7 @@ bitflags = "1.2.1"
 x86_64 = "0.14.0"
 atomic_refcell = "0.1.7"
 r-efi = "3.2.0"
-uart_16550 = "0.2.13"
+uart_16550 = "0.2.14"
 linked_list_allocator = "0.8.11"
 
 [dev-dependencies]
