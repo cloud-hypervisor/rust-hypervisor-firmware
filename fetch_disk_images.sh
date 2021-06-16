@@ -26,7 +26,7 @@ convert_image() {
 }
 
 CLEAR_OS_IMAGE_NAME="clear-31311-cloudguest.img"
-CLEAR_OS_URL_BASE="https://cloudhypervisorstorage.blob.core.windows.net/images"
+CLEAR_OS_URL_BASE="https://cloud-hypervisor.azureedge.net/"
 CLEAR_OS_IMAGE_URL="$CLEAR_OS_URL_BASE/$CLEAR_OS_IMAGE_NAME"
 fetch_image "$CLEAR_OS_IMAGE_NAME" "$CLEAR_OS_IMAGE_URL"
 
