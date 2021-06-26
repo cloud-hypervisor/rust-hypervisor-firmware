@@ -15,7 +15,7 @@
 use core::ffi::c_void;
 
 use r_efi::{
-    efi::{AllocateType, Char16, Guid, MemoryType, Status},
+    efi::{self, Char16, Guid, Status},
     protocols::{
         device_path::Protocol as DevicePathProtocol, file::Protocol as FileProtocol,
         simple_file_system::Protocol as SimpleFileSystemProtocol,
@@ -270,8 +270,8 @@ impl<'a> FileSystemWrapper<'a> {
     fn create_file(&self, node: crate::fat::Node<'a>) -> Option<*mut FileWrapper> {
         let size = core::mem::size_of::<FileWrapper>();
         let (status, new_address) = super::ALLOCATOR.borrow_mut().allocate_pages(
-            AllocateType::AllocateAnyPages,
-            MemoryType::LoaderData,
+            efi::ALLOCATE_ANY_PAGES,
+            efi::LOADER_DATA,
             ((size + super::PAGE_SIZE as usize - 1) / super::PAGE_SIZE as usize) as u64,
             0_u64,
         );

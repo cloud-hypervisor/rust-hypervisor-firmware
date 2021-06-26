@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use r_efi::efi::{AllocateType, MemoryType, PhysicalAddress, Status, VirtualAddress};
+use r_efi::efi::{self, AllocateType, MemoryType, PhysicalAddress, Status, VirtualAddress};
 
 const PAGE_SIZE: u64 = 4096;
 
@@ -120,7 +120,7 @@ impl Allocator {
         while cur != None {
             let a = &mut self.allocations[cur.unwrap()];
 
-            if a.descriptor.r#type != MemoryType::ConventionalMemory as u32 {
+            if a.descriptor.r#type != efi::CONVENTIONAL_MEMORY as u32 {
                 cur = a.next_allocation;
                 continue;
             }
@@ -129,7 +129,7 @@ impl Allocator {
             let alloc_top = alloc_bottom + PAGE_SIZE * a.descriptor.number_of_pages;
 
             match allocation_type {
-                AllocateType::AllocateAddress => {
+                efi::ALLOCATE_ADDRESS => {
                     let req_bottom = address;
                     let req_top = req_bottom + PAGE_SIZE * page_count;
 
@@ -137,7 +137,7 @@ impl Allocator {
                         return cur;
                     }
                 }
-                AllocateType::AllocateAnyPages => {
+                efi::ALLOCATE_ANY_PAGES => {
                     // Always allocate generic requests > 1MiB
                     if a.descriptor.number_of_pages >= page_count
                         && a.descriptor.physical_start > 0x10_0000
@@ -145,13 +145,16 @@ impl Allocator {
                         return cur;
                     }
                 }
-                AllocateType::AllocateMaxAddress => {
+                efi::ALLOCATE_MAX_ADDRESS => {
                     let req_bottom = a.descriptor.physical_start;
                     let req_top = req_bottom + PAGE_SIZE * page_count;
 
                     if a.descriptor.number_of_pages >= page_count && req_top <= address {
                         return cur;
                     }
+                }
+                _ => {
+                    return None;
                 }
             }
 
@@ -225,7 +228,7 @@ impl Allocator {
 
         let assigned;
         match allocate_type {
-            AllocateType::AllocateAddress => {
+            efi::ALLOCATE_ADDRESS => {
                 // Most complex: Three cases: at beginning, at end, in the middle.
 
                 // If allocating at the beginning, can just ignore 2nd half as is already marked as free
@@ -256,7 +259,7 @@ impl Allocator {
                     assigned = split
                 }
             }
-            AllocateType::AllocateMaxAddress | AllocateType::AllocateAnyPages => {
+            efi::ALLOCATE_MAX_ADDRESS | efi::ALLOCATE_ANY_PAGES => {
                 // With the more general allocation we always put at the start of the range
                 let split = self.split_allocation(dest, page_count);
                 if split == None {
@@ -265,13 +268,14 @@ impl Allocator {
 
                 assigned = dest;
             }
+            _ => {
+                return (Status::INVALID_PARAMETER, 0);
+            }
         }
 
         self.allocations[assigned].descriptor.r#type = memory_type as u32;
         self.allocations[assigned].descriptor.attribute |= match memory_type {
-            MemoryType::RuntimeServicesCode | MemoryType::RuntimeServicesData => {
-                r_efi::efi::MEMORY_RUNTIME
-            }
+            efi::RUNTIME_SERVICES_CODE | efi::RUNTIME_SERVICES_DATA => r_efi::efi::MEMORY_RUNTIME,
             _ => 0,
         };
 
@@ -295,8 +299,8 @@ impl Allocator {
             let next = next_allocation.unwrap();
 
             // If next allocation has the same type and are contiguous then merge
-            if self.allocations[current].descriptor.r#type == MemoryType::ConventionalMemory as u32
-                && self.allocations[next].descriptor.r#type == MemoryType::ConventionalMemory as u32
+            if self.allocations[current].descriptor.r#type == efi::CONVENTIONAL_MEMORY as u32
+                && self.allocations[next].descriptor.r#type == efi::CONVENTIONAL_MEMORY as u32
                 && self.allocations[next].descriptor.physical_start
                     == self.allocations[current].descriptor.physical_start
                         + self.allocations[current].descriptor.number_of_pages * PAGE_SIZE
@@ -322,7 +326,7 @@ impl Allocator {
             let a = &mut self.allocations[cur.unwrap()];
 
             if address == a.descriptor.physical_start {
-                a.descriptor.r#type = MemoryType::ConventionalMemory as u32;
+                a.descriptor.r#type = efi::CONVENTIONAL_MEMORY as u32;
                 self.merge_free_memory();
                 return Status::SUCCESS;
             }
@@ -410,13 +414,13 @@ impl Allocator {
 #[cfg(test)]
 mod tests {
     use super::Allocator;
-    use r_efi::efi::{AllocateType, MemoryType, Status};
+    use r_efi::efi::{self, AllocateType, MemoryType, Status};
 
     fn add_initial_allocations(allocator: &mut Allocator) {
         // Add range 0 - 0x9fc00
         assert_eq!(
             allocator.add_initial_allocation(
-                MemoryType::ConventionalMemory,
+                efi::CONVENTIONAL_MEMORY,
                 0x9fc00 / super::PAGE_SIZE,
                 0,
                 0
@@ -436,7 +440,7 @@ mod tests {
         // Add range 1 - 128MiB
         assert_eq!(
             allocator.add_initial_allocation(
-                MemoryType::ConventionalMemory,
+                efi::CONVENTIONAL_MEMORY,
                 127 * 1024 * 1024 / super::PAGE_SIZE,
                 1024 * 1024,
                 0
@@ -464,13 +468,13 @@ mod tests {
         );
         assert_eq!(
             allocator.allocations[0].descriptor.r#type,
-            MemoryType::ConventionalMemory as u32
+            efi::CONVENTIONAL_MEMORY as u32
         );
 
         // Add range 3.5GiB to 4.0
         assert_eq!(
             allocator.add_initial_allocation(
-                MemoryType::MemoryMappedIO,
+                efi::MEMORY_MAPPED_IO,
                 512 * 1024 * 1024 / super::PAGE_SIZE,
                 3584 * 1024 * 1024,
                 0
@@ -490,13 +494,13 @@ mod tests {
         );
         assert_eq!(
             allocator.allocations[2].descriptor.r#type,
-            MemoryType::MemoryMappedIO as u32
+            efi::MEMORY_MAPPED_IO as u32
         );
 
         // Add memory from 4GiB to 8GiB of conventional
         assert_eq!(
             allocator.add_initial_allocation(
-                MemoryType::ConventionalMemory,
+                efi::CONVENTIONAL_MEMORY,
                 4096 * 1024 * 1024 / super::PAGE_SIZE,
                 4096 * 1024 * 1024,
                 0
@@ -535,7 +539,7 @@ mod tests {
         );
         assert_eq!(
             allocator.allocations[0].descriptor.r#type,
-            MemoryType::ConventionalMemory as u32
+            efi::CONVENTIONAL_MEMORY as u32
         );
 
         assert!(allocator.allocations[4].in_use);
@@ -550,7 +554,7 @@ mod tests {
         );
         assert_eq!(
             allocator.allocations[4].descriptor.r#type,
-            MemoryType::ConventionalMemory as u32
+            efi::CONVENTIONAL_MEMORY as u32
         );
     }
 
@@ -571,7 +575,7 @@ mod tests {
 
         assert_eq!(
             allocator.find_free_memory(
-                AllocateType::AllocateAddress,
+                efi::ALLOCATE_ADDRESS,
                 1024 * 1024 / super::PAGE_SIZE,
                 1024 * 1024
             ),
@@ -582,14 +586,14 @@ mod tests {
 
         // 4K at 1MiB
         assert_eq!(
-            allocator.find_free_memory(AllocateType::AllocateAddress, 1024, 1024 * 1024),
+            allocator.find_free_memory(efi::ALLOCATE_ADDRESS, 1024, 1024 * 1024),
             Some(1)
         );
 
         // 1MiB at 1GiB
         assert_eq!(
             allocator.find_free_memory(
-                AllocateType::AllocateAddress,
+                efi::ALLOCATE_ADDRESS,
                 1024 * 1024 / super::PAGE_SIZE,
                 1024 * 1024 * 1024
             ),
@@ -599,7 +603,7 @@ mod tests {
         // 1 GiB at 0
         assert_eq!(
             allocator.find_free_memory(
-                AllocateType::AllocateAddress,
+                efi::ALLOCATE_ADDRESS,
                 1024 * 1024 * 1024 / super::PAGE_SIZE,
                 0
             ),
@@ -609,7 +613,7 @@ mod tests {
         // 2MiB at 127MiB
         assert_eq!(
             allocator.find_free_memory(
-                AllocateType::AllocateAddress,
+                efi::ALLOCATE_ADDRESS,
                 2 * 1024 * 1024 / super::PAGE_SIZE,
                 127 * 1024 * 1024
             ),
@@ -619,7 +623,7 @@ mod tests {
         // Add memory from 4GiB to 8GiB of conventional
         assert_eq!(
             allocator.add_initial_allocation(
-                MemoryType::ConventionalMemory,
+                efi::CONVENTIONAL_MEMORY,
                 4096 * 1024 * 1024 / super::PAGE_SIZE,
                 4096 * 1024 * 1024,
                 0
@@ -630,7 +634,7 @@ mod tests {
         // 64MiB below 4Gib
         assert_eq!(
             allocator.find_free_memory(
-                AllocateType::AllocateMaxAddress,
+                efi::ALLOCATE_MAX_ADDRESS,
                 64 * 1024 * 1024 / super::PAGE_SIZE,
                 4096 * 1024 * 1024
             ),
@@ -640,7 +644,7 @@ mod tests {
         // 256MiB below 4Gib
         assert_eq!(
             allocator.find_free_memory(
-                AllocateType::AllocateMaxAddress,
+                efi::ALLOCATE_MAX_ADDRESS,
                 256 * 1024 * 1024 / super::PAGE_SIZE,
                 4096 * 1024 * 1024
             ),
@@ -650,7 +654,7 @@ mod tests {
         // 256MiB below 8Gib
         assert_eq!(
             allocator.find_free_memory(
-                AllocateType::AllocateMaxAddress,
+                efi::ALLOCATE_MAX_ADDRESS,
                 256 * 1024 * 1024 / super::PAGE_SIZE,
                 8192 * 1024 * 1024
             ),
@@ -660,7 +664,7 @@ mod tests {
         // 128 MiB anywhere
         assert_eq!(
             allocator.find_free_memory(
-                AllocateType::AllocateAnyPages,
+                efi::ALLOCATE_ANY_PAGES,
                 128 * 1024 * 1024 / super::PAGE_SIZE,
                 0,
             ),
@@ -670,7 +674,7 @@ mod tests {
         // 256 MiB anywhere
         assert_eq!(
             allocator.find_free_memory(
-                AllocateType::AllocateAnyPages,
+                efi::ALLOCATE_ANY_PAGES,
                 256 * 1024 * 1024 / super::PAGE_SIZE,
                 0,
             ),
@@ -694,12 +698,7 @@ mod tests {
 
         // 4KiB at 0x1000
         assert_eq!(
-            allocator.allocate_pages(
-                AllocateType::AllocateAddress,
-                MemoryType::LoaderData,
-                1,
-                0x1000
-            ),
+            allocator.allocate_pages(efi::ALLOCATE_ADDRESS, efi::LOADER_DATA, 1, 0x1000),
             (Status::SUCCESS, 0x1000)
         );
 
@@ -709,27 +708,22 @@ mod tests {
 
         assert_eq!(descriptors[0].physical_start, 0);
         assert_eq!(descriptors[0].number_of_pages, 1);
-        assert_eq!(descriptors[0].r#type, MemoryType::ConventionalMemory as u32);
+        assert_eq!(descriptors[0].r#type, efi::CONVENTIONAL_MEMORY as u32);
 
         assert_eq!(descriptors[1].physical_start, 0x1000);
         assert_eq!(descriptors[1].number_of_pages, 1);
-        assert_eq!(descriptors[1].r#type, MemoryType::LoaderData as u32);
+        assert_eq!(descriptors[1].r#type, efi::LOADER_DATA as u32);
 
         assert_eq!(descriptors[2].physical_start, 0x2000);
         assert_eq!(
             descriptors[2].number_of_pages,
             (0x9fc00 / super::PAGE_SIZE) - 2
         );
-        assert_eq!(descriptors[2].r#type, MemoryType::ConventionalMemory as u32);
+        assert_eq!(descriptors[2].r#type, efi::CONVENTIONAL_MEMORY as u32);
 
         // 4KiB at 0x1000
         assert_eq!(
-            allocator.allocate_pages(
-                AllocateType::AllocateAddress,
-                MemoryType::LoaderData,
-                1,
-                0x1000
-            ),
+            allocator.allocate_pages(efi::ALLOCATE_ADDRESS, efi::LOADER_DATA, 1, 0x1000),
             (Status::OUT_OF_RESOURCES, 0)
         );
 
@@ -739,22 +733,22 @@ mod tests {
 
         assert_eq!(descriptors[0].physical_start, 0);
         assert_eq!(descriptors[0].number_of_pages, 1);
-        assert_eq!(descriptors[0].r#type, MemoryType::ConventionalMemory as u32);
+        assert_eq!(descriptors[0].r#type, efi::CONVENTIONAL_MEMORY as u32);
 
         assert_eq!(descriptors[1].physical_start, 0x1000);
         assert_eq!(descriptors[1].number_of_pages, 1);
-        assert_eq!(descriptors[1].r#type, MemoryType::LoaderData as u32);
+        assert_eq!(descriptors[1].r#type, efi::LOADER_DATA as u32);
 
         assert_eq!(descriptors[2].physical_start, 0x2000);
         assert_eq!(
             descriptors[2].number_of_pages,
             (0x9fc00 / super::PAGE_SIZE) - 2
         );
-        assert_eq!(descriptors[2].r#type, MemoryType::ConventionalMemory as u32);
+        assert_eq!(descriptors[2].r#type, efi::CONVENTIONAL_MEMORY as u32);
 
         // 4KiB at 0
         assert_eq!(
-            allocator.allocate_pages(AllocateType::AllocateAddress, MemoryType::LoaderData, 1, 0),
+            allocator.allocate_pages(efi::ALLOCATE_ADDRESS, efi::LOADER_DATA, 1, 0),
             (Status::SUCCESS, 0)
         );
 
@@ -764,18 +758,18 @@ mod tests {
 
         assert_eq!(descriptors[0].physical_start, 0);
         assert_eq!(descriptors[0].number_of_pages, 1);
-        assert_eq!(descriptors[0].r#type, MemoryType::LoaderData as u32);
+        assert_eq!(descriptors[0].r#type, efi::LOADER_DATA as u32);
 
         assert_eq!(descriptors[1].physical_start, 0x1000);
         assert_eq!(descriptors[1].number_of_pages, 1);
-        assert_eq!(descriptors[1].r#type, MemoryType::LoaderData as u32);
+        assert_eq!(descriptors[1].r#type, efi::LOADER_DATA as u32);
 
         assert_eq!(descriptors[2].physical_start, 0x2000);
         assert_eq!(
             descriptors[2].number_of_pages,
             (0x9fc00 / super::PAGE_SIZE) - 2
         );
-        assert_eq!(descriptors[2].r#type, MemoryType::ConventionalMemory as u32);
+        assert_eq!(descriptors[2].r#type, efi::CONVENTIONAL_MEMORY as u32);
     }
 
     #[test]
@@ -793,12 +787,7 @@ mod tests {
 
         // 4KiB at 0x1000
         assert_eq!(
-            allocator.allocate_pages(
-                AllocateType::AllocateAddress,
-                MemoryType::LoaderData,
-                1,
-                0x1000
-            ),
+            allocator.allocate_pages(efi::ALLOCATE_ADDRESS, efi::LOADER_DATA, 1, 0x1000),
             (Status::SUCCESS, 0x1000)
         );
 
@@ -808,18 +797,18 @@ mod tests {
 
         assert_eq!(descriptors[0].physical_start, 0);
         assert_eq!(descriptors[0].number_of_pages, 1);
-        assert_eq!(descriptors[0].r#type, MemoryType::ConventionalMemory as u32);
+        assert_eq!(descriptors[0].r#type, efi::CONVENTIONAL_MEMORY as u32);
 
         assert_eq!(descriptors[1].physical_start, 0x1000);
         assert_eq!(descriptors[1].number_of_pages, 1);
-        assert_eq!(descriptors[1].r#type, MemoryType::LoaderData as u32);
+        assert_eq!(descriptors[1].r#type, efi::LOADER_DATA as u32);
 
         assert_eq!(descriptors[2].physical_start, 0x2000);
         assert_eq!(
             descriptors[2].number_of_pages,
             (0x9fc00 / super::PAGE_SIZE) - 2
         );
-        assert_eq!(descriptors[2].r#type, MemoryType::ConventionalMemory as u32);
+        assert_eq!(descriptors[2].r#type, efi::CONVENTIONAL_MEMORY as u32);
 
         assert_eq!(allocator.free_pages(0x1000), Status::SUCCESS);
 
