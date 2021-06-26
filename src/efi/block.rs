@@ -15,7 +15,7 @@
 use core::ffi::c_void;
 
 use r_efi::{
-    efi::{AllocateType, Guid, MemoryType, Status},
+    efi::{self, Guid, Status},
     eficall, eficall_abi,
     protocols::device_path::Protocol as DevicePathProtocol,
 };
@@ -187,8 +187,8 @@ impl<'a> BlockWrapper<'a> {
 
         let size = core::mem::size_of::<BlockWrapper>();
         let (_status, new_address) = super::ALLOCATOR.borrow_mut().allocate_pages(
-            AllocateType::AllocateAnyPages,
-            MemoryType::LoaderData,
+            efi::ALLOCATE_ANY_PAGES,
+            efi::LOADER_DATA,
             ((size + super::PAGE_SIZE as usize - 1) / super::PAGE_SIZE as usize) as u64,
             0_u64,
         );

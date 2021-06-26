@@ -454,7 +454,7 @@ pub extern "win64" fn allocate_pool(
     address: *mut *mut c_void,
 ) -> Status {
     let (status, new_address) = ALLOCATOR.borrow_mut().allocate_pages(
-        AllocateType::AllocateAnyPages,
+        efi::ALLOCATE_ANY_PAGES,
         memory_type,
         ((size + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize) as u64,
         address as u64,
@@ -633,7 +633,7 @@ pub extern "win64" fn load_image(
     let load_addr =
         match ALLOCATOR
             .borrow_mut()
-            .find_free_pages(AllocateType::AllocateAnyPages, file_size, 0)
+            .find_free_pages(efi::ALLOCATE_ANY_PAGES, file_size, 0)
         {
             Some(a) => a,
             None => return Status::OUT_OF_RESOURCES,
@@ -645,8 +645,8 @@ pub extern "win64" fn load_image(
         Err(_) => return Status::DEVICE_ERROR,
     };
     ALLOCATOR.borrow_mut().allocate_pages(
-        AllocateType::AllocateAddress,
-        MemoryType::LoaderCode,
+        efi::ALLOCATE_ADDRESS,
+        efi::LOADER_CODE,
         file_size,
         load_addr,
     );
@@ -890,7 +890,7 @@ fn populate_allocator(info: &dyn boot::Info, image_address: u64, image_size: u64
         let entry = info.entry(i);
         if entry.entry_type == boot::E820Entry::RAM_TYPE {
             ALLOCATOR.borrow_mut().add_initial_allocation(
-                MemoryType::ConventionalMemory,
+                efi::CONVENTIONAL_MEMORY,
                 entry.size / PAGE_SIZE,
                 entry.addr,
                 efi::MEMORY_WB,
@@ -909,28 +909,28 @@ fn populate_allocator(info: &dyn boot::Info, image_address: u64, image_size: u64
 
     // Add ourselves
     ALLOCATOR.borrow_mut().allocate_pages(
-        AllocateType::AllocateAddress,
-        MemoryType::RuntimeServicesData,
+        efi::ALLOCATE_ADDRESS,
+        efi::RUNTIME_SERVICES_DATA,
         (text_start - ram_min) / PAGE_SIZE,
         ram_min,
     );
     ALLOCATOR.borrow_mut().allocate_pages(
-        AllocateType::AllocateAddress,
-        MemoryType::RuntimeServicesCode,
+        efi::ALLOCATE_ADDRESS,
+        efi::RUNTIME_SERVICES_CODE,
         (text_end - text_start) / PAGE_SIZE,
         text_start,
     );
     ALLOCATOR.borrow_mut().allocate_pages(
-        AllocateType::AllocateAddress,
-        MemoryType::RuntimeServicesData,
+        efi::ALLOCATE_ADDRESS,
+        efi::RUNTIME_SERVICES_DATA,
         (stack_start - text_end) / PAGE_SIZE,
         text_end,
     );
 
     // Add the loaded binary
     ALLOCATOR.borrow_mut().allocate_pages(
-        AllocateType::AllocateAddress,
-        MemoryType::LoaderCode,
+        efi::ALLOCATE_ADDRESS,
+        efi::LOADER_CODE,
         image_size / PAGE_SIZE,
         image_address,
     );
@@ -942,8 +942,8 @@ fn populate_allocator(info: &dyn boot::Info, image_address: u64, image_size: u64
 #[cfg(not(test))]
 fn init_heap_allocator(size: usize) {
     let (status, heap_start) = ALLOCATOR.borrow_mut().allocate_pages(
-        AllocateType::AllocateAnyPages,
-        MemoryType::BootServicesCode,
+        efi::ALLOCATE_ANY_PAGES,
+        efi::BOOT_SERVICES_CODE,
         size as u64 / PAGE_SIZE,
         0,
     );
@@ -975,7 +975,7 @@ fn new_image_handle(
 ) -> *mut LoadedImageWrapper {
     let mut file_paths = null_mut();
     let status = allocate_pool(
-        MemoryType::LoaderData,
+        efi::LOADER_DATA,
         size_of::<DevicePaths>(),
         &mut file_paths as *mut *mut c_void,
     );
@@ -1004,7 +1004,7 @@ fn new_image_handle(
 
     let mut image = null_mut();
     allocate_pool(
-        MemoryType::LoaderData,
+        efi::LOADER_DATA,
         size_of::<LoadedImageWrapper>(),
         &mut image as *mut *mut c_void,
     );
@@ -1024,8 +1024,8 @@ fn new_image_handle(
             load_options: null_mut(),
             image_base: load_addr as *mut _,
             image_size: load_size,
-            image_code_type: efi::MemoryType::LoaderCode,
-            image_data_type: efi::MemoryType::LoaderData,
+            image_code_type: efi::LOADER_CODE,
+            image_data_type: efi::LOADER_DATA,
             unload: image_unload,
             reserved: null_mut(),
         },
