@@ -61,6 +61,9 @@ pipeline {
                                 }
                                 stage ('Windows CH Tests') {
                                         agent { node { label 'focal-fw' } }
+                                        environment {
+                                                AZURE_CONNECTION_STRING = credentials('46b4e7d6-315f-4cc1-8333-b58780863b9b')
+                                        }
                                         options {
                                                 timeout(time: 1, unit: 'HOURS')
                                         }
@@ -72,7 +75,7 @@ pipeline {
                                                 }
                                                 stage ('Install system packages') {
                                                         steps {
-                                                                sh "sudo apt-get -y install build-essential mtools qemu-system-x86 libssl-dev pkg-config"
+                                                                sh "sudo apt-get -y install build-essential mtools qemu-system-x86 libssl-dev pkg-config azure-cli"
                                                         }
                                                 }
                                                 stage ('Install Rust') {
@@ -83,11 +86,7 @@ pipeline {
                                                 stage ('Download assets') {
                                                         steps {
                                                                 sh "mkdir -p ./resources/images"
-                                                                azureDownload(storageCredentialId: 'ch-image-store',
-                                                                                          containerName: 'private-images',
-                                                                                          includeFilesPattern: 'windows-server-2019.raw',
-                                                                                          downloadType: 'container',
-                                                                                          downloadDirLoc: "./resources/images")
+                                                                sh 'az storage blob download --container-name private-images --file "./resources/images/windows-server-2019.raw" --name windows-server-2019.raw --connection-string "$AZURE_CONNECTION_STRING"'
                                                         }
                                                 }
                                                 stage('Run integration tests') {
