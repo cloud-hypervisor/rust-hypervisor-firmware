@@ -536,10 +536,20 @@ mod tests {
             }
         }
 
+        fn prepare_windows_os_disk(_: &TempDir, image_name: &str) -> String {
+            let src_osdisk = std::env::current_dir()
+                .unwrap()
+                .join("resources")
+                .join("images")
+                .join(image_name);
+            let dest_osdisk = src_osdisk;
+            dest_osdisk.to_str().unwrap().to_owned()
+        }
+
         fn test_boot_qemu_windows_common(fw: &Firmware) {
             let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
             let net = GuestNetworkConfig::new(COUNTER.fetch_add(1, Ordering::SeqCst) as u8);
-            let os = prepare_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
+            let os = prepare_windows_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
 
             prepare_tap(&net);
 
@@ -622,7 +632,7 @@ mod tests {
         #[cfg(not(feature = "coreboot"))]
         fn test_boot_ch_windows() {
             let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
-            let os = prepare_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
+            let os = prepare_windows_os_disk(&tmp_dir, WINDOWS_IMAGE_NAME);
 
             let mut c = Command::new("./resources/cloud-hypervisor");
             c.args(&[
