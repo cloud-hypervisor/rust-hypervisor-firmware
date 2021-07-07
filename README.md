@@ -2,7 +2,7 @@
 
 This repository contains a simple firmware that is designed to be launched from
 anything that supports loading ELF binaries and running them with the
-PVH booting standard
+PVH booting standard.
 
 The purpose is to be able to use this firmware to be able to load a
 bootloader from within a disk image without requiring the use of a complex
@@ -28,7 +28,9 @@ all the way into the OS.
 
 To compile:
 
+```
 cargo build --release --target target.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+```
 
 The result will be in:
 
