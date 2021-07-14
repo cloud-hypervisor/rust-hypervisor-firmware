@@ -178,7 +178,7 @@ impl PciDevice {
         let mut current_bar = 0;
 
         //0x24 offset is last bar
-        while current_bar_offset < 0x24 {
+        while current_bar_offset <= 0x24 {
             #[allow(clippy::blacklisted_name)]
             let bar = self.read_u32(current_bar_offset);
 
