@@ -615,19 +615,28 @@ impl<'a> Filesystem<'a> {
     fn next_cluster(&self, cluster: u32) -> Result<u32, Error> {
         match self.fat_type {
             FatType::FAT12 => {
-                let mut data: [u8; 512] = [0; 512];
-
                 let fat_offset = cluster + (cluster / 2); // equivalent of x 1.5
                 let fat_sector = self.first_fat_sector + (fat_offset / self.bytes_per_sector);
                 let offset = fat_offset % self.bytes_per_sector;
 
+                let mut data: [u8; 512] = [0; 512];
                 match self.read(u64::from(fat_sector), &mut data) {
                     Ok(_) => {}
                     Err(_) => return Err(Error::BlockError),
                 };
+                let lower_data = data[offset as usize] as u16;
+                let upper_data = if offset < 511 {
+                    data[offset as usize + 1] as u16
+                } else {
+                    // read next sector to get upper byte if offset is 511
+                    match self.read(u64::from(fat_sector) + 1, &mut data) {
+                        Ok(_) => {}
+                        Err(_) => return Err(Error::BlockError),
+                    }
+                    data[0] as u16
+                };
 
-                let next_cluster_raw =
-                    unsafe { *((data.as_ptr() as u64 + u64::from(offset)) as *const u16) };
+                let next_cluster_raw = lower_data | (upper_data << 8);
 
                 let next_cluster = if cluster % 2 == 0 {
                     next_cluster_raw & 0xfff
