@@ -1,6 +1,6 @@
 [package]
 name = "hypervisor-fw"
-version = "0.3.0"
+version = "0.3.2"
 authors = ["Rob Bradford <robert.bradford@intel.com>"]
 edition = "2018"
 
