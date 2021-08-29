@@ -179,7 +179,6 @@ fn main(info: &dyn boot::Info) -> ! {
         VIRTIO_PCI_BLOCK_DEVICE_ID,
         |pci_device| {
             let mut pci_transport = pci::VirtioPciTransport::new(pci_device);
-            block::VirtioBlockDevice::new(&mut pci_transport);
             let mut device = block::VirtioBlockDevice::new(&mut pci_transport);
             boot_from_device(&mut device, info)
         },
