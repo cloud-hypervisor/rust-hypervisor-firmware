@@ -178,10 +178,9 @@ mod tests {
     }
 
     fn prepare_os_disk(tmp_dir: &TempDir, image_name: &str) -> String {
-        let src_osdisk = std::env::current_dir()
+        let src_osdisk = dirs::home_dir()
             .unwrap()
-            .join("resources")
-            .join("images")
+            .join("workloads")
             .join(image_name);
         let dest_osdisk = tmp_dir.path().join(image_name);
         fs::copy(&src_osdisk, &dest_osdisk).expect("Expect copying OS disk to succeed");
@@ -355,7 +354,11 @@ mod tests {
         use crate::integration::tests::*;
 
         fn spawn_ch(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
-            let mut c = Command::new("./resources/cloud-hypervisor");
+            let clh_path = dirs::home_dir()
+                .unwrap()
+                .join("workloads")
+                .join("cloud-hypervisor");
+            let mut c = Command::new(clh_path.to_str().unwrap());
             c.args(&[
                 "--console",
                 "off",

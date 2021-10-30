@@ -313,6 +313,24 @@ cmd_tests() {
 	       ./scripts/run_cargo_tests.sh "$@"  || fix_dir_perms $? || exit $?
     fi
 
+    if [ "$integration" = true ] ;  then
+	say "Running integration tests..."
+	$DOCKER_RUNTIME run \
+	       --workdir "$CTR_RHF_ROOT_DIR" \
+	       --rm \
+	       --privileged \
+	       --security-opt seccomp=unconfined \
+	       --ipc=host \
+	       --net="$CTR_RHF_NET" \
+	       --mount type=tmpfs,destination=/tmp \
+	       --volume /dev:/dev \
+	       --volume "$RHF_ROOT_DIR:$CTR_RHF_ROOT_DIR" $exported_volumes \
+	       --volume "$RHF_WORKLOADS:$CTR_RHF_WORKLOADS" \
+	       --env USER="root" \
+	       "$CTR_IMAGE" \
+	       ./scripts/run_integration_tests.sh "$@" || fix_dir_perms $? || exit $?
+    fi
+
     fix_dir_perms $?
 }
 
