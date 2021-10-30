@@ -242,13 +242,13 @@ impl<'a> Loader<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::part::tests::FakeDisk;
+    use crate::part::tests::*;
 
     use std::alloc;
 
     #[test]
     fn test_loader() {
-        let d = FakeDisk::new("clear-28660-kvm.img");
+        let d = FakeDisk::new(&clear_disk_path());
         let (start, end) = crate::part::find_efi_partition(&d).unwrap();
 
         let mut f = crate::fat::Filesystem::new(&d, start, end);
