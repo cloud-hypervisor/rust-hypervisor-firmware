@@ -46,7 +46,4 @@ jobs:
       - name: Unit tests
         run: |
           sudo apt-get install -y mtools
-          wget https://download.clearlinux.org/releases/28660/clear/clear-28660-kvm.img.xz
-          unxz clear-28660-kvm.img.xz
-          ./make-test-disks.sh
-          cargo test
+          bash scripts/run_unit_tests.sh

@@ -151,6 +151,7 @@ pub mod tests {
     use std::io::Read;
     use std::io::Seek;
     use std::io::SeekFrom;
+    use std::path::{Path, PathBuf};
 
     use crate::block;
     use crate::block::SectorRead;
@@ -161,7 +162,7 @@ pub mod tests {
     }
 
     impl FakeDisk {
-        pub fn new(path: &str) -> FakeDisk {
+        pub fn new<P: AsRef<Path>>(path: &P) -> FakeDisk {
             let file = File::open(path).expect("missing disk image");
             let metadata = fs::metadata(path).expect("error getting file metadata");
             FakeDisk {
@@ -190,9 +191,17 @@ pub mod tests {
         }
     }
 
+    pub fn clear_disk_path() -> PathBuf {
+        let mut disk_path = dirs::home_dir().unwrap();
+        disk_path.push("workloads");
+        disk_path.push("clear-28660-kvm.img");
+
+        disk_path
+    }
+
     #[test]
     fn test_find_efi_partition() {
-        let d = FakeDisk::new("clear-28660-kvm.img");
+        let d = FakeDisk::new(&clear_disk_path());
 
         match super::find_efi_partition(&d) {
             Ok((start, end)) => {

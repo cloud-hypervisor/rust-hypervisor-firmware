@@ -105,12 +105,12 @@ fix_dir_perms() {
     # Yes, running Docker to get elevated privileges, just to chown some files
     # is a dirty hack.
     $DOCKER_RUNTIME run \
-	--workdir "$CTR_CLH_ROOT_DIR" \
+	--workdir "$CTR_RHF_ROOT_DIR" \
 	   --rm \
 	   --volume /dev:/dev \
-	   --volume "$CLH_ROOT_DIR:$CTR_CLH_ROOT_DIR" $exported_volumes \
+	   --volume "$RHF_ROOT_DIR:$CTR_RHF_ROOT_DIR" $exported_volumes \
 	   "$CTR_IMAGE" \
-           chown -R "$(id -u):$(id -g)" "$CTR_CLH_ROOT_DIR"
+           chown -R "$(id -u):$(id -g)" "$CTR_RHF_ROOT_DIR"
 
     return $1
 }
@@ -141,6 +141,7 @@ process_volumes_args() {
 #
 ensure_build_dir() {
     for dir in "$RHF_BUILD_DIR" \
+		   "$RHF_WORKLOADS" \
 		   "$CARGO_TARGET_DIR" \
 		   "$CARGO_REGISTRY_DIR" \
 		   "$CARGO_GIT_REGISTRY_DIR"; do
@@ -180,6 +181,14 @@ cmd_help() {
     echo ""
     echo "    clean [<cargo args>]]"
     echo "        Remove the Rust Hypervisor Firmware artifacts."
+    echo ""
+    echo "    tests [--unit|--cargo|--all] [-- [<cargo test args>]]"
+    echo "        Run the Rust Hypervisor Firmware tests."
+    echo "        --unit                       Run the unit tests."
+    echo "        --cargo                      Run the cargo tests."
+    echo "        --integration                Run the integration tests."
+    echo "        --volumes                    Hash separated volumes to be exported. Example --volumes /mnt:/mnt#/myvol:/myvol"
+    echo "        --all                        Run all tests."
     echo ""
     echo "    shell"
     echo "        Run the development container into an interactive, privileged BASH shell."
@@ -252,6 +261,51 @@ cmd_clean() {
 	         --target-dir "$CTR_RHF_CARGO_TARGET" \
 	         "${cargo_args[@]}"
 }
+
+cmd_tests() {
+    unit=false
+    cargo=false
+    integration=false
+    arg_vols=""
+    exported_device="/dev/kvm"
+    while [ $# -gt 0 ]; do
+	case "$1" in
+            "-h"|"--help")                  { cmd_help; exit 1; } ;;
+            "--unit")                       { unit=true; } ;;
+            "--cargo")                      { cargo=true; } ;;
+            "--integration")                { integration=true; } ;;
+            "--volumes")
+                shift
+                arg_vols="$1"
+                ;;
+            "--all")                 { cargo=true; unit=true; integration=true; } ;;
+            "--")                    { shift; break; } ;;
+            *)
+		die "Unknown tests argument: $1. Please use --help for help."
+		;;
+	esac
+	shift
+    done
+
+    ensure_build_dir
+    ensure_latest_ctr
+
+    process_volumes_args
+
+    if [ "$unit" = true ] ;  then
+	say "Running unit tests..."
+	$DOCKER_RUNTIME run \
+	       --workdir "$CTR_RHF_ROOT_DIR" \
+	       --rm \
+	       --volume "$RHF_ROOT_DIR:$CTR_RHF_ROOT_DIR" $exported_volumes \
+	       --volume "$RHF_WORKLOADS:$CTR_RHF_WORKLOADS" \
+	       "$CTR_IMAGE" \
+	       ./scripts/run_unit_tests.sh "$@" || fix_dir_perms $? || exit $?
+    fi
+
+    fix_dir_perms $?
+}
+
 
 cmd_build-container() {
     container_type="dev"

@@ -157,12 +157,12 @@ pub fn load_default_entry(fs: &fat::Filesystem, info: &dyn boot::Info) -> Result
 #[cfg(test)]
 mod tests {
     use crate::fat::Read;
-    use crate::part::tests::FakeDisk;
+    use crate::part::tests::*;
     use core::convert::TryInto;
 
     #[test]
     fn test_default_entry() {
-        let d = FakeDisk::new("clear-28660-kvm.img");
+        let d = FakeDisk::new(&clear_disk_path());
         let (start, end) = crate::part::find_efi_partition(&d).unwrap();
         let mut fs = crate::fat::Filesystem::new(&d, start, end);
         fs.init().expect("Error initialising filesystem");

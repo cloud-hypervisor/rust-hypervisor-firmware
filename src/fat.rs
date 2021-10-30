@@ -816,15 +816,30 @@ impl<'a> Filesystem<'a> {
 #[cfg(test)]
 mod tests {
     use super::Read;
-    use crate::part::tests::FakeDisk;
-    use core::convert::TryInto;
+    use crate::part::tests::*;
+    use std::convert::TryInto;
+    use std::path::PathBuf;
+
+    fn fat_test_image_paths() -> Vec<PathBuf> {
+        let images = ["fat12.img", "fat16.img", "fat32.img"];
+
+        let mut workload_path = dirs::home_dir().unwrap();
+        workload_path.push("workloads");
+
+        let mut paths = Vec::<PathBuf>::new();
+        for image in &images {
+            paths.push(workload_path.join(image))
+        }
+
+        paths
+    }
 
     #[test]
     fn test_fat_file_reads() {
-        let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
+        let images = fat_test_image_paths();
 
         for image in &images {
-            let d = FakeDisk::new(image);
+            let d = FakeDisk::new(&image);
 
             for n in 9..16 {
                 for o in 0..2 {
@@ -863,7 +878,7 @@ mod tests {
 
     #[test]
     fn test_fat_file_seek() {
-        let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
+        let images = fat_test_image_paths();
 
         for image in &images {
             let d = FakeDisk::new(image);
@@ -940,7 +955,7 @@ mod tests {
 
     #[test]
     fn test_fat_init() {
-        let d = FakeDisk::new("clear-28660-kvm.img");
+        let d = FakeDisk::new(&clear_disk_path());
         match crate::part::find_efi_partition(&d) {
             Ok((start, end)) => {
                 let mut f = crate::fat::Filesystem::new(&d, start, end);
@@ -958,7 +973,7 @@ mod tests {
 
     #[test]
     fn test_fat_open() {
-        let d = FakeDisk::new("clear-28660-kvm.img");
+        let d = FakeDisk::new(&clear_disk_path());
         match crate::part::find_efi_partition(&d) {
             Ok((start, end)) => {
                 let mut f = crate::fat::Filesystem::new(&d, start, end);
@@ -982,10 +997,10 @@ mod tests {
 
     #[test]
     fn test_fat_list_root() {
-        let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
+        let images = fat_test_image_paths();
 
         for image in &images {
-            let disk = FakeDisk::new(image);
+            let disk = FakeDisk::new(&image);
             let len = disk.len();
             let mut fs = crate::fat::Filesystem::new(&disk, 0, len);
             fs.init().expect("Error initialising filesystem");
@@ -996,10 +1011,10 @@ mod tests {
     }
     #[test]
     fn test_fat_list_recurse() {
-        let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
+        let images = fat_test_image_paths();
 
         for image in &images {
-            let disk = FakeDisk::new(image);
+            let disk = FakeDisk::new(&image);
             let len = disk.len();
             let mut fs = crate::fat::Filesystem::new(&disk, 0, len);
             fs.init().expect("Error initialising filesystem");
@@ -1030,10 +1045,10 @@ mod tests {
 
     #[test]
     fn test_fat_long_file_name() {
-        let images: [&str; 3] = ["fat12.img", "fat16.img", "fat32.img"];
+        let images = fat_test_image_paths();
 
         for image in &images {
-            let d = FakeDisk::new(image);
+            let d = FakeDisk::new(&image);
             let len = d.len();
             let mut fs = crate::fat::Filesystem::new(&d, 0, len);
             fs.init().expect("Error initialising filesystem");
