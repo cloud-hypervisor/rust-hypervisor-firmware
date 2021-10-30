@@ -303,6 +303,16 @@ cmd_tests() {
 	       ./scripts/run_unit_tests.sh "$@" || fix_dir_perms $? || exit $?
     fi
 
+    if [ "$cargo" = true ] ;  then
+	say "Running cargo tests..."
+	$DOCKER_RUNTIME run \
+	       --workdir "$CTR_RHF_ROOT_DIR" \
+	       --rm \
+	       --volume "$RHF_ROOT_DIR:$CTR_RHF_ROOT_DIR" $exported_volumes \
+	       "$CTR_IMAGE" \
+	       ./scripts/run_cargo_tests.sh "$@"  || fix_dir_perms $? || exit $?
+    fi
+
     fix_dir_perms $?
 }
 
