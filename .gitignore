@@ -1,3 +1,4 @@
+build
 clear-*-kvm.img*
 fat*.img
 target
