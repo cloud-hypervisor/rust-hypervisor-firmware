@@ -187,6 +187,7 @@ cmd_help() {
     echo "        --unit                       Run the unit tests."
     echo "        --cargo                      Run the cargo tests."
     echo "        --integration                Run the integration tests."
+    echo "        --integration-coreboot       Run the coreboot target integration tests."
     echo "        --volumes                    Hash separated volumes to be exported. Example --volumes /mnt:/mnt#/myvol:/myvol"
     echo "        --all                        Run all tests."
     echo ""
@@ -266,6 +267,7 @@ cmd_tests() {
     unit=false
     cargo=false
     integration=false
+    integration_coreboot=false
     arg_vols=""
     exported_device="/dev/kvm"
     while [ $# -gt 0 ]; do
@@ -274,6 +276,7 @@ cmd_tests() {
             "--unit")                       { unit=true; } ;;
             "--cargo")                      { cargo=true; } ;;
             "--integration")                { integration=true; } ;;
+            "--integration-coreboot")       { integration_coreboot=true; } ;;
             "--volumes")
                 shift
                 arg_vols="$1"
@@ -329,6 +332,24 @@ cmd_tests() {
 	       --env USER="root" \
 	       "$CTR_IMAGE" \
 	       ./scripts/run_integration_tests.sh "$@" || fix_dir_perms $? || exit $?
+    fi
+
+    if [ "$integration_coreboot" = true ] ;  then
+	say "Running coreboot integration tests..."
+	$DOCKER_RUNTIME run \
+	       --workdir "$CTR_RHF_ROOT_DIR" \
+	       --rm \
+	       --privileged \
+	       --security-opt seccomp=unconfined \
+	       --ipc=host \
+	       --net="$CTR_RHF_NET" \
+	       --mount type=tmpfs,destination=/tmp \
+	       --volume /dev:/dev \
+	       --volume "$RHF_ROOT_DIR:$CTR_RHF_ROOT_DIR" $exported_volumes \
+	       --volume "$RHF_WORKLOADS:$CTR_RHF_WORKLOADS" \
+	       --env USER="root" \
+	       "$CTR_IMAGE" \
+	       ./scripts/run_coreboot_integration_tests.sh "$@" || fix_dir_perms $? || exit $?
     fi
 
     fix_dir_perms $?

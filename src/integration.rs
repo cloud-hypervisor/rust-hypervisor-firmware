@@ -178,10 +178,7 @@ mod tests {
     }
 
     fn prepare_os_disk(tmp_dir: &TempDir, image_name: &str) -> String {
-        let src_osdisk = dirs::home_dir()
-            .unwrap()
-            .join("workloads")
-            .join(image_name);
+        let src_osdisk = dirs::home_dir().unwrap().join("workloads").join(image_name);
         let dest_osdisk = tmp_dir.path().join(image_name);
         fs::copy(&src_osdisk, &dest_osdisk).expect("Expect copying OS disk to succeed");
 
@@ -443,9 +440,14 @@ mod tests {
 
         #[cfg(feature = "coreboot")]
         fn spawn_qemu(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+            let coreboot_dir = std::env::var("COREBOOT_DIR").unwrap();
+            let rom_path = std::path::Path::new(&coreboot_dir)
+                .join("build")
+                .join("coreboot.rom");
+
             let fw = Firmware {
                 fw_type: "-bios",
-                path: "resources/coreboot/coreboot/build/coreboot.rom",
+                path: rom_path.as_path().to_str().unwrap(),
             };
             spawn_qemu_common(tmp_dir, &fw, os, ci, net)
         }
