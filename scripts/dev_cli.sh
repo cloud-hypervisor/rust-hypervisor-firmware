@@ -188,6 +188,7 @@ cmd_help() {
     echo "        --cargo                      Run the cargo tests."
     echo "        --integration                Run the integration tests."
     echo "        --integration-coreboot       Run the coreboot target integration tests."
+    echo "        --integration-windows        Run the Windows guest integration tests."
     echo "        --volumes                    Hash separated volumes to be exported. Example --volumes /mnt:/mnt#/myvol:/myvol"
     echo "        --all                        Run all tests."
     echo ""
@@ -268,6 +269,7 @@ cmd_tests() {
     cargo=false
     integration=false
     integration_coreboot=false
+    integration_windows=false
     arg_vols=""
     exported_device="/dev/kvm"
     while [ $# -gt 0 ]; do
@@ -277,6 +279,7 @@ cmd_tests() {
             "--cargo")                      { cargo=true; } ;;
             "--integration")                { integration=true; } ;;
             "--integration-coreboot")       { integration_coreboot=true; } ;;
+            "--integration-windows")        { integration_windows=true; } ;;
             "--volumes")
                 shift
                 arg_vols="$1"
@@ -350,6 +353,24 @@ cmd_tests() {
 	       --env USER="root" \
 	       "$CTR_IMAGE" \
 	       ./scripts/run_coreboot_integration_tests.sh "$@" || fix_dir_perms $? || exit $?
+    fi
+
+    if [ "$integration_windows" = true ] ;  then
+	say "Running Windows integration tests..."
+	$DOCKER_RUNTIME run \
+	       --workdir "$CTR_RHF_ROOT_DIR" \
+	       --rm \
+	       --privileged \
+	       --security-opt seccomp=unconfined \
+	       --ipc=host \
+	       --net="$CTR_RHF_NET" \
+	       --mount type=tmpfs,destination=/tmp \
+	       --volume /dev:/dev \
+	       --volume "$RHF_ROOT_DIR:$CTR_RHF_ROOT_DIR" $exported_volumes \
+	       --volume "$RHF_WORKLOADS:$CTR_RHF_WORKLOADS" \
+	       --env USER="root" \
+	       "$CTR_IMAGE" \
+	       ./scripts/run_integration_tests_windows.sh "$@" || fix_dir_perms $? || exit $?
     fi
 
     fix_dir_perms $?
