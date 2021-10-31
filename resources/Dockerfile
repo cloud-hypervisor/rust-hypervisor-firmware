@@ -6,10 +6,12 @@ ARG RHF_SRC_DIR="/rust-hypervisor-firmware"
 ARG RHF_BUILD_DIR="$RHF_SRC_DIR/build"
 ARG CARGO_REGISTRY_DIR="$RHF_BUILD_DIR/cargo_registry"
 ARG CARGO_GIT_REGISTRY_DIR="$RHF_BUILD_DIR/cargo_git_registry"
+ARG COREBOOT_VERSION="4.13"
 
 ENV CARGO_HOME=/usr/local/rust
 ENV RUSTUP_HOME=$CARGO_HOME
 ENV PATH="$PATH:$CARGO_HOME/bin"
+ENV COREBOOT_DIR=/opt/coreboot/src
 
 # Install all CI dependencies
 RUN apt-get update \
@@ -43,6 +45,9 @@ RUN apt-get update \
 	ntfs-3g \
 	python3-distutils \
 	uuid-dev \
+	m4 \
+	zlib1g-dev \
+	gnat-9 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -70,3 +75,9 @@ RUN export ARCH="$(uname -m)" \
 RUN echo 'source $CARGO_HOME/env' >> $HOME/.bashrc \
     && mkdir $HOME/.cargo \
     && ln -s $CARGO_HOME/env $HOME/.cargo/env
+
+# Checkout coreboot repository and setup cross toolchains
+RUN git clone --quiet --branch "$COREBOOT_VERSION" --depth 1 https://github.com/coreboot/coreboot.git "$COREBOOT_DIR" \
+    && cd "$COREBOOT_DIR" \
+    && git submodule update --init --checkout \
+    && make crossgcc-i386 CPUS=`nproc`
