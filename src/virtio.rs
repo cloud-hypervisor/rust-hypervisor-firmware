@@ -15,10 +15,10 @@
 /// Virtio related errors
 #[derive(Debug)]
 pub enum Error {
-    VirtioUnsupportedDevice,
-    VirtioLegacyOnly,
-    VirtioFeatureNegotiationFailed,
-    VirtioQueueTooSmall,
+    UnsupportedDevice,
+    LegacyOnly,
+    FeatureNegotiationFailed,
+    QueueTooSmall,
 }
 
 /// Trait to allow separation of transport from block driver

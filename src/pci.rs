@@ -274,7 +274,7 @@ impl VirtioTransport for VirtioPciTransport {
         // bit 4 of status is capability bit
         if status & 1 << 4 == 0 {
             log!("No capabilities detected");
-            return Err(VirtioError::VirtioUnsupportedDevice);
+            return Err(VirtioError::UnsupportedDevice);
         }
 
         // capabilities list offset is at 0x34

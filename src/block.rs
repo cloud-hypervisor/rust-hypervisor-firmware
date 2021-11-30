@@ -151,7 +151,7 @@ impl<'a> VirtioBlockDevice<'a> {
 
         if device_features & VIRTIO_F_VERSION_1 != VIRTIO_F_VERSION_1 {
             self.transport.add_status(VIRTIO_STATUS_FAILED);
-            return Err(VirtioError::VirtioLegacyOnly);
+            return Err(VirtioError::LegacyOnly);
         }
 
         // Don't support any advanced features for now
@@ -164,7 +164,7 @@ impl<'a> VirtioBlockDevice<'a> {
         self.transport.add_status(VIRTIO_STATUS_FEATURES_OK);
         if self.transport.get_status() & VIRTIO_STATUS_FEATURES_OK != VIRTIO_STATUS_FEATURES_OK {
             self.transport.add_status(VIRTIO_STATUS_FAILED);
-            return Err(VirtioError::VirtioFeatureNegotiationFailed);
+            return Err(VirtioError::FeatureNegotiationFailed);
         }
 
         // Program queues
@@ -175,7 +175,7 @@ impl<'a> VirtioBlockDevice<'a> {
         // Hardcoded queue size to QUEUE_SIZE at the moment
         if max_queue < QUEUE_SIZE as u16 {
             self.transport.add_status(VIRTIO_STATUS_FAILED);
-            return Err(VirtioError::VirtioQueueTooSmall);
+            return Err(VirtioError::QueueTooSmall);
         }
         self.transport.set_queue_size(QUEUE_SIZE as u16);
 
