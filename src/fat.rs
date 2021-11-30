@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{block::SectorRead, mem::MemoryRegion};
+use crate::{
+    block::{Error as BlockError, SectorRead},
+    mem::MemoryRegion,
+};
 use core::convert::TryFrom;
 
 #[repr(packed)]
@@ -112,7 +115,7 @@ pub struct Filesystem<'a> {
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    BlockError,
+    Block(BlockError),
     Unsupported,
     NotFound,
     EndOfFile,
@@ -280,7 +283,7 @@ impl<'a> Directory<'a> {
             let mut data: [u8; 512] = [0; 512];
             match self.filesystem.read(u64::from(sector), &mut data) {
                 Ok(_) => {}
-                Err(_) => return Err(Error::BlockError),
+                Err(e) => return Err(Error::Block(e)),
             };
 
             let dirs: &[FatDirectory] = unsafe {
@@ -429,7 +432,7 @@ impl<'a> Read for File<'a> {
             .filesystem
             .read(u64::from(cluster_start) + self.sector_offset, data)
         {
-            Err(_) => Err(Error::BlockError),
+            Err(e) => Err(Error::Block(e)),
             Ok(()) => {
                 self.sector_offset += 1;
                 if (self.position + 512) > self.size {
@@ -564,7 +567,7 @@ impl<'a> Filesystem<'a> {
         let mut data: [u8; 512] = [0; 512];
         match self.read(0, &mut data) {
             Ok(_) => {}
-            Err(_) => return Err(Error::BlockError),
+            Err(e) => return Err(Error::Block(e)),
         };
 
         let h = unsafe { &*(data.as_ptr() as *const Header) };
@@ -622,7 +625,7 @@ impl<'a> Filesystem<'a> {
                 let mut data: [u8; 512] = [0; 512];
                 match self.read(u64::from(fat_sector), &mut data) {
                     Ok(_) => {}
-                    Err(_) => return Err(Error::BlockError),
+                    Err(e) => return Err(Error::Block(e)),
                 };
                 let lower_data = data[offset as usize] as u16;
                 let upper_data = if offset < 511 {
@@ -631,7 +634,7 @@ impl<'a> Filesystem<'a> {
                     // read next sector to get upper byte if offset is 511
                     match self.read(u64::from(fat_sector) + 1, &mut data) {
                         Ok(_) => {}
-                        Err(_) => return Err(Error::BlockError),
+                        Err(e) => return Err(Error::Block(e)),
                     }
                     data[0] as u16
                 };
@@ -659,7 +662,7 @@ impl<'a> Filesystem<'a> {
                 let data = unsafe { core::slice::from_raw_parts_mut(fat.as_ptr() as *mut u8, 512) };
                 match self.read(u64::from(fat_sector), data) {
                     Ok(_) => {}
-                    Err(_) => return Err(Error::BlockError),
+                    Err(e) => return Err(Error::Block(e)),
                 };
 
                 let next_cluster = fat[(offset / 2) as usize];
@@ -681,7 +684,7 @@ impl<'a> Filesystem<'a> {
 
                 match self.read(u64::from(fat_sector), data) {
                     Ok(_) => {}
-                    Err(_) => return Err(Error::BlockError),
+                    Err(e) => return Err(Error::Block(e)),
                 };
 
                 let next_cluster_raw = fat[(offset / 4) as usize];

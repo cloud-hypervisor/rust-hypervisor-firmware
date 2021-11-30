@@ -75,6 +75,7 @@ struct DriverState {
     next_head: usize,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum Error {
     BlockIOError,
 
