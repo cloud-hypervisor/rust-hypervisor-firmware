@@ -21,7 +21,7 @@ use crate::{
 
 #[derive(Debug)]
 pub enum Error {
-    FileError(fat::Error),
+    File(fat::Error),
     NoInitrdMemory,
     MagicMissing,
     NotRelocatable,
@@ -29,7 +29,7 @@ pub enum Error {
 
 impl From<fat::Error> for Error {
     fn from(e: fat::Error) -> Error {
-        Error::FileError(e)
+        Error::File(e)
     }
 }
 
