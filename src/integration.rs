@@ -98,7 +98,7 @@ mod tests {
             user_data_string = user_data_string.replace("12:34:56:78:90:ab", &network.guest_mac);
             fs::File::create(cloud_init_directory.join("latest").join("user_data"))
                 .unwrap()
-                .write_all(&user_data_string.as_bytes())
+                .write_all(user_data_string.as_bytes())
                 .expect("Expected writing out user_data to succeed");
             std::process::Command::new("mkdosfs")
                 .args(&["-n", "config-2"])
@@ -152,7 +152,7 @@ mod tests {
 
             fs::File::create(cloud_init_directory.join("network-config"))
                 .unwrap()
-                .write_all(&network_config_string.as_bytes())
+                .write_all(network_config_string.as_bytes())
                 .expect("Expected writing out network-config to succeed");
 
             std::process::Command::new("mkdosfs")

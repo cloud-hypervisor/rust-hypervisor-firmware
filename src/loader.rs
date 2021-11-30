@@ -125,7 +125,7 @@ fn default_entry_path(fs: &fat::Filesystem) -> Result<[u8; 260], fat::Error> {
 }
 
 pub fn load_default_entry(fs: &fat::Filesystem, info: &dyn boot::Info) -> Result<Kernel, Error> {
-    let default_entry_path = default_entry_path(&fs)?;
+    let default_entry_path = default_entry_path(fs)?;
     let default_entry_path = ascii_strip(&default_entry_path);
 
     let mut f = match fs.open(default_entry_path)? {
