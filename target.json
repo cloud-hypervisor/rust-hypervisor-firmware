@@ -12,7 +12,6 @@
   "panic-strategy": "abort",
   "disable-redzone": true,
   "features": "-mmx,-sse,+soft-float",
-  "dynamic-linking-available": false,
   "code-model": "small",
   "relocation-model": "pic",
   "pre-link-args": {
