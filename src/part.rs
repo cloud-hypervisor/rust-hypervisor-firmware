@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::block::SectorRead;
+use crate::block::{Error as BlockError, SectorRead};
 
 #[repr(packed)]
 /// GPT header
@@ -61,7 +61,7 @@ impl PartitionEntry {
 
 #[derive(Debug)]
 pub enum Error {
-    BlockError,
+    Block(BlockError),
     HeaderNotFound,
     ViolatesSpecification,
     ExceededPartitionCount,
@@ -72,7 +72,7 @@ pub fn get_partitions(r: &dyn SectorRead, parts_out: &mut [PartitionEntry]) -> R
     let mut data: [u8; 512] = [0; 512];
     match r.read(1, &mut data) {
         Ok(_) => {}
-        Err(_) => return Err(Error::BlockError),
+        Err(e) => return Err(Error::Block(e)),
     };
 
     // Safe as sizeof header is less than 512 bytes (size of data)
@@ -98,7 +98,7 @@ pub fn get_partitions(r: &dyn SectorRead, parts_out: &mut [PartitionEntry]) -> R
     for lba in first_part_lba..first_usable_lba {
         match r.read(lba, &mut data) {
             Ok(_) => {}
-            Err(_) => return Err(Error::BlockError),
+            Err(e) => return Err(Error::Block(e)),
         }
 
         // Safe as size of partition struct * 4 is 512 bytes (size of data)
