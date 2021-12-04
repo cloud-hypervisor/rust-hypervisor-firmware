@@ -8,7 +8,7 @@ mkdir -p "$WORKLOADS_DIR"
 
 WIN_IMAGE_FILE="$WORKLOADS_DIR/windows-server-2019.raw"
 
-CH_VERSION="v18.0"
+CH_VERSION="v20.0"
 CH_URL="https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/$CH_VERSION/cloud-hypervisor"
 CH_PATH="$WORKLOADS_DIR/cloud-hypervisor"
 if [ ! -f "$CH_PATH" ]; then

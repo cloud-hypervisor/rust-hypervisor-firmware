@@ -7,7 +7,7 @@ source $(dirname "$0")/fetch_disk_images.sh
 WORKLOADS_DIR="$HOME/workloads"
 mkdir -p "$WORKLOADS_DIR"
 
-CH_VERSION="v18.0"
+CH_VERSION="v20.0"
 CH_URL="https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/$CH_VERSION/cloud-hypervisor"
 CH_PATH="$WORKLOADS_DIR/cloud-hypervisor"
 if [ ! -f "$CH_PATH" ]; then
