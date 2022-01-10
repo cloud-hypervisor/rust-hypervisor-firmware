@@ -317,9 +317,9 @@ dependencies = [
 
 [[package]]
 name = "uart_16550"
-version = "0.2.15"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65ad019480ef5ff8ffe66d6f6a259cd87cf317649481394981db1739d844f374"
+checksum = "af81448a9a53c7b0f66198381f80912fd18f2c8965f9da4319e6f92e740bca5b"
 dependencies = [
  "bitflags",
  "x86_64",
