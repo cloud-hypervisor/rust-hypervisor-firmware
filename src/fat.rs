@@ -531,11 +531,18 @@ fn compare_short_name(name: &str, de: &DirectoryEntry) -> bool {
 
         i += 1;
     }
+    while i < 11 {
+        if de.name[i] != b' ' {
+            return false;
+        }
+        i += 1;
+    }
     true
 }
 
 fn compare_name(name: &str, de: &DirectoryEntry) -> bool {
-    compare_short_name(name, de) || &de.long_name[0..name.len()] == name.as_bytes()
+    compare_short_name(name, de)
+        || (&de.long_name[0..name.len()] == name.as_bytes() && de.long_name[name.len()] == 0)
 }
 
 impl<'a> Filesystem<'a> {
@@ -1067,6 +1074,8 @@ mod tests {
         assert!(super::compare_short_name("X.abc", &de));
         de.name.copy_from_slice(b"ABCDEFGHIJK");
         assert!(super::compare_short_name("abcdefgh.ijk", &de));
+        de.name.copy_from_slice(b"EFI-SYSTEM ");
+        assert!(!super::compare_short_name("EFI", &de));
     }
 
     #[test]
