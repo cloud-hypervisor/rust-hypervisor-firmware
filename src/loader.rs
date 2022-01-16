@@ -43,6 +43,8 @@ impl From<bzimage::Error> for Error {
     }
 }
 
+const ENTRY_EXTENSION: &str = ".conf";
+
 fn default_entry_file(f: &mut fat::File) -> Result<[u8; 260], fat::Error> {
     let mut data = [0; 4096];
     assert!(f.get_size() as usize <= data.len());
@@ -64,6 +66,8 @@ fn default_entry_file(f: &mut fat::File) -> Result<[u8; 260], fat::Error> {
         if let Some(entry) = line.strip_prefix("default") {
             let entry = entry.trim();
             entry_file_name[0..entry.len()].copy_from_slice(entry.as_bytes());
+            entry_file_name[entry.len()..entry.len() + ENTRY_EXTENSION.len()]
+                .copy_from_slice(ENTRY_EXTENSION.as_bytes());
         }
     }
 
@@ -170,7 +174,7 @@ mod tests {
         let mut f: crate::fat::File = fs.open("/loader/loader.conf").unwrap().try_into().unwrap();
         let s = super::default_entry_file(&mut f).unwrap();
         let s = super::ascii_strip(&s);
-        assert_eq!(s, "Clear-linux-kvm-5.0.6-318");
+        assert_eq!(s, "Clear-linux-kvm-5.0.6-318.conf");
 
         let default_entry_path = super::default_entry_path(&fs).unwrap();
         let default_entry_path = super::ascii_strip(&default_entry_path);
