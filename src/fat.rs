@@ -255,35 +255,73 @@ impl<'a> Read for Node<'a> {
 }
 
 impl<'a> Directory<'a> {
+    fn read_next(&mut self, data: &mut [u8]) -> Result<(), Error> {
+        assert_eq!(data.len(), 512);
+
+        let sector = if self.cluster.is_some() {
+            if self.sector >= self.filesystem.sectors_per_cluster {
+                match self.filesystem.next_cluster(self.cluster.unwrap()) {
+                    Ok(new_cluster) => {
+                        self.cluster = Some(new_cluster);
+                        self.sector = 0;
+                        self.offset = 0;
+                    }
+                    Err(e) => {
+                        return Err(e);
+                    }
+                }
+            }
+            self.sector
+                + self
+                    .filesystem
+                    .first_sector_of_cluster(self.cluster.unwrap())
+        } else {
+            self.sector
+        };
+
+        match self.filesystem.read(u64::from(sector), data) {
+            Ok(_) => {}
+            Err(e) => return Err(Error::Block(e)),
+        };
+
+        Ok(())
+    }
+
+    // Checks if there are any other entries.
+    pub fn has_next(&mut self) -> Result<bool, Error> {
+        let mut data: [u8; 512] = [0; 512];
+
+        match self.read_next(&mut data) {
+            Ok(_) => {}
+            Err(e) => {
+                return Err(e);
+            }
+        };
+
+        let dirs: &[FatDirectory] =
+            unsafe { core::slice::from_raw_parts(data.as_ptr() as *const FatDirectory, 512 / 32) };
+
+        let d = &dirs[self.offset];
+
+        // Last entry
+        if d.name[0] == 0x0 {
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
+
     // Returns and then increments to point to the next one, may return EndOfFile if this is the last entry
     pub fn next_entry(&mut self) -> Result<DirectoryEntry, Error> {
         let mut long_entry = [0u16; 260];
         loop {
-            let sector = if self.cluster.is_some() {
-                if self.sector >= self.filesystem.sectors_per_cluster {
-                    match self.filesystem.next_cluster(self.cluster.unwrap()) {
-                        Ok(new_cluster) => {
-                            self.cluster = Some(new_cluster);
-                            self.sector = 0;
-                            self.offset = 0;
-                        }
-                        Err(e) => {
-                            return Err(e);
-                        }
-                    }
-                }
-                self.sector
-                    + self
-                        .filesystem
-                        .first_sector_of_cluster(self.cluster.unwrap())
-            } else {
-                self.sector
-            };
-
             let mut data: [u8; 512] = [0; 512];
-            match self.filesystem.read(u64::from(sector), &mut data) {
+
+            match self.read_next(&mut data) {
                 Ok(_) => {}
-                Err(e) => return Err(Error::Block(e)),
+                Err(e) => {
+                    return Err(e);
+                }
             };
 
             let dirs: &[FatDirectory] = unsafe {
