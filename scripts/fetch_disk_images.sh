@@ -42,12 +42,12 @@ fetch_disk_images() {
     fetch_image "$FOCAL_OS_IMAGE_NAME" "$FOCAL_OS_IMAGE_URL"
     convert_image "$FOCAL_OS_IMAGE_NAME" "$FOCAL_OS_RAW_IMAGE_NAME"
 
-    HIRSUTE_OS_IMAGE_NAME="hirsute-server-cloudimg-amd64.img"
-    HIRSUTE_OS_RAW_IMAGE_NAME="hirsute-server-cloudimg-amd64-raw.img"
-    HIRSUTE_OS_IMAGE_BASE="https://cloud-images.ubuntu.com/hirsute/current"
-    HIRSUTE_OS_IMAGE_URL="$HIRSUTE_OS_IMAGE_BASE/$HIRSUTE_OS_IMAGE_NAME"
-    fetch_image "$HIRSUTE_OS_IMAGE_NAME" "$HIRSUTE_OS_IMAGE_URL"
-    convert_image "$HIRSUTE_OS_IMAGE_NAME" "$HIRSUTE_OS_RAW_IMAGE_NAME"
+    JAMMY_OS_IMAGE_NAME="jammy-server-cloudimg-amd64.img"
+    JAMMY_OS_RAW_IMAGE_NAME="jammy-server-cloudimg-amd64-raw.img"
+    JAMMY_OS_IMAGE_BASE="https://cloud-images.ubuntu.com/jammy/current"
+    JAMMY_OS_IMAGE_URL="$JAMMY_OS_IMAGE_BASE/$JAMMY_OS_IMAGE_NAME"
+    fetch_image "$JAMMY_OS_IMAGE_NAME" "$JAMMY_OS_IMAGE_URL"
+    convert_image "$JAMMY_OS_IMAGE_NAME" "$JAMMY_OS_RAW_IMAGE_NAME"
 
     popd
 }

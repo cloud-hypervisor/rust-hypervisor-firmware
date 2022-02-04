@@ -616,7 +616,7 @@ mod tests {
 
         const BIONIC_IMAGE_NAME: &str = "bionic-server-cloudimg-amd64-raw.img";
         const FOCAL_IMAGE_NAME: &str = "focal-server-cloudimg-amd64-raw.img";
-        const HIRSUTE_IMAGE_NAME: &str = "hirsute-server-cloudimg-amd64-raw.img";
+        const JAMMY_IMAGE_NAME: &str = "jammy-server-cloudimg-amd64-raw.img";
         const CLEAR_IMAGE_NAME: &str = "clear-31311-cloudguest.img";
 
         #[test]
@@ -630,8 +630,8 @@ mod tests {
         }
 
         #[test]
-        fn test_boot_qemu_hirsute() {
-            test_boot(HIRSUTE_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
+        fn test_boot_qemu_jammy() {
+            test_boot(JAMMY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
         }
 
         #[test]
@@ -653,8 +653,8 @@ mod tests {
 
         #[test]
         #[cfg(not(feature = "coreboot"))]
-        fn test_boot_ch_hirsute() {
-            test_boot(HIRSUTE_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
+        fn test_boot_ch_jammy() {
+            test_boot(JAMMY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
         }
 
         #[test]
