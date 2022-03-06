@@ -2,6 +2,7 @@
 // Copyright (C) 2021 Akira Moroo
 // Copyright (C) 2018 Google LLC
 
+use core::arch::asm;
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::_rdtsc;
 
