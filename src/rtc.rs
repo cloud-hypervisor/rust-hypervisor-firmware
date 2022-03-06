@@ -29,12 +29,12 @@ impl Rtc {
         }
     }
 
-    fn is_updating(&mut self) -> bool {
+    fn get_update_status(&mut self) -> bool {
         self.read_cmos(0x0a) & 0x80 != 0
     }
 
     fn read(&mut self, offset: u8) -> Result<u8, ()> {
-        if crate::delay::wait_while(1, || self.is_updating()) {
+        if crate::delay::wait_while(1, || self.get_update_status()) {
             return Err(());
         }
         Ok(self.read_cmos(offset))
