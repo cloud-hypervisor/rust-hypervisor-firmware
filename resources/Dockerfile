@@ -1,7 +1,7 @@
 FROM ubuntu:20.04 as dev
 
 ARG TARGETARCH
-ARG RUST_TOOLCHAIN="nightly-2021-12-01"
+ARG RUST_TOOLCHAIN="nightly-2022-03-28"
 ARG RHF_SRC_DIR="/rust-hypervisor-firmware"
 ARG RHF_BUILD_DIR="$RHF_SRC_DIR/build"
 ARG CARGO_REGISTRY_DIR="$RHF_BUILD_DIR/cargo_registry"

@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         rust:
-          - nightly-2021-12-01
+          - nightly-2022-03-28
         target:
           - x86_64-unknown-linux-gnu
     steps:

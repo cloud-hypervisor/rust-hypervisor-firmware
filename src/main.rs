@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #![feature(alloc_error_handler)]
-#![feature(asm, global_asm)]
 #![feature(stmt_expr_attributes)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
