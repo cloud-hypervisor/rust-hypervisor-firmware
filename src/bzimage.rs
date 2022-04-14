@@ -82,30 +82,50 @@ impl Kernel {
             0 => 0x37FF_FFFF,
             a => a as u64,
         };
+
+        // Limit to 4GiB identity mapped area
+        let initrd_addr_max = u64::min(initrd_addr_max, (4 << 30) - 1);
+
         let max_start = (initrd_addr_max + 1) - size;
 
-        let mut option_addr = None;
+        // Align address to 2MiB boundary as we use 2 MiB pages
+        let max_start = max_start & !((2 << 20) - 1);
+
+        let mut current_addr = None;
         for i in 0..self.0.num_entries() {
             let entry = self.0.entry(i);
             if entry.entry_type != E820Entry::RAM_TYPE {
                 continue;
             }
-            let addr = entry.addr + entry.size - size;
-            // Align address to 2MiB boundary as we use 2 MiB pages
-            let addr = addr & !((2 << 20) - 1);
-            // The ramdisk must fit in the region completely
-            if addr > max_start || addr < entry.addr {
+
+            // Disregard regions beyond the max
+            if entry.addr > max_start {
                 continue;
             }
-            // Use the largest address we can find
-            if let Some(load_addr) = option_addr {
-                if load_addr >= addr {
+
+            // Disregard regions that are too small
+            if size > entry.size {
+                continue;
+            }
+
+            // Place at the top of the region
+            let potential_addr = entry.addr + entry.size - size;
+
+            // Align address to 2MiB boundary as we use 2 MiB pages
+            let potential_addr = potential_addr & !((2 << 20) - 1);
+
+            // But clamp to the maximum start
+            let potential_addr = u64::min(potential_addr, max_start);
+
+            // Use the higest address we can find
+            if let Some(current_addr) = current_addr {
+                if current_addr >= potential_addr {
                     continue;
                 }
             }
-            option_addr = Some(addr)
+            current_addr = Some(potential_addr)
         }
-        option_addr
+        current_addr
     }
 
     pub fn load_initrd(&mut self, f: &mut dyn Read) -> Result<(), Error> {
