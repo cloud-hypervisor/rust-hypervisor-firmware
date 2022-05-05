@@ -620,6 +620,15 @@ impl<'a> Filesystem<'a> {
         self.bytes_per_sector = u32::from(h.bytes_per_sector);
         self.fat_count = u32::from(h.fat_count);
         self.sectors_per_cluster = u32::from(h.sectors_per_cluster);
+        self.root_dir_sectors = ((u32::from(h.root_dir_count * 32)) + self.bytes_per_sector - 1)
+            / self.bytes_per_sector;
+
+        self.sectors_per_fat = if h.legacy_sectors_per_fat == 0 {
+            let h32 = unsafe { &*(data.as_ptr() as *const Fat32Header) };
+            h32.sectors_per_fat
+        } else {
+            u32::from(h.legacy_sectors_per_fat)
+        };
 
         self.sectors = if h.legacy_sectors == 0 {
             h.sectors
@@ -627,7 +636,13 @@ impl<'a> Filesystem<'a> {
             u32::from(h.legacy_sectors)
         };
 
-        self.clusters = self.sectors / u32::from(h.sectors_per_cluster);
+        self.first_fat_sector = u32::from(h.reserved_sectors);
+        self.first_data_sector =
+            self.first_fat_sector + (self.fat_count * self.sectors_per_fat) + self.root_dir_sectors;
+        self.data_sector_count = self.sectors - self.first_data_sector;
+        self.data_cluster_count = self.data_sector_count / self.bytes_per_sector;
+
+        self.clusters = self.data_sector_count / u32::from(h.sectors_per_cluster);
 
         self.fat_type = if self.clusters < FAT12_MAX {
             FatType::FAT12
@@ -639,23 +654,8 @@ impl<'a> Filesystem<'a> {
 
         if self.fat_type == FatType::FAT32 {
             let h32 = unsafe { &*(data.as_ptr() as *const Fat32Header) };
-            self.sectors_per_fat = h32.sectors_per_fat;
             self.root_cluster = h32.root_cluster;
-        } else {
-            self.sectors_per_fat = u32::from(h.legacy_sectors_per_fat);
         }
-
-        if self.fat_type == FatType::FAT12 || self.fat_type == FatType::FAT16 {
-            self.root_dir_sectors = ((u32::from(h.root_dir_count * 32)) + self.bytes_per_sector
-                - 1)
-                / self.bytes_per_sector;
-        }
-
-        self.first_fat_sector = u32::from(h.reserved_sectors);
-        self.first_data_sector =
-            self.first_fat_sector + (self.fat_count * self.sectors_per_fat) + self.root_dir_sectors;
-        self.data_sector_count = self.sectors - self.first_data_sector;
-        self.data_cluster_count = self.data_sector_count / self.bytes_per_sector;
 
         Ok(())
     }
