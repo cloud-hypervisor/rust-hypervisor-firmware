@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::{
+    block::SectorBuf,
     boot,
     bzimage::{self, Kernel},
     common::ascii_strip,
@@ -50,15 +51,16 @@ impl From<bzimage::Error> for Error {
 fn default_entry_pattern(f: &mut fat::File) -> Result<[u8; 260], fat::Error> {
     let mut data = [0; 4096];
     assert!(f.get_size() as usize <= data.len());
+    assert!(data.len() >= SectorBuf::len());
 
     let mut entry_pattern = [0; 260];
     let mut offset = 0;
     loop {
-        match f.read(&mut data[offset..offset + 512]) {
+        match f.read(&mut data[offset..offset + SectorBuf::len()]) {
             Err(fat::Error::EndOfFile) => break,
             Err(e) => return Err(e),
             Ok(_) => {
-                offset += 512;
+                offset += SectorBuf::len();
             }
         }
     }
@@ -163,16 +165,17 @@ fn compare_entry(file_name: &[u8], pattern: &[u8]) -> Result<bool, Error> {
 fn parse_entry(f: &mut fat::File) -> Result<LoaderConfig, fat::Error> {
     let mut data = [0; 4096];
     assert!(f.get_size() as usize <= data.len());
+    assert!(data.len() >= SectorBuf::len());
 
     let mut loader_config: LoaderConfig = unsafe { core::mem::zeroed() };
 
     let mut offset = 0;
     loop {
-        match f.read(&mut data[offset..offset + 512]) {
+        match f.read(&mut data[offset..offset + SectorBuf::len()]) {
             Err(fat::Error::EndOfFile) => break,
             Err(e) => return Err(e),
             Ok(_) => {
-                offset += 512;
+                offset += SectorBuf::len();
             }
         }
     }

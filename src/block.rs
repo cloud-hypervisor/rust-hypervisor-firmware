@@ -96,6 +96,30 @@ struct BlockRequestFooter {
     status: u8,
 }
 
+const SECTOR_SIZE: usize = 512;
+
+#[repr(C)]
+pub struct SectorBuf([u8; SECTOR_SIZE]);
+
+impl SectorBuf {
+    pub const fn new() -> Self {
+        Self([0_u8; SECTOR_SIZE])
+    }
+
+    #[inline]
+    pub const fn len() -> usize {
+        SECTOR_SIZE
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+
+    pub fn as_mut_bytes(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
 pub trait SectorRead {
     /// Read a single sector (512 bytes) from the block device. `data` must be
     /// exactly 512 bytes long.
@@ -213,7 +237,7 @@ impl<'a> VirtioBlockDevice<'a> {
         request: RequestType,
     ) -> Result<(), Error> {
         if request != RequestType::Flush {
-            assert_eq!(512, data.as_ref().unwrap().len());
+            assert_eq!(SectorBuf::len(), data.as_ref().unwrap().len());
         }
 
         const VIRTQ_DESC_F_NEXT: u16 = 1;
@@ -245,7 +269,7 @@ impl<'a> VirtioBlockDevice<'a> {
         let next_desc = (next_desc + 1) % QUEUE_SIZE;
         if request != RequestType::Flush {
             d.addr = data.unwrap().as_ptr() as u64;
-            d.length = core::mem::size_of::<[u8; 512]>() as u32;
+            d.length = SectorBuf::len() as u32;
         }
 
         d.flags = VIRTQ_DESC_F_NEXT

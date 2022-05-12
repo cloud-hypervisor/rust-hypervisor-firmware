@@ -22,6 +22,8 @@ use r_efi::{
     },
 };
 
+use crate::block::SectorBuf;
+
 #[repr(C)]
 pub struct FileDevicePathProtocol {
     pub device_path: DevicePathProtocol,
@@ -154,12 +156,12 @@ pub extern "win64" fn read(file: *mut FileProtocol, size: *mut usize, buf: *mut 
     loop {
         let buf = unsafe { core::slice::from_raw_parts_mut(buf as *mut u8, *size) };
 
-        let mut data: [u8; 512] = [0; 512];
+        let mut data = SectorBuf::new();
         unsafe {
-            match (*wrapper).node.read(&mut data) {
+            match (*wrapper).node.read(data.as_mut_bytes()) {
                 Ok(bytes_read) => {
                     buf[current_offset..current_offset + bytes_read as usize]
-                        .copy_from_slice(&data[0..bytes_read as usize]);
+                        .copy_from_slice(&data.as_bytes()[0..bytes_read as usize]);
                     current_offset += bytes_read as usize;
 
                     if bytes_remaining <= bytes_read as usize {
