@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::block::{Error as BlockError, SectorRead};
+use crate::block::{Error as BlockError, SectorBuf, SectorRead};
 
 #[repr(packed)]
 /// GPT header
@@ -69,14 +69,14 @@ pub enum Error {
 }
 
 pub fn get_partitions(r: &dyn SectorRead, parts_out: &mut [PartitionEntry]) -> Result<u32, Error> {
-    let mut data: [u8; 512] = [0; 512];
-    match r.read(1, &mut data) {
+    let mut data = SectorBuf::new();
+    match r.read(1, data.as_mut_bytes()) {
         Ok(_) => {}
         Err(e) => return Err(Error::Block(e)),
     };
 
     // Safe as sizeof header is less than 512 bytes (size of data)
-    let h = unsafe { &*(data.as_ptr() as *const Header) };
+    let h = unsafe { &*(data.as_bytes().as_ptr() as *const Header) };
 
     // GPT magic constant
     if h.signature != 0x5452_4150_2049_4645u64 {
@@ -96,14 +96,15 @@ pub fn get_partitions(r: &dyn SectorRead, parts_out: &mut [PartitionEntry]) -> R
     let mut current_part = 0u32;
 
     for lba in first_part_lba..first_usable_lba {
-        match r.read(lba, &mut data) {
+        match r.read(lba, data.as_mut_bytes()) {
             Ok(_) => {}
             Err(e) => return Err(Error::Block(e)),
         }
 
         // Safe as size of partition struct * 4 is 512 bytes (size of data)
-        let parts =
-            unsafe { core::slice::from_raw_parts(data.as_ptr() as *const PartitionEntry, 4) };
+        let parts = unsafe {
+            core::slice::from_raw_parts(data.as_bytes().as_ptr() as *const PartitionEntry, 4)
+        };
 
         for p in parts {
             if p.guid == [0; 16] {
@@ -154,7 +155,7 @@ pub mod tests {
     use std::path::{Path, PathBuf};
 
     use crate::block;
-    use crate::block::SectorRead;
+    use crate::block::{SectorBuf, SectorRead};
 
     pub struct FakeDisk {
         file: RefCell<File>,
@@ -179,7 +180,7 @@ pub mod tests {
     impl SectorRead for FakeDisk {
         fn read(&self, sector: u64, data: &mut [u8]) -> Result<(), block::Error> {
             let mut file = self.file.borrow_mut();
-            match file.seek(SeekFrom::Start(sector * 512)) {
+            match file.seek(SeekFrom::Start(sector * SectorBuf::len() as u64)) {
                 Ok(_) => {}
                 Err(_) => return Err(block::Error::BlockIOError),
             }

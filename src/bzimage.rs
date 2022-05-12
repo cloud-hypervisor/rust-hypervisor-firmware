@@ -14,6 +14,7 @@
 use atomic_refcell::AtomicRefCell;
 
 use crate::{
+    block::SectorBuf,
     boot::{E820Entry, Header, Info, Params},
     fat::{self, Read},
     mem::MemoryRegion,
@@ -62,7 +63,7 @@ impl Kernel {
             0 => 4,
             n => n as u32,
         };
-        let setup_bytes = (setup_sects + 1) * 512;
+        let setup_bytes = (setup_sects + 1) * SectorBuf::len() as u32;
         let remaining_bytes = f.get_size() - setup_bytes;
 
         let mut region = MemoryRegion::new(KERNEL_LOCATION, remaining_bytes as u64);

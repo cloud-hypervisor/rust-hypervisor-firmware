@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::mem::MemoryRegion;
+use crate::{block::SectorBuf, mem::MemoryRegion};
 
 pub struct Loader<'a> {
     file: &'a mut dyn crate::fat::Read,
@@ -48,16 +48,30 @@ impl<'a> Loader<'a> {
     }
 
     pub fn load(&mut self, load_addr: u64) -> Result<(u64, u64, u64), Error> {
-        let mut data: [u8; 1024] = [0; 1024];
+        const HEADER_SIZE: usize = 1024;
+        let mut data = [0_u8; HEADER_SIZE];
+        assert!(data.len() % 512 == 0);
 
-        match self.file.read(&mut data[0..512]) {
+        let mut buf = SectorBuf::new();
+        match self.file.read(buf.as_mut_bytes()) {
             Ok(_) => {}
             Err(_) => return Err(Error::FileError),
         }
-
-        match self.file.read(&mut data[512..]) {
-            Ok(_) => {}
-            Err(_) => return Err(Error::FileError),
+        let sector_size = SectorBuf::len();
+        if data.len() <= sector_size {
+            data.copy_from_slice(&buf.as_bytes()[..HEADER_SIZE]);
+        } else if data.len() == sector_size * 2 {
+            // The sector size is 512
+            data[..sector_size].copy_from_slice(buf.as_bytes());
+            match self.file.read(buf.as_mut_bytes()) {
+                Ok(_) => {
+                    data[sector_size..].copy_from_slice(buf.as_bytes());
+                }
+                Err(_) => return Err(Error::FileError),
+            }
+        } else {
+            // Unsupported sector size
+            return Err(Error::FileError);
         }
 
         let dos_region = MemoryRegion::from_bytes(&mut data);
@@ -70,7 +84,7 @@ impl<'a> Loader<'a> {
         // offset to COFF header
         let pe_header_offset = dos_region.read_u32(0x3c);
 
-        if pe_header_offset >= 512 {
+        if pe_header_offset >= sector_size as u32 {
             return Err(Error::InvalidExecutable);
         }
 
@@ -137,14 +151,14 @@ impl<'a> Loader<'a> {
         while header_offset < u64::from(size_of_headers) {
             match self
                 .file
-                .read(loaded_region.as_mut_slice(header_offset, 512))
+                .read(loaded_region.as_mut_slice(header_offset, sector_size as u64))
             {
                 Ok(_) => {}
                 Err(_) => {
                     return Err(Error::FileError);
                 }
             }
-            header_offset += 512;
+            header_offset += sector_size as u64;
         }
 
         for section in sections {
@@ -153,7 +167,7 @@ impl<'a> Loader<'a> {
             }
 
             // TODO: Handle strange offset sections.
-            if section.raw_offset % 512 != 0 {
+            if section.raw_offset % sector_size as u32 != 0 {
                 continue;
             }
 
@@ -162,13 +176,14 @@ impl<'a> Loader<'a> {
                 Err(_) => return Err(Error::FileError),
             }
 
-            let mut section_data: [u8; 512] = [0; 512];
+            let mut section_data = SectorBuf::new();
 
             let mut section_offset = 0;
             let section_size = core::cmp::min(section.raw_size, section.virt_size);
             while section_offset < section_size {
-                let remaining_bytes = core::cmp::min(section_size - section_offset, 512);
-                match self.file.read(&mut section_data) {
+                let remaining_bytes =
+                    core::cmp::min(section_size - section_offset, sector_size as u32);
+                match self.file.read(section_data.as_mut_bytes()) {
                     Ok(_) => {}
                     Err(_) => {
                         return Err(Error::FileError);
@@ -179,7 +194,7 @@ impl<'a> Loader<'a> {
                     u64::from(section.virt_address + section_offset),
                     u64::from(remaining_bytes),
                 );
-                l.copy_from_slice(&section_data[0..remaining_bytes as usize]);
+                l.copy_from_slice(&section_data.as_bytes()[0..remaining_bytes as usize]);
                 section_offset += remaining_bytes;
             }
         }
@@ -198,7 +213,9 @@ impl<'a> Loader<'a> {
             return Ok(image_info);
         }
         for section in sections {
-            if section.virt_address == reloc_dir_virt_addr && section.raw_offset % 512 != 0 {
+            if section.virt_address == reloc_dir_virt_addr
+                && section.raw_offset % sector_size as u32 != 0
+            {
                 // This section is not loaded
                 return Ok(image_info);
             }

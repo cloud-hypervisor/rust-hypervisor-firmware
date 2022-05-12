@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::{
-    block::{Error as BlockError, SectorRead},
+    block::{Error as BlockError, SectorBuf, SectorRead},
     mem::MemoryRegion,
 };
 use core::convert::TryFrom;
@@ -249,14 +249,14 @@ impl<'a> Read for Node<'a> {
     fn get_size(&self) -> u32 {
         match self {
             Self::File(file) => file.get_size(),
-            Self::Directory(_) => 512_u32,
+            Self::Directory(_) => SectorBuf::len() as u32,
         }
     }
 }
 
 impl<'a> Directory<'a> {
     fn read_next(&mut self, data: &mut [u8]) -> Result<(), Error> {
-        assert_eq!(data.len(), 512);
+        assert_eq!(data.len(), SectorBuf::len());
 
         let sector = if self.cluster.is_some() {
             if self.sector >= self.filesystem.sectors_per_cluster {
@@ -289,17 +289,21 @@ impl<'a> Directory<'a> {
 
     // Checks if there are any other entries.
     pub fn has_next(&mut self) -> Result<bool, Error> {
-        let mut data: [u8; 512] = [0; 512];
+        let mut data = SectorBuf::new();
 
-        match self.read_next(&mut data) {
+        match self.read_next(data.as_mut_bytes()) {
             Ok(_) => {}
             Err(e) => {
                 return Err(e);
             }
         };
 
-        let dirs: &[FatDirectory] =
-            unsafe { core::slice::from_raw_parts(data.as_ptr() as *const FatDirectory, 512 / 32) };
+        let dirs: &[FatDirectory] = unsafe {
+            core::slice::from_raw_parts(
+                data.as_bytes().as_ptr() as *const FatDirectory,
+                SectorBuf::len() / 32,
+            )
+        };
 
         let d = &dirs[self.offset];
 
@@ -315,9 +319,9 @@ impl<'a> Directory<'a> {
     pub fn next_entry(&mut self) -> Result<DirectoryEntry, Error> {
         let mut long_entry = [0u16; 260];
         loop {
-            let mut data: [u8; 512] = [0; 512];
+            let mut data = SectorBuf::new();
 
-            match self.read_next(&mut data) {
+            match self.read_next(data.as_mut_bytes()) {
                 Ok(_) => {}
                 Err(e) => {
                     return Err(e);
@@ -325,11 +329,17 @@ impl<'a> Directory<'a> {
             };
 
             let dirs: &[FatDirectory] = unsafe {
-                core::slice::from_raw_parts(data.as_ptr() as *const FatDirectory, 512 / 32)
+                core::slice::from_raw_parts(
+                    data.as_bytes().as_ptr() as *const FatDirectory,
+                    SectorBuf::len() / 32,
+                )
             };
 
             let lfns: &[FatLongNameEntry] = unsafe {
-                core::slice::from_raw_parts(data.as_ptr() as *const FatLongNameEntry, 512 / 32)
+                core::slice::from_raw_parts(
+                    data.as_bytes().as_ptr() as *const FatLongNameEntry,
+                    SectorBuf::len() / 32,
+                )
             };
 
             for i in self.offset..dirs.len() {
@@ -427,7 +437,7 @@ pub trait Read {
 
     // Loads the remainder of the file into the specified memory region
     fn load_file(&mut self, mem: &mut MemoryRegion) -> Result<(), Error> {
-        let mut chunks = mem.as_bytes().chunks_exact_mut(512);
+        let mut chunks = mem.as_bytes().chunks_exact_mut(SectorBuf::len());
         for chunk in chunks.by_ref() {
             self.read(chunk)?;
         }
@@ -436,17 +446,17 @@ pub trait Read {
             return Ok(());
         }
         // Use tmp buffer for last, partial sector
-        let mut dst = [0; 512];
-        let bytes = self.read(&mut dst)? as usize;
+        let mut dst = SectorBuf::new();
+        let bytes = self.read(dst.as_mut_bytes())? as usize;
         assert_eq!(bytes, last.len());
-        last.copy_from_slice(&dst[..bytes]);
+        last.copy_from_slice(&dst.as_bytes()[..bytes]);
         Ok(())
     }
 }
 
 impl<'a> Read for File<'a> {
     fn read(&mut self, data: &mut [u8]) -> Result<u32, Error> {
-        assert_eq!(data.len(), 512);
+        assert_eq!(data.len(), SectorBuf::len());
 
         if self.position >= self.size {
             return Err(Error::EndOfFile);
@@ -473,20 +483,22 @@ impl<'a> Read for File<'a> {
             Err(e) => Err(Error::Block(e)),
             Ok(()) => {
                 self.sector_offset += 1;
-                if (self.position + 512) > self.size {
+                let sector_size = SectorBuf::len() as u32;
+                if (self.position + sector_size) > self.size {
                     let bytes_read = self.size - self.position;
                     self.position = self.size;
                     Ok(bytes_read)
                 } else {
-                    self.position += 512;
-                    Ok(512)
+                    self.position += sector_size;
+                    Ok(sector_size)
                 }
             }
         }
     }
 
     fn seek(&mut self, position: u32) -> Result<(), Error> {
-        if position % 512 != 0 {
+        let sector_size = SectorBuf::len() as u32;
+        if position % sector_size != 0 {
             return Err(Error::InvalidOffset);
         }
 
@@ -516,7 +528,7 @@ impl<'a> Read for File<'a> {
             }
 
             self.sector_offset += 1;
-            self.position += 512;
+            self.position += sector_size;
         }
 
         Ok(())
@@ -609,13 +621,13 @@ impl<'a> Filesystem<'a> {
         const FAT12_MAX: u32 = 0xff5;
         const FAT16_MAX: u32 = 0xfff5;
 
-        let mut data: [u8; 512] = [0; 512];
-        match self.read(0, &mut data) {
+        let mut data = SectorBuf::new();
+        match self.read(0, data.as_mut_bytes()) {
             Ok(_) => {}
             Err(e) => return Err(Error::Block(e)),
         };
 
-        let h = unsafe { &*(data.as_ptr() as *const Header) };
+        let h = unsafe { &*(data.as_bytes().as_ptr() as *const Header) };
 
         self.bytes_per_sector = u32::from(h.bytes_per_sector);
         self.fat_count = u32::from(h.fat_count);
@@ -624,7 +636,7 @@ impl<'a> Filesystem<'a> {
             / self.bytes_per_sector;
 
         self.sectors_per_fat = if h.legacy_sectors_per_fat == 0 {
-            let h32 = unsafe { &*(data.as_ptr() as *const Fat32Header) };
+            let h32 = unsafe { &*(data.as_bytes().as_ptr() as *const Fat32Header) };
             h32.sectors_per_fat
         } else {
             u32::from(h.legacy_sectors_per_fat)
@@ -653,7 +665,7 @@ impl<'a> Filesystem<'a> {
         };
 
         if self.fat_type == FatType::FAT32 {
-            let h32 = unsafe { &*(data.as_ptr() as *const Fat32Header) };
+            let h32 = unsafe { &*(data.as_bytes().as_ptr() as *const Fat32Header) };
             self.root_cluster = h32.root_cluster;
         }
 
@@ -667,21 +679,21 @@ impl<'a> Filesystem<'a> {
                 let fat_sector = self.first_fat_sector + (fat_offset / self.bytes_per_sector);
                 let offset = fat_offset % self.bytes_per_sector;
 
-                let mut data: [u8; 512] = [0; 512];
-                match self.read(u64::from(fat_sector), &mut data) {
+                let mut data = SectorBuf::new();
+                match self.read(u64::from(fat_sector), data.as_mut_bytes()) {
                     Ok(_) => {}
                     Err(e) => return Err(Error::Block(e)),
                 };
-                let lower_data = data[offset as usize] as u16;
-                let upper_data = if offset < 511 {
-                    data[offset as usize + 1] as u16
+                let lower_data = data.as_bytes()[offset as usize] as u16;
+                let upper_data = if offset < (SectorBuf::len() - 1) as u32 {
+                    data.as_bytes()[offset as usize + 1] as u16
                 } else {
                     // read next sector to get upper byte if offset is 511
-                    match self.read(u64::from(fat_sector) + 1, &mut data) {
+                    match self.read(u64::from(fat_sector) + 1, data.as_mut_bytes()) {
                         Ok(_) => {}
                         Err(e) => return Err(Error::Block(e)),
                     }
-                    data[0] as u16
+                    data.as_bytes()[0] as u16
                 };
 
                 let next_cluster_raw = lower_data | (upper_data << 8);
@@ -698,13 +710,15 @@ impl<'a> Filesystem<'a> {
                 }
             }
             FatType::FAT16 => {
-                let fat: [u16; 512 / 2] = [0; 512 / 2];
+                let fat = [0_u16; SectorBuf::len() / 2];
 
                 let fat_offset = cluster * 2;
                 let fat_sector = self.first_fat_sector + (fat_offset / self.bytes_per_sector);
                 let offset = fat_offset % self.bytes_per_sector;
 
-                let data = unsafe { core::slice::from_raw_parts_mut(fat.as_ptr() as *mut u8, 512) };
+                let data = unsafe {
+                    core::slice::from_raw_parts_mut(fat.as_ptr() as *mut u8, SectorBuf::len())
+                };
                 match self.read(u64::from(fat_sector), data) {
                     Ok(_) => {}
                     Err(e) => return Err(Error::Block(e)),
@@ -719,13 +733,15 @@ impl<'a> Filesystem<'a> {
                 }
             }
             FatType::FAT32 => {
-                let fat: [u32; 512 / 4] = [0; 512 / 4];
+                let fat = [0_u32; SectorBuf::len() / 4];
 
                 let fat_offset = cluster * 4;
                 let fat_sector = self.first_fat_sector + (fat_offset / self.bytes_per_sector);
                 let offset = fat_offset % self.bytes_per_sector;
 
-                let data = unsafe { core::slice::from_raw_parts_mut(fat.as_ptr() as *mut u8, 512) };
+                let data = unsafe {
+                    core::slice::from_raw_parts_mut(fat.as_ptr() as *mut u8, SectorBuf::len())
+                };
 
                 match self.read(u64::from(fat_sector), data) {
                     Ok(_) => {}
@@ -864,6 +880,7 @@ impl<'a> Filesystem<'a> {
 #[cfg(test)]
 mod tests {
     use super::Read;
+    use crate::block::SectorBuf;
     use crate::part::tests::*;
     use std::convert::TryInto;
     use std::path::PathBuf;
@@ -906,8 +923,8 @@ mod tests {
 
                     let mut bytes_so_far = 0;
                     loop {
-                        let mut data: [u8; 512] = [0; 512];
-                        match f.read(&mut data) {
+                        let mut data = SectorBuf::new();
+                        match f.read(data.as_mut_bytes()) {
                             Ok(bytes) => {
                                 bytes_so_far += bytes;
                             }
@@ -948,8 +965,8 @@ mod tests {
 
                     let mut bytes_so_far = 0;
                     loop {
-                        let mut data: [u8; 512] = [0; 512];
-                        match f.read(&mut data) {
+                        let mut data = SectorBuf::new();
+                        match f.read(data.as_mut_bytes()) {
                             Ok(bytes) => {
                                 bytes_so_far += bytes;
                             }
@@ -965,8 +982,8 @@ mod tests {
                     f.seek(0).expect("expect seek to work");
                     bytes_so_far = 0;
                     loop {
-                        let mut data: [u8; 512] = [0; 512];
-                        match f.read(&mut data) {
+                        let mut data = SectorBuf::new();
+                        match f.read(data.as_mut_bytes()) {
                             Ok(bytes) => {
                                 bytes_so_far += bytes;
                             }
@@ -979,12 +996,12 @@ mod tests {
 
                     assert_eq!(bytes_so_far, f.size);
 
-                    if f.size > 512 && f.size % 2 == 0 {
+                    if f.size > SectorBuf::len() as u32 && f.size % 2 == 0 {
                         f.seek(f.size / 2).expect("expect seek to work");
                         bytes_so_far = f.size / 2;
                         loop {
-                            let mut data: [u8; 512] = [0; 512];
-                            match f.read(&mut data) {
+                            let mut data = SectorBuf::new();
+                            match f.read(data.as_mut_bytes()) {
                                 Ok(bytes) => {
                                     bytes_so_far += bytes;
                                 }

@@ -20,6 +20,8 @@ use r_efi::{
     protocols::device_path::Protocol as DevicePathProtocol,
 };
 
+use crate::block::SectorBuf;
+
 pub const PROTOCOL_GUID: Guid = Guid::from_fields(
     0x964e_5b21,
     0x6459,
@@ -118,12 +120,13 @@ pub extern "win64" fn read_blocks(
     let wrapper = container_of!(proto, BlockWrapper, proto);
     let wrapper = unsafe { &*wrapper };
 
-    let blocks = (size / 512) as usize;
+    let block_size = wrapper.media.block_size as usize;
+    let blocks = size / block_size;
     let mut region = crate::mem::MemoryRegion::new(buffer as u64, size as u64);
 
     for i in 0..blocks {
         use crate::block::SectorRead;
-        let data = region.as_mut_slice(i as u64 * 512, 512);
+        let data = region.as_mut_slice((i * block_size) as u64, block_size as u64);
         let block = unsafe { &*wrapper.block };
         match block.read(wrapper.start_lba + start + i as u64, data) {
             Ok(()) => continue,
@@ -146,12 +149,13 @@ pub extern "win64" fn write_blocks(
     let wrapper = container_of!(proto, BlockWrapper, proto);
     let wrapper = unsafe { &*wrapper };
 
-    let blocks = (size / 512) as usize;
+    let block_size = wrapper.media.block_size as usize;
+    let blocks = (size / block_size) as usize;
     let mut region = crate::mem::MemoryRegion::new(buffer as u64, size as u64);
 
     for i in 0..blocks {
         use crate::block::SectorWrite;
-        let data = region.as_mut_slice(i as u64 * 512, 512);
+        let data = region.as_mut_slice((i * block_size) as u64, block_size as u64);
         let block = unsafe { &*wrapper.block };
         match block.write(wrapper.start_lba + start + i as u64, data) {
             Ok(()) => continue,
@@ -208,7 +212,7 @@ impl<'a> BlockWrapper<'a> {
                     logical_partition: false,
                     read_only: true,
                     write_caching: false,
-                    block_size: 512,
+                    block_size: SectorBuf::len() as u32,
                     io_align: 0,
                     last_block,
                 },
