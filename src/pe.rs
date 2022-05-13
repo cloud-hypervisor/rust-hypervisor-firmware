@@ -38,6 +38,12 @@ struct Section {
 }
 
 impl<'a> Loader<'a> {
+    #[cfg(target_arch = "x86_64")]
+    const MACHINE_TYPE: u16 = 0x8664;
+
+    #[cfg(target_arch = "x86_64")]
+    const OPTIONAL_HEADER_MAGIC: u16 = 0x20b; // PE32+
+
     pub fn new(file: &'a mut dyn crate::fat::Read) -> Loader {
         Loader {
             file,
@@ -84,7 +90,7 @@ impl<'a> Loader<'a> {
         }
 
         // Check for supported machine
-        if pe_region.read_u16(4) != 0x8664 {
+        if pe_region.read_u16(4) != Self::MACHINE_TYPE {
             return Err(Error::InvalidExecutable);
         }
 
@@ -94,8 +100,7 @@ impl<'a> Loader<'a> {
         let optional_region =
             MemoryRegion::from_bytes(&mut data[(24 + pe_header_offset) as usize..]);
 
-        // Only support x86-64 EFI
-        if optional_region.read_u16(0) != 0x20b {
+        if optional_region.read_u16(0) != Self::OPTIONAL_HEADER_MAGIC {
             return Err(Error::InvalidExecutable);
         }
 
