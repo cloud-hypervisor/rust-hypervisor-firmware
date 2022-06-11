@@ -31,6 +31,7 @@ use r_efi::{
     protocols::{
         device_path::Protocol as DevicePathProtocol, loaded_image::Protocol as LoadedImageProtocol,
     },
+    system::{ConfigurationTable, RuntimeServices},
 };
 
 use crate::boot;
@@ -209,11 +210,11 @@ unsafe fn fixup_at_virtual(descriptors: &[alloc::MemoryDescriptor]) {
 
     let ct = st.configuration_table;
     let ptr = convert_internal_pointer(descriptors, (ct as *const _) as u64).unwrap();
-    st.configuration_table = transmute(ptr);
+    st.configuration_table = ptr as *mut ConfigurationTable;
 
     let rs = st.runtime_services;
     let ptr = convert_internal_pointer(descriptors, (rs as *const _) as u64).unwrap();
-    st.runtime_services = transmute(ptr);
+    st.runtime_services = ptr as *mut RuntimeServices;
 }
 
 pub extern "win64" fn not_available() -> Status {
