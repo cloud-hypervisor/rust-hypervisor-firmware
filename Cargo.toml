@@ -2,7 +2,7 @@
 name = "hypervisor-fw"
 version = "0.4.0"
 authors = ["Rob Bradford <robert.bradford@intel.com>"]
-edition = "2018"
+edition = "2021"
 
 # Despite "panic-strategy": "abort" being set in target.json, panic = "abort" is
 # needed here to make "cargo check" and "cargo clippy" run without errors.
