@@ -73,7 +73,7 @@ impl Rtc {
         }
 
         if ((self.get_reg_b() & 0x02) == 0) && ((hour & 0x80) != 0) {
-            hour = (hour & 0x7f) + 12 % 24;
+            hour = ((hour & 0x7f) + 12) % 24;
         }
 
         Ok((hour, minute, second))
