@@ -85,7 +85,7 @@ pub struct DirectoryEntry {
     cluster: u32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 enum FatType {
     Unknown,
     FAT12,
@@ -113,7 +113,7 @@ pub struct Filesystem<'a> {
     root_cluster: u32, // FAT32 only
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     Block(BlockError),
     Unsupported,
@@ -122,7 +122,7 @@ pub enum Error {
     InvalidOffset,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 enum FileType {
     File,
     Directory,

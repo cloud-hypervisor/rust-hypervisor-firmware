@@ -45,7 +45,7 @@ mod var;
 use alloc::Allocator;
 use var::VariableAllocator;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 enum HandleType {
     None,
     Block,
