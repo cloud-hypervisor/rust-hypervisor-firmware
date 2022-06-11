@@ -35,7 +35,7 @@ macro_rules! log {
     ($($arg:tt)*) => {{
         use core::fmt::Write;
         #[cfg(all(feature = "log-serial", not(test)))]
-        writeln!(crate::serial::Serial, $($arg)*).unwrap();
+        writeln!($crate::serial::Serial, $($arg)*).unwrap();
         #[cfg(all(feature = "log-serial", test))]
         println!($($arg)*);
     }};
