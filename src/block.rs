@@ -75,7 +75,7 @@ struct DriverState {
     next_head: usize,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     BlockIOError,
 
@@ -109,7 +109,7 @@ pub trait SectorWrite {
     fn flush(&self) -> Result<(), Error>;
 }
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 enum RequestType {
     Read = 0,
     Write = 1,
