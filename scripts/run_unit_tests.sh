@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source $HOME/.cargo/env
+source "${CARGO_HOME:-$HOME/.cargo}/env"
 source $(dirname "$0")/make-test-disks.sh
 
 WORKLOADS_DIR="$HOME/workloads"
