@@ -2,7 +2,7 @@
 
 set -ex
 
-source $HOME/.cargo/env
+source "${CARGO_HOME:-$HOME/.cargo}/env"
 
 export RUSTFLAGS="-D warnings"
 
