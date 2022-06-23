@@ -86,6 +86,16 @@ pub struct DirectoryEntry {
     cluster: u32,
 }
 
+impl DirectoryEntry {
+    pub fn long_name(&self) -> [u8; 255] {
+        self.long_name
+    }
+
+    pub fn is_file(&self) -> bool {
+        matches!(self.file_type, FileType::File)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum FatType {
     Unknown,
@@ -121,6 +131,7 @@ pub enum Error {
     NotFound,
     EndOfFile,
     InvalidOffset,
+    NodeTypeMismatch,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -147,23 +158,23 @@ impl<'a> From<Directory<'a>> for Node<'a> {
 }
 
 impl<'a> TryFrom<Node<'a>> for File<'a> {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(from: Node<'a>) -> Result<Self, Self::Error> {
         match from {
             Node::File(f) => Ok(f),
-            _ => Err(()),
+            _ => Err(Self::Error::NodeTypeMismatch),
         }
     }
 }
 
 impl<'a> TryFrom<Node<'a>> for Directory<'a> {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(from: Node<'a>) -> Result<Self, Self::Error> {
         match from {
             Node::Directory(d) => Ok(d),
-            _ => Err(()),
+            _ => Err(Self::Error::NodeTypeMismatch),
         }
     }
 }
