@@ -160,9 +160,10 @@ pub fn load_default_entry(fs: &fat::Filesystem, info: &dyn boot::Info) -> Result
 
 #[cfg(test)]
 mod tests {
+    use core::convert::TryInto;
+
     use crate::fat::Read;
     use crate::part::tests::*;
-    use core::convert::TryInto;
 
     #[test]
     fn test_default_entry() {

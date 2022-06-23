@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use core::convert::TryFrom;
+
 use crate::{
     block::{Error as BlockError, SectorRead},
     mem::MemoryRegion,
 };
-use core::convert::TryFrom;
 
 #[repr(packed)]
 struct Header {
@@ -311,7 +312,8 @@ impl<'a> Directory<'a> {
         Ok(true)
     }
 
-    // Returns and then increments to point to the next one, may return EndOfFile if this is the last entry
+    // Returns and then increments to point to the next one, may return EndOfFile if
+    // this is the last entry
     pub fn next_entry(&mut self) -> Result<DirectoryEntry, Error> {
         let mut long_entry = [0u16; 260];
         loop {
@@ -501,7 +503,8 @@ impl<'a> Read for File<'a> {
             self.active_cluster = self.start_cluster;
         }
 
-        // Like read but without reading, follow cluster chain if we reach end of cluster
+        // Like read but without reading, follow cluster chain if we reach end of
+        // cluster
         while self.position != position {
             if self.sector_offset == u64::from(self.filesystem.sectors_per_cluster) {
                 match self.filesystem.next_cluster(self.active_cluster) {
@@ -536,8 +539,9 @@ impl<'a> SectorRead for Filesystem<'a> {
     }
 }
 
-// Do a case-insensitive match on the name with the 8.3 format that you get from FAT.
-// In the FAT directory entry the "." isn't stored and any gaps are padded with " ".
+// Do a case-insensitive match on the name with the 8.3 format that you get from
+// FAT. In the FAT directory entry the "." isn't stored and any gaps are padded
+// with " ".
 fn compare_short_name(name: &str, de: &DirectoryEntry) -> bool {
     let name = name.trim_matches(char::from(0));
     // 8.3 (plus 1 for the separator)
@@ -863,10 +867,11 @@ impl<'a> Filesystem<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::Read;
-    use crate::part::tests::*;
     use std::convert::TryInto;
     use std::path::PathBuf;
+
+    use super::Read;
+    use crate::part::tests::*;
 
     fn fat_test_image_paths() -> Vec<PathBuf> {
         let images = ["fat12.img", "fat16.img", "fat32.img"];
