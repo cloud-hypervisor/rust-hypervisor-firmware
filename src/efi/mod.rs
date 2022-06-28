@@ -950,7 +950,7 @@ fn init_heap_allocator(size: usize) {
     );
     assert!(status == Status::SUCCESS);
     unsafe {
-        HEAP_ALLOCATOR.lock().init(heap_start as usize, size);
+        HEAP_ALLOCATOR.lock().init(heap_start as *mut _, size);
     }
 }
 
