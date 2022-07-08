@@ -31,7 +31,7 @@ x86_64 = "0.14.9"
 atomic_refcell = "0.1.8"
 r-efi = "4.0.0"
 uart_16550 = "0.2.18"
-linked_list_allocator = "0.10.0"
+linked_list_allocator = "0.10.1"
 
 [dev-dependencies]
 dirs = "4.0.0"
