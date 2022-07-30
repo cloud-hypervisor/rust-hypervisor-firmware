@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::convert::TryFrom;
-
 use crate::{
     block::{Error as BlockError, SectorRead},
     mem::MemoryRegion,
 };
+use core::convert::TryFrom;
 
 #[repr(packed)]
 struct Header {
@@ -878,11 +877,10 @@ impl<'a> Filesystem<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-    use std::path::PathBuf;
-
     use super::Read;
     use crate::part::tests::*;
+    use std::convert::TryInto;
+    use std::path::PathBuf;
 
     fn fat_test_image_paths() -> Vec<PathBuf> {
         let images = ["fat12.img", "fat16.img", "fat32.img"];
