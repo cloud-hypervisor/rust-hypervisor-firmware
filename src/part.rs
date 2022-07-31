@@ -182,11 +182,11 @@ pub mod tests {
             let mut file = self.file.borrow_mut();
             match file.seek(SeekFrom::Start(sector * SectorBuf::len() as u64)) {
                 Ok(_) => {}
-                Err(_) => return Err(block::Error::BlockIOError),
+                Err(_) => return Err(block::Error::BlockIO),
             }
             match file.read(data) {
                 Ok(_) => {}
-                Err(_) => return Err(block::Error::BlockIOError),
+                Err(_) => return Err(block::Error::BlockIO),
             }
             Ok(())
         }
