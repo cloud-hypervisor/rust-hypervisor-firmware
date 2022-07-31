@@ -77,7 +77,9 @@ struct DriverState {
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    BlockIOError,
+    BlockIO,
+    NoDataBuf,
+    InvalidDataBufSize,
 
     BlockNotSupported,
 }
@@ -236,10 +238,6 @@ impl<'a> VirtioBlockDevice<'a> {
         data: Option<&mut [u8]>,
         request: RequestType,
     ) -> Result<(), Error> {
-        if request != RequestType::Flush {
-            assert_eq!(SectorBuf::len(), data.as_ref().unwrap().len());
-        }
-
         const VIRTQ_DESC_F_NEXT: u16 = 1;
         const VIRTQ_DESC_F_WRITE: u16 = 2;
 
@@ -268,8 +266,18 @@ impl<'a> VirtioBlockDevice<'a> {
         let mut d = &mut state.descriptors[next_desc];
         let next_desc = (next_desc + 1) % QUEUE_SIZE;
         if request != RequestType::Flush {
-            d.addr = data.unwrap().as_ptr() as u64;
-            d.length = SectorBuf::len() as u32;
+            match data {
+                None => {
+                    return Err(Error::NoDataBuf);
+                }
+                Some(data) => {
+                    if data.len() != SectorBuf::len() {
+                        return Err(Error::InvalidDataBufSize);
+                    }
+                    d.addr = data.as_ptr() as u64;
+                    d.length = SectorBuf::len() as u32;
+                }
+            }
         }
 
         d.flags = VIRTQ_DESC_F_NEXT
@@ -306,7 +314,7 @@ impl<'a> VirtioBlockDevice<'a> {
 
         match footer.status {
             VIRTIO_BLK_S_OK => Ok(()),
-            VIRTIO_BLK_S_IOERR => Err(Error::BlockIOError),
+            VIRTIO_BLK_S_IOERR => Err(Error::BlockIO),
             VIRTIO_BLK_S_UNSUPP => Err(Error::BlockNotSupported),
             _ => Err(Error::BlockNotSupported),
         }

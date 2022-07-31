@@ -541,7 +541,7 @@ impl<'a> Read for File<'a> {
 impl<'a> SectorRead for Filesystem<'a> {
     fn read(&self, sector: u64, data: &mut [u8]) -> Result<(), crate::block::Error> {
         if self.start + sector > self.last {
-            Err(crate::block::Error::BlockIOError)
+            Err(crate::block::Error::BlockIO)
         } else {
             self.device.read(self.start + sector, data)
         }
