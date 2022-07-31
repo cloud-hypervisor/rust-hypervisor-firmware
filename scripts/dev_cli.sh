@@ -400,12 +400,14 @@ cmd_build-container() {
     cp $RHF_DOCKERFILE $BUILD_DIR
 
     [ $(uname -m) = "x86_64" ] && TARGETARCH="amd64"
+    RUST_TOOLCHAIN="$(rustup show active-toolchain | cut -d ' ' -f1)"
 
     $DOCKER_RUNTIME build \
 	   --target $container_type \
 	   -t $CTR_IMAGE \
 	   -f $BUILD_DIR/Dockerfile \
-	   --build-arg TARGETARCH=$TARGETARCH \
+       --build-arg TARGETARCH=$TARGETARCH \
+       --build-arg RUST_TOOLCHAIN=$RUST_TOOLCHAIN \
 	   $BUILD_DIR
 }
 
