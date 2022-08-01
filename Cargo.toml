@@ -1,7 +1,7 @@
 [package]
 name = "hypervisor-fw"
-version = "0.4.0"
-authors = ["Rob Bradford <robert.bradford@intel.com>"]
+version = "0.4.1"
+authors = ["The Rust Hypervisor Firmware Authors"]
 edition = "2021"
 
 # Despite "panic-strategy": "abort" being set in target.json, panic = "abort" is
