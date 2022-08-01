@@ -100,5 +100,4 @@ sha1sum: 5fc086643dea4b20c59a795a262e0d2400fab15f
 
 ## Security issues
 
-Please use the GitHub security advisories feature for reporting issues:
-https://github.com/cloud-hypervisor/rust-hypervisor-firmware/security/advisories/new
+Please contact the maintainers listed in the MAINTAINERS.md file with security issues.
