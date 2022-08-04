@@ -15,7 +15,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
       - name: Install rust-src
         run: rustup component add rust-src
       - name: Install clippy
