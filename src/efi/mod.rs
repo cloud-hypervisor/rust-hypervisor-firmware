@@ -477,7 +477,7 @@ pub extern "win64" fn free_pool(ptr: *mut c_void) -> Status {
 pub extern "win64" fn create_event(
     _: u32,
     _: Tpl,
-    _: EventNotify,
+    _: Option<EventNotify>,
     _: *mut c_void,
     _: *mut Event,
 ) -> Status {
@@ -842,7 +842,7 @@ pub extern "win64" fn set_mem(_: *mut c_void, _: usize, _: u8) {}
 pub extern "win64" fn create_event_ex(
     _: u32,
     _: Tpl,
-    _: EventNotify,
+    _: Option<EventNotify>,
     _: *const c_void,
     _: *const Guid,
     _: *mut Event,
