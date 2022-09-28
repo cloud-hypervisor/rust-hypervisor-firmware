@@ -240,7 +240,7 @@ cmd_build() {
 	   --volume "$RHF_ROOT_DIR:$CTR_RHF_ROOT_DIR" $exported_volumes \
 	   --env RUSTFLAGS="$rustflags" \
 	   "$CTR_IMAGE" \
-	   cargo build --target "target.json" \
+	   cargo build --target "x86_64-unknown-none.json" \
 	         -Zbuild-std=core,alloc \
 	         -Zbuild-std-features=compiler-builtins-mem \
 	         --target-dir "$CTR_RHF_CARGO_TARGET" \

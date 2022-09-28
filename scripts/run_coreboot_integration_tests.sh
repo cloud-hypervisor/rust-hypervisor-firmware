@@ -12,9 +12,9 @@ mkdir -p "$WORKLOADS_DIR"
 fetch_disk_images "$WORKLOADS_DIR"
 
 rustup component add rust-src
-cargo build --release --target target.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem --features "coreboot"
+cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem --features "coreboot"
 
-RHF_BIN="$RHF_ROOT_DIR/target/target/release/hypervisor-fw"
+RHF_BIN="$RHF_ROOT_DIR/target/x86_64-unknown-none/release/hypervisor-fw"
 COREBOOT_CONFIG_IN="$RHF_ROOT_DIR/resources/coreboot/qemu-q35-config.in"
 
 cat $COREBOOT_CONFIG_IN | sed -e "s#@CONFIG_PAYLOAD_FILE@#$RHF_BIN#g" > "$COREBOOT_DIR/.config"

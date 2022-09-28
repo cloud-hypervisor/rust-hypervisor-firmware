@@ -32,7 +32,7 @@ dmsetup create windows-snapshot-base --table "0 $img_blk_size snapshot-origin /d
 dmsetup mknodes
 
 rustup component add rust-src
-cargo build --release --target target.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
 
 export RUST_BACKTRACE=1
 time cargo test --features "integration_tests" "integration::tests::windows"
