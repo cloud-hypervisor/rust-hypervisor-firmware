@@ -497,7 +497,7 @@ mod tests {
                 "--serial",
                 "tty",
                 "--kernel",
-                "target/target/release/hypervisor-fw",
+                "target/x86_64-unknown-none/release/hypervisor-fw",
                 "--disk",
                 &format!("path={}", os),
                 &format!("path={}", ci),
@@ -568,7 +568,7 @@ mod tests {
         fn spawn_qemu(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
             let fw = Firmware {
                 fw_type: "-kernel",
-                path: "target/target/release/hypervisor-fw",
+                path: "target/x86_64-unknown-none/release/hypervisor-fw",
             };
             spawn_qemu_common(tmp_dir, &fw, os, ci, net)
         }
@@ -743,7 +743,7 @@ mod tests {
         fn test_boot_qemu_windows() {
             let fw = Firmware {
                 fw_type: "-kernel",
-                path: "target/target/release/hypervisor-fw",
+                path: "target/x86_64-unknown-none/release/hypervisor-fw",
             };
             test_boot_qemu_windows_common(&fw);
         }
@@ -781,7 +781,7 @@ mod tests {
                 "--serial",
                 "tty",
                 "--kernel",
-                "target/target/release/hypervisor-fw",
+                "target/x86_64-unknown-none/release/hypervisor-fw",
                 "--disk",
                 &format!("path={}", disk.osdisk_path),
                 "--net",

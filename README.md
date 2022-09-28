@@ -28,11 +28,11 @@ all the way into the OS.
 
 To compile:
 
-cargo build --release --target target.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
 
 The result will be in:
 
-target/target/release/hypervisor-fw
+target/x86_64-unknown-none/release/hypervisor-fw
 
 ## Features
 
@@ -64,7 +64,7 @@ instead use the binary you build above.
 $ pushd $CLOUDH
 $ sudo setcap cap_net_admin+ep ./cloud-hypervisor/target/release/cloud-hypervisor
 $ ./cloud-hypervisor/target/release/cloud-hypervisor \
-	--kernel ./target/target/release/hypervisor-fw \
+	--kernel ./target/x86_64-unknown-none/release/hypervisor-fw \
 	--disk path=focal-server-cloudimg-amd64.raw \
 	--cpus boot=4 \
 	--memory size=512M \
@@ -81,7 +81,7 @@ e.g.
 
 ```
 $ qemu-system-x86_64 -machine q35,accel=kvm -cpu host,-vmx -m 1G\
-    -kernel ./target/target/release/hypervisor-fw \
+    -kernel ./target/x86_64-unknown-none/release/hypervisor-fw \
     -display none -nodefaults \
     -serial stdio \
     -drive id=os,file=focal-server-cloudimg-amd64.raw,if=none \

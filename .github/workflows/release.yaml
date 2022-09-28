@@ -19,7 +19,7 @@ jobs:
       - name: Install rust-src
         run: rustup component add rust-src
       - name: Build (release)
-        run: cargo build --release --target target.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+        run: cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
       - name: Create release
         id: create_release
         uses: actions/create-release@v1
@@ -36,6 +36,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: target/target/release/hypervisor-fw
+          asset_path: target/x86_64-unknown-none/release/hypervisor-fw
           asset_name: hypervisor-fw
           asset_content_type: application/octet-stream
