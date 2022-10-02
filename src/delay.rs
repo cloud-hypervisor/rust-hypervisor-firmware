@@ -13,7 +13,9 @@ const PAUSE_THRESHOLD_TICKS: u64 = 150;
 #[cfg(target_arch = "aarch64")]
 #[inline]
 unsafe fn rdtsc() -> u64 {
-    todo!();
+    let value: u64;
+    asm!("mrs {}, cntvct_el0", out(reg) value);
+    value
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -25,7 +27,7 @@ unsafe fn rdtsc() -> u64 {
 #[cfg(target_arch = "aarch64")]
 #[inline]
 unsafe fn pause() {
-    todo!();
+    asm!("yield");
 }
 
 #[cfg(target_arch = "x86_64")]
