@@ -26,6 +26,11 @@ make_test_disks() {
         dd if=test_data/a/b/c/d of=test_data/a/b/c/$n count=$n bs=1
     done
 
+    mkdir -p test_data/largedir
+    for x in `seq 0 100`; do
+        touch test_data/largedir/$x
+    done
+
     touch test_data/longfilenametest
 
     export MTOOLS_SKIP_CHECK=1

@@ -1134,6 +1134,29 @@ mod tests {
     }
 
     #[test]
+    fn test_fat_large_directory() {
+        let images = fat_test_image_paths();
+
+        for image in &images {
+            let disk = FakeDisk::new(&image);
+            let len = disk.len();
+            let mut fs = crate::fat::Filesystem::new(&disk, 0, len);
+            fs.init().expect("Error initialising filesystem");
+
+            let mut d = fs.root().unwrap();
+            let de = d.next_entry().unwrap();
+            assert_eq!(&de.name, b"A          ");
+            let de = d.next_entry().unwrap();
+            assert_eq!(&de.name, b"LARGEDIR   ");
+
+            let mut d = fs.get_directory(de.cluster).unwrap();
+            while d.has_next().unwrap() {
+                d.next_entry().unwrap();
+            }
+        }
+    }
+
+    #[test]
     fn test_fat_long_file_name() {
         let images = fat_test_image_paths();
 
