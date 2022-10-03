@@ -340,17 +340,19 @@ impl<'a> Directory<'a> {
                 }
             };
 
+            let num_dirs = SectorBuf::len() / 32;
+
             let dirs: &[FatDirectory] = unsafe {
                 core::slice::from_raw_parts(
                     data.as_bytes().as_ptr() as *const FatDirectory,
-                    SectorBuf::len() / 32,
+                    num_dirs,
                 )
             };
 
             let lfns: &[FatLongNameEntry] = unsafe {
                 core::slice::from_raw_parts(
                     data.as_bytes().as_ptr() as *const FatLongNameEntry,
-                    SectorBuf::len() / 32,
+                    num_dirs,
                 )
             };
 
@@ -400,6 +402,10 @@ impl<'a> Directory<'a> {
                 };
 
                 self.offset = i + 1;
+                if self.offset >= num_dirs {
+                    self.sector += (self.offset / num_dirs) as u32;
+                    self.offset %= num_dirs;
+                }
                 return Ok(entry);
             }
             self.sector += 1;
