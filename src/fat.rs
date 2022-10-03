@@ -191,6 +191,7 @@ pub struct File<'a> {
 pub struct Directory<'a> {
     filesystem: &'a Filesystem<'a>,
     cluster: Option<u32>,
+    first_sector: u32,
     sector: u32,
     offset: usize,
 }
@@ -443,6 +444,7 @@ impl<'a> Directory<'a> {
         if offset != 0 {
             return Err(Error::Unsupported);
         }
+        self.sector = self.first_sector;
         self.offset = 0;
         Ok(())
     }
@@ -792,6 +794,7 @@ impl<'a> Filesystem<'a> {
                 Ok(Directory {
                     filesystem: self,
                     cluster: None,
+                    first_sector: root_directory_start,
                     sector: root_directory_start,
                     offset: 0,
                 })
@@ -799,6 +802,7 @@ impl<'a> Filesystem<'a> {
             FatType::FAT32 => Ok(Directory {
                 filesystem: self,
                 cluster: Some(self.root_cluster),
+                first_sector: 0,
                 sector: 0,
                 offset: 0,
             }),
@@ -821,6 +825,7 @@ impl<'a> Filesystem<'a> {
         Ok(Directory {
             filesystem: self,
             cluster: Some(cluster),
+            first_sector: 0,
             sector: 0,
             offset: 0,
         })
