@@ -19,23 +19,24 @@ use core::fmt;
 
 use atomic_refcell::AtomicRefCell;
 
+#[cfg(target_arch = "aarch64")]
+use crate::{arch::aarch64::layout::map, uart_pl011::Pl011 as UartPl011};
+
 #[cfg(target_arch = "x86_64")]
-use uart_16550::SerialPort;
+use uart_16550::SerialPort as Uart16550;
 
 // We use COM1 as it is the standard first serial port.
 #[cfg(target_arch = "x86_64")]
-pub static PORT: AtomicRefCell<SerialPort> = AtomicRefCell::new(unsafe { SerialPort::new(0x3f8) });
+pub static PORT: AtomicRefCell<Uart16550> = AtomicRefCell::new(unsafe { Uart16550::new(0x3f8) });
+
+#[cfg(target_arch = "aarch64")]
+pub static PORT: AtomicRefCell<UartPl011> =
+    AtomicRefCell::new(UartPl011::new(map::mmio::PL011_START));
 
 pub struct Serial;
 impl fmt::Write for Serial {
-    #[cfg(target_arch = "x86_64")]
     fn write_str(&mut self, s: &str) -> fmt::Result {
         PORT.borrow_mut().write_str(s)
-    }
-
-    #[cfg(target_arch = "aarch64")]
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        todo!();
     }
 }
 
