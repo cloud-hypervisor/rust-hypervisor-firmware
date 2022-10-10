@@ -59,6 +59,8 @@ mod pe;
 mod pvh;
 mod rtc;
 #[cfg(target_arch = "aarch64")]
+mod rtc_pl031;
+#[cfg(target_arch = "aarch64")]
 mod uart_pl011;
 mod virtio;
 
