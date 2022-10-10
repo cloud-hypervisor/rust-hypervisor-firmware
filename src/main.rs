@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #![feature(abi_efiapi)]
+#![feature(asm_const)]
 #![feature(alloc_error_handler)]
 #![feature(stmt_expr_attributes)]
 #![feature(slice_take)]
