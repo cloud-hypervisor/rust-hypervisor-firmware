@@ -153,6 +153,13 @@ static mut BS: efi::BootServices = efi::BootServices {
     reserved: null_mut(),
 };
 
+const INVALID_GUID: Guid = Guid::from_fields(0, 0, 0, 0, 0, &[0_u8; 6]);
+const MAX_CT_ENTRIES: usize = 8;
+static mut CT: [efi::ConfigurationTable; MAX_CT_ENTRIES] = [efi::ConfigurationTable {
+    vendor_guid: INVALID_GUID,
+    vendor_table: null_mut(),
+}; MAX_CT_ENTRIES];
+
 static mut ST: efi::SystemTable = efi::SystemTable {
     hdr: efi::TableHeader {
         signature: efi::SYSTEM_TABLE_SIGNATURE,
@@ -602,8 +609,39 @@ pub extern "efiapi" fn locate_device_path(
     Status::NOT_FOUND
 }
 
-pub extern "efiapi" fn install_configuration_table(_: *mut Guid, _: *mut c_void) -> Status {
-    Status::UNSUPPORTED
+pub extern "efiapi" fn install_configuration_table(guid: *mut Guid, table: *mut c_void) -> Status {
+    let st = unsafe { &mut ST };
+    let ct = unsafe { &mut CT };
+
+    for entry in ct.iter_mut() {
+        if entry.vendor_guid == unsafe { *guid } {
+            entry.vendor_table = table;
+            if table.is_null() {
+                entry.vendor_guid = INVALID_GUID;
+                entry.vendor_table = null_mut();
+                st.number_of_table_entries -= 1;
+            } else {
+                entry.vendor_table = table;
+            }
+            return Status::SUCCESS;
+        }
+    }
+
+    if table.is_null() {
+        // Trying to delete the table, but not found.
+        return Status::NOT_FOUND;
+    }
+
+    for entry in ct.iter_mut() {
+        if entry.vendor_guid == INVALID_GUID && entry.vendor_table.is_null() {
+            entry.vendor_guid = unsafe { *guid };
+            entry.vendor_table = table;
+            st.number_of_table_entries += 1;
+            return Status::SUCCESS;
+        }
+    }
+
+    Status::OUT_OF_RESOURCES
 }
 
 pub extern "efiapi" fn load_image(
@@ -1051,7 +1089,7 @@ pub fn efi_exec(
     let vendor_data = 0u32;
     let acpi_rsdp_ptr = info.rsdp_addr();
 
-    let mut ct = if acpi_rsdp_ptr != 0 {
+    let ct_entry = if acpi_rsdp_ptr != 0 {
         efi::ConfigurationTable {
             vendor_guid: Guid::from_fields(
                 0x8868_e871,
@@ -1077,6 +1115,9 @@ pub fn efi_exec(
         }
     };
 
+    let ct = unsafe { &mut CT };
+    ct[0] = ct_entry;
+
     let mut stdin = console::STDIN;
     let mut stdout = console::STDOUT;
     let mut st = unsafe { &mut ST };
@@ -1086,7 +1127,7 @@ pub fn efi_exec(
     st.runtime_services = unsafe { &mut RS };
     st.boot_services = unsafe { &mut BS };
     st.number_of_table_entries = 1;
-    st.configuration_table = &mut ct;
+    st.configuration_table = &mut ct[0];
 
     populate_allocator(info, loaded_address, loaded_size);
 
