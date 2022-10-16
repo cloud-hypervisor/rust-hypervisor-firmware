@@ -816,7 +816,8 @@ pub extern "efiapi" fn locate_protocol(
     _: *mut c_void,
     _: *mut *mut c_void,
 ) -> Status {
-    Status::UNSUPPORTED
+    // XXX: A recent version of Linux kernel fails to boot if EFI_UNSUPPORTED returned.
+    Status::NOT_FOUND
 }
 
 pub extern "efiapi" fn install_multiple_protocol_interfaces(
