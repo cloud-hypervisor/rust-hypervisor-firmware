@@ -133,7 +133,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::
 
     let mut l = pe::Loader::new(&mut file);
     #[cfg(target_arch = "aarch64")]
-    let load_addr = 0x4040_0000;
+    let load_addr = arch::aarch64::layout::map::dram::KERNEL_START as u64;
     #[cfg(target_arch = "x86_64")]
     let load_addr = 0x20_0000;
     let (entry_addr, load_addr, size) = match l.load(load_addr) {
@@ -168,11 +168,20 @@ pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh:
 
 #[cfg(target_arch = "aarch64")]
 #[no_mangle]
-pub extern "C" fn rust64_start(_x0: *const u8) -> ! {
-    todo!();
+pub extern "C" fn rust64_start(x0: *const u8) -> ! {
+    serial::PORT.borrow_mut().init();
+
+    arch::aarch64::paging::setup();
+
+    let info = fdt::StartInfo::new(x0);
+
+    if let Some((base, length)) = info.find_compatible_region(&["pci-host-ecam-generic"]) {
+        pci::init(base as u64, length as u64);
+    }
+
+    main(&info)
 }
 
-#[cfg(target_arch = "x86_64")]
 fn main(info: &dyn bootinfo::Info) -> ! {
     log!("\nBooting with {}", info.name());
 
