@@ -128,27 +128,19 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn boot::Info
 }
 
 #[no_mangle]
-#[cfg(not(feature = "coreboot"))]
-pub extern "C" fn rust64_start(rdi: &pvh::StartInfo) -> ! {
+pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh::StartInfo) -> ! {
     serial::PORT.borrow_mut().init();
 
     arch::x86_64::sse::enable_sse();
     arch::x86_64::paging::setup();
 
-    main(rdi)
-}
+    #[cfg(feature = "coreboot")]
+    let info = &coreboot::StartInfo::default();
 
-#[no_mangle]
-#[cfg(feature = "coreboot")]
-pub extern "C" fn rust64_start() -> ! {
-    serial::PORT.borrow_mut().init();
+    #[cfg(not(feature = "coreboot"))]
+    let info = pvh_info;
 
-    arch::x86_64::sse::enable_sse();
-    arch::x86_64::paging::setup();
-
-    let info = coreboot::StartInfo::default();
-
-    main(&info)
+    main(info)
 }
 
 fn main(info: &dyn boot::Info) -> ! {
