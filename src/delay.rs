@@ -10,18 +10,30 @@ const NSECS_PER_SEC: u64 = 1000000000;
 const CPU_KHZ_DEFAULT: u64 = 200;
 const PAUSE_THRESHOLD_TICKS: u64 = 150;
 
+#[cfg(target_arch = "x86_64")]
+#[inline]
+unsafe fn rdtsc() -> u64 {
+    _rdtsc()
+}
+
+#[cfg(target_arch = "x86_64")]
+#[inline]
+unsafe fn pause() {
+    asm!("pause");
+}
+
 pub fn ndelay(ns: u64) {
     let delta = ns * CPU_KHZ_DEFAULT / NSECS_PER_SEC;
     let mut pause_delta = 0;
     unsafe {
-        let start = _rdtsc();
+        let start = rdtsc();
         if delta > PAUSE_THRESHOLD_TICKS {
             pause_delta = delta - PAUSE_THRESHOLD_TICKS;
         }
-        while _rdtsc() - start < pause_delta {
-            asm!("pause");
+        while rdtsc() - start < pause_delta {
+            pause();
         }
-        while _rdtsc() - start < delta {}
+        while rdtsc() - start < delta {}
     }
 }
 
