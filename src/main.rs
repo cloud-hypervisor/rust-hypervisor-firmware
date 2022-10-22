@@ -52,7 +52,6 @@ mod layout;
 mod loader;
 mod mem;
 mod part;
-#[cfg(target_arch = "x86_64")]
 mod pci;
 mod pe;
 #[cfg(target_arch = "x86_64")]
