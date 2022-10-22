@@ -80,17 +80,20 @@ fn get_device_details(bus: u8, device: u8, func: u8) -> (u16, u16) {
 }
 
 pub fn print_bus() {
-    for device in 0..MAX_DEVICES {
-        let (vendor_id, device_id) = get_device_details(0, device, 0);
-        if vendor_id == INVALID_VENDOR_ID {
-            continue;
+    for bus in 0..MAX_BUSES {
+        for device in 0..MAX_DEVICES {
+            let (vendor_id, device_id) = get_device_details(bus, device, 0);
+            if vendor_id == INVALID_VENDOR_ID {
+                continue;
+            }
+            log!(
+                "Found PCI device vendor={:x} device={:x} in slot={}:{}",
+                vendor_id,
+                device_id,
+                bus,
+                device
+            );
         }
-        log!(
-            "Found PCI device vendor={:x} device={:x} in slot={}",
-            vendor_id,
-            device_id,
-            device
-        );
     }
 }
 
@@ -98,13 +101,15 @@ pub fn with_devices<F>(target_vendor_id: u16, target_device_id: u16, per_device:
 where
     F: Fn(PciDevice) -> bool,
 {
-    for device in 0..MAX_DEVICES {
-        let (vendor_id, device_id) = get_device_details(0, device, 0);
-        if vendor_id == target_vendor_id
-            && device_id == target_device_id
-            && per_device(PciDevice::new(0, device, 0))
-        {
-            break;
+    for bus in 0..MAX_BUSES {
+        for device in 0..MAX_DEVICES {
+            let (vendor_id, device_id) = get_device_details(bus, device, 0);
+            if vendor_id == target_vendor_id
+                && device_id == target_device_id
+                && per_device(PciDevice::new(bus, device, 0))
+            {
+                break;
+            }
         }
     }
 }

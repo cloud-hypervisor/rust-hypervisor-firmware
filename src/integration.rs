@@ -600,7 +600,7 @@ mod tests {
 
             let mut child = spawn(&tmp_dir, &os, &ci, &net);
 
-            thread::sleep(std::time::Duration::from_secs(20));
+            thread::sleep(std::time::Duration::from_secs(30));
             let r = std::panic::catch_unwind(|| {
                 ssh_command(&net.guest_ip, "sudo shutdown -h now")
                     .expect("Expect SSH Command to work");
