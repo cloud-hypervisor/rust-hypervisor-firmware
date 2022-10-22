@@ -13,6 +13,8 @@
 // limitations under the License.
 
 use atomic_refcell::AtomicRefCell;
+
+#[cfg(target_arch = "x86_64")]
 use x86_64::instructions::port::{PortReadOnly, PortWriteOnly};
 
 use crate::{
@@ -20,6 +22,7 @@ use crate::{
     virtio::{Error as VirtioError, VirtioTransport},
 };
 
+const MAX_BUSES: u8 = 8;
 const MAX_DEVICES: u8 = 32;
 const MAX_FUNCTIONS: u8 = 8;
 
@@ -27,12 +30,14 @@ const INVALID_VENDOR_ID: u16 = 0xffff;
 
 static PCI_CONFIG: AtomicRefCell<PciConfig> = AtomicRefCell::new(PciConfig::new());
 
+#[cfg(target_arch = "x86_64")]
 struct PciConfig {
     address_port: PortWriteOnly<u32>,
     data_port: PortReadOnly<u32>,
 }
 
 impl PciConfig {
+    #[cfg(target_arch = "x86_64")]
     const fn new() -> Self {
         // We use the legacy, port-based Configuration Access Mechanism (CAM).
         Self {
@@ -41,15 +46,8 @@ impl PciConfig {
         }
     }
 
-    fn read(&mut self, bus: u8, device: u8, func: u8, offset: u8) -> u32 {
-        assert_eq!(offset % 4, 0);
-        assert!(device < MAX_DEVICES);
-        assert!(func < MAX_FUNCTIONS);
-
-        let addr = u32::from(bus) << 16; // bus bits 23-16
-        let addr = addr | u32::from(device) << 11; // slot/device bits 15-11
-        let addr = addr | u32::from(func) << 8; // function bits 10-8
-        let addr = addr | u32::from(offset & 0xfc); // register 7-0
+    #[cfg(target_arch = "x86_64")]
+    fn read_at(&mut self, addr: u32) -> u32 {
         let addr = addr | 1u32 << 31; // enable bit 31
 
         // SAFETY: We have exclusive access to the ports, so the data read will
@@ -58,6 +56,21 @@ impl PciConfig {
             self.address_port.write(addr);
             self.data_port.read()
         }
+    }
+
+    fn read(&mut self, bus: u8, device: u8, func: u8, offset: u8) -> u32 {
+        assert_eq!(offset % 4, 0);
+        assert!(bus < MAX_BUSES);
+        assert!(device < MAX_DEVICES);
+        assert!(func < MAX_FUNCTIONS);
+
+        let mut addr = 0;
+        addr |= u32::from(bus) << 16; // bus bits 23-16
+        addr |= u32::from(device) << 11; // slot/device bits 15-11
+        addr |= u32::from(func) << 8; // function bits 10-8
+        addr |= u32::from(offset & 0xfc); // register 7-0
+
+        self.read_at(addr)
     }
 }
 
