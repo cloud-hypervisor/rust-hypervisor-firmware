@@ -30,6 +30,11 @@ const INVALID_VENDOR_ID: u16 = 0xffff;
 
 static PCI_CONFIG: AtomicRefCell<PciConfig> = AtomicRefCell::new(PciConfig::new());
 
+#[cfg(target_arch = "aarch64")]
+struct PciConfig {
+    region: Option<mem::MemoryRegion>,
+}
+
 #[cfg(target_arch = "x86_64")]
 struct PciConfig {
     address_port: PortWriteOnly<u32>,
@@ -37,6 +42,12 @@ struct PciConfig {
 }
 
 impl PciConfig {
+    #[cfg(target_arch = "aarch64")]
+    const fn new() -> Self {
+        // We use Enhanced Configuration Access Mechanism (ECAM).
+        Self { region: None }
+    }
+
     #[cfg(target_arch = "x86_64")]
     const fn new() -> Self {
         // We use the legacy, port-based Configuration Access Mechanism (CAM).
@@ -44,6 +55,19 @@ impl PciConfig {
             address_port: PortWriteOnly::new(0xcf8),
             data_port: PortReadOnly::new(0xcfc),
         }
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    fn init(&mut self, base: u64, length: u64) {
+        self.region = Some(mem::MemoryRegion::new(base, length));
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    fn read_at(&mut self, addr: u32) -> u32 {
+        self.region
+            .as_ref()
+            .expect("PCI config space is not initialized")
+            .io_read_u32(addr as u64)
     }
 
     #[cfg(target_arch = "x86_64")]
@@ -72,6 +96,11 @@ impl PciConfig {
 
         self.read_at(addr)
     }
+}
+
+#[cfg(target_arch = "aarch64")]
+pub fn init(base: u64, length: u64) {
+    PCI_CONFIG.borrow_mut().init(base, length);
 }
 
 fn get_device_details(bus: u8, device: u8, func: u8) -> (u16, u16) {
