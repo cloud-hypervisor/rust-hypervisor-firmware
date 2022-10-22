@@ -22,6 +22,7 @@
 
 use core::panic::PanicInfo;
 
+#[cfg(target_arch = "x86_64")]
 use x86_64::instructions::hlt;
 
 #[macro_use]
@@ -45,8 +46,10 @@ mod integration;
 mod loader;
 mod mem;
 mod part;
+#[cfg(target_arch = "x86_64")]
 mod pci;
 mod pe;
+#[cfg(target_arch = "x86_64")]
 mod pvh;
 mod rtc;
 mod virtio;
@@ -56,6 +59,7 @@ mod virtio;
 fn panic(info: &PanicInfo) -> ! {
     log!("PANIC: {}", info);
     loop {
+        #[cfg(target_arch = "x86_64")]
         hlt()
     }
 }
@@ -129,6 +133,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn boot::Info
     true
 }
 
+#[cfg(target_arch = "x86_64")]
 #[no_mangle]
 pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh::StartInfo) -> ! {
     serial::PORT.borrow_mut().init();
@@ -145,6 +150,7 @@ pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh:
     main(info)
 }
 
+#[cfg(target_arch = "x86_64")]
 fn main(info: &dyn boot::Info) -> ! {
     log!("\nBooting with {}", info.name());
 

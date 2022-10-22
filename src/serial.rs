@@ -18,13 +18,17 @@
 use core::fmt;
 
 use atomic_refcell::AtomicRefCell;
+
+#[cfg(target_arch = "x86_64")]
 use uart_16550::SerialPort;
 
 // We use COM1 as it is the standard first serial port.
+#[cfg(target_arch = "x86_64")]
 pub static PORT: AtomicRefCell<SerialPort> = AtomicRefCell::new(unsafe { SerialPort::new(0x3f8) });
 
 pub struct Serial;
 impl fmt::Write for Serial {
+    #[cfg(target_arch = "x86_64")]
     fn write_str(&mut self, s: &str) -> fmt::Result {
         PORT.borrow_mut().write_str(s)
     }
