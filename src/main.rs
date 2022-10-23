@@ -44,6 +44,8 @@ mod coreboot;
 mod delay;
 mod efi;
 mod fat;
+#[cfg(target_arch = "aarch64")]
+mod fdt;
 #[cfg(all(test, feature = "integration_tests"))]
 mod integration;
 mod layout;
