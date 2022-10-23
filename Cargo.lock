@@ -77,6 +77,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fdt"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "964f5becd44d069dca0beea2b4bc05639ae7bf3b3f5369c295aff360bb57cca2"
+
+[[package]]
 name = "getrandom"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -95,6 +101,7 @@ dependencies = [
  "bitflags",
  "cortex-a",
  "dirs",
+ "fdt",
  "linked_list_allocator",
  "r-efi",
  "rand",
