@@ -106,11 +106,11 @@ pub struct BlockWrappers<'a> {
     pub count: usize,
 }
 
-pub extern "win64" fn reset(_: *mut BlockIoProtocol, _: bool) -> Status {
+pub extern "efiapi" fn reset(_: *mut BlockIoProtocol, _: bool) -> Status {
     Status::UNSUPPORTED
 }
 
-pub extern "win64" fn read_blocks(
+pub extern "efiapi" fn read_blocks(
     proto: *mut BlockIoProtocol,
     _: u32,
     start: u64,
@@ -139,7 +139,7 @@ pub extern "win64" fn read_blocks(
     Status::SUCCESS
 }
 
-pub extern "win64" fn write_blocks(
+pub extern "efiapi" fn write_blocks(
     proto: *mut BlockIoProtocol,
     _: u32,
     start: u64,
@@ -168,7 +168,7 @@ pub extern "win64" fn write_blocks(
     Status::SUCCESS
 }
 
-pub extern "win64" fn flush_blocks(proto: *mut BlockIoProtocol) -> Status {
+pub extern "efiapi" fn flush_blocks(proto: *mut BlockIoProtocol) -> Status {
     let wrapper = container_of!(proto, BlockWrapper, proto);
     let wrapper = unsafe { &*wrapper };
     use crate::block::SectorWrite;

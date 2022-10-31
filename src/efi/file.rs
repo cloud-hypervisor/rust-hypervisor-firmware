@@ -30,7 +30,7 @@ pub struct FileDevicePathProtocol {
     pub filename: [u16; 64],
 }
 
-pub extern "win64" fn filesystem_open_volume(
+pub extern "efiapi" fn filesystem_open_volume(
     fs_proto: *mut SimpleFileSystemProtocol,
     file: *mut *mut FileProtocol,
 ) -> Status {
@@ -48,7 +48,7 @@ pub extern "win64" fn filesystem_open_volume(
     }
 }
 
-pub extern "win64" fn open(
+pub extern "efiapi" fn open(
     file_in: *mut FileProtocol,
     file_out: *mut *mut FileProtocol,
     path_in: *mut Char16,
@@ -92,18 +92,18 @@ pub extern "win64" fn open(
     }
 }
 
-pub extern "win64" fn close(proto: *mut FileProtocol) -> Status {
+pub extern "efiapi" fn close(proto: *mut FileProtocol) -> Status {
     let wrapper = container_of!(proto, FileWrapper, proto);
     super::ALLOCATOR
         .borrow_mut()
         .free_pages(&wrapper as *const _ as u64)
 }
 
-pub extern "win64" fn delete(_: *mut FileProtocol) -> Status {
+pub extern "efiapi" fn delete(_: *mut FileProtocol) -> Status {
     Status::UNSUPPORTED
 }
 
-pub extern "win64" fn read(file: *mut FileProtocol, size: *mut usize, buf: *mut c_void) -> Status {
+pub extern "efiapi" fn read(file: *mut FileProtocol, size: *mut usize, buf: *mut c_void) -> Status {
     use crate::fat::Read;
     let wrapper = container_of_mut!(file, FileWrapper, proto);
     if let crate::fat::Node::Directory(d) = unsafe { &mut (*wrapper).node } {
@@ -178,15 +178,15 @@ pub extern "win64" fn read(file: *mut FileProtocol, size: *mut usize, buf: *mut 
     }
 }
 
-pub extern "win64" fn write(_: *mut FileProtocol, _: *mut usize, _: *mut c_void) -> Status {
+pub extern "efiapi" fn write(_: *mut FileProtocol, _: *mut usize, _: *mut c_void) -> Status {
     Status::UNSUPPORTED
 }
 
-pub extern "win64" fn get_position(_: *mut FileProtocol, _: *mut u64) -> Status {
+pub extern "efiapi" fn get_position(_: *mut FileProtocol, _: *mut u64) -> Status {
     Status::UNSUPPORTED
 }
 
-pub extern "win64" fn set_position(file: *mut FileProtocol, position: u64) -> Status {
+pub extern "efiapi" fn set_position(file: *mut FileProtocol, position: u64) -> Status {
     // Seeking to end of file is not supported
     if position == 0xFFFFFFFFFFFFFFFF {
         return Status::UNSUPPORTED;
@@ -212,7 +212,7 @@ struct FileInfo {
     file_name: [Char16; 256],
 }
 
-pub extern "win64" fn get_info(
+pub extern "efiapi" fn get_info(
     file: *mut FileProtocol,
     guid: *mut Guid,
     info_size: *mut usize,
@@ -245,7 +245,7 @@ pub extern "win64" fn get_info(
     }
 }
 
-pub extern "win64" fn set_info(
+pub extern "efiapi" fn set_info(
     _: *mut FileProtocol,
     _: *mut Guid,
     _: usize,
@@ -254,7 +254,7 @@ pub extern "win64" fn set_info(
     Status::UNSUPPORTED
 }
 
-pub extern "win64" fn flush(_: *mut FileProtocol) -> Status {
+pub extern "efiapi" fn flush(_: *mut FileProtocol) -> Status {
     Status::UNSUPPORTED
 }
 
