@@ -42,7 +42,7 @@ jump_to_64bit:
     # load a 64-bit code segment into our GDT.
     lgdtl GDT64_PTR
     # Initialize the stack pointer (Rust code always uses the stack)
-    movl $stack_start, %esp
+    movl $stack_end, %esp
     # Set segment registers to a 64-bit segment.
     movw $0x10, %ax
     movw %ax, %ds
