@@ -4,5 +4,6 @@
 #[cfg(not(test))]
 pub mod asm;
 pub mod gdt;
+pub mod layout;
 pub mod paging;
 pub mod sse;
