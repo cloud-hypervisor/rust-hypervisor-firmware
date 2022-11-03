@@ -15,20 +15,22 @@ SECTIONS
 
   /* These sections are mapped into RAM from the file. Omitting :ram from
      later sections avoids emitting empty sections in the final binary.       */
-  text_start = .;
+  code_start = .;
   .text.boot  : { *(.text.boot)        }
   .text       : { *(.text .text.*)     }
   . = ALIGN(4K);
-  text_end = .;
+  code_end = .;
+
+  data_start = .;
   .data       : { *(.data .data.*)     }
   .rodata     : { *(.rodata .rodata.*) }
 
   /* The BSS section isn't mapped from file data. It is just zeroed in RAM. */
   .bss : {
-    bss_start = .;
     *(.bss .bss.*)
-    bss_size = . - bss_start;
   }
+  . = ALIGN(4K);
+  data_end = .;
 
   stack_start = .;
   .stack (NOLOAD) : ALIGN(4K) { . += 128K; }
