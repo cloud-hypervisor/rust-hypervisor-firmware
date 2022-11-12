@@ -150,7 +150,7 @@ pub extern "efiapi" fn write_blocks(
     let wrapper = unsafe { &*wrapper };
 
     let block_size = wrapper.media.block_size as usize;
-    let blocks = (size / block_size) as usize;
+    let blocks = size / block_size;
     let mut region = crate::mem::MemoryRegion::new(buffer as u64, size as u64);
 
     for i in 0..blocks {

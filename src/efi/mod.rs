@@ -391,12 +391,9 @@ pub extern "efiapi" fn allocate_pages(
     let (status, new_address) =
         ALLOCATOR
             .borrow_mut()
-            .allocate_pages(
-                allocate_type,
-                memory_type,
-                pages as u64,
-                unsafe { *address } as u64,
-            );
+            .allocate_pages(allocate_type, memory_type, pages as u64, unsafe {
+                *address
+            });
     if status == Status::SUCCESS {
         unsafe {
             *address = new_address;
@@ -1077,7 +1074,7 @@ pub fn efi_exec(
                 0x22,
                 &[0x00, 0x80, 0xc7, 0x3c, 0x88, 0x81],
             ),
-            vendor_table: acpi_rsdp_ptr as u64 as *mut _,
+            vendor_table: acpi_rsdp_ptr as *mut _,
         }
     } else {
         efi::ConfigurationTable {
