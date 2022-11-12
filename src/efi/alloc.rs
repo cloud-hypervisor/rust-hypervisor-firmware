@@ -54,7 +54,7 @@ impl Allocator {
     ) -> Status {
         self.key += 1;
 
-        if self.first_allocation == None {
+        if self.first_allocation.is_none() {
             let mut a = &mut self.allocations[0];
 
             a.in_use = true;
@@ -72,7 +72,7 @@ impl Allocator {
         // Find the last used allocation
         let mut cur = self.first_allocation;
         let mut last = cur.unwrap();
-        while cur != None {
+        while cur.is_some() {
             last = cur.unwrap();
             cur = self.allocations[last].next_allocation;
         }
@@ -117,7 +117,7 @@ impl Allocator {
         address: u64,
     ) -> Option<usize> {
         let mut cur = self.first_allocation;
-        while cur != None {
+        while cur.is_some() {
             let a = &mut self.allocations[cur.unwrap()];
 
             if a.descriptor.r#type != efi::CONVENTIONAL_MEMORY as u32 {
@@ -209,7 +209,7 @@ impl Allocator {
     ) -> (Status, u64) {
         let dest = self.find_free_memory(allocate_type, page_count, address);
 
-        if dest == None {
+        if dest.is_none() {
             return (Status::OUT_OF_RESOURCES, 0);
         }
 
@@ -234,7 +234,7 @@ impl Allocator {
                 // If allocating at the beginning, can just ignore 2nd half as is already marked as free
                 if self.allocations[dest].descriptor.physical_start == address {
                     let split = self.split_allocation(dest, page_count);
-                    if split == None {
+                    if split.is_none() {
                         return (Status::OUT_OF_RESOURCES, 0);
                     }
                     assigned = dest
@@ -243,7 +243,7 @@ impl Allocator {
                     let pages =
                         (address - self.allocations[dest].descriptor.physical_start) / PAGE_SIZE;
                     let split = self.split_allocation(dest, pages);
-                    if split == None {
+                    if split.is_none() {
                         return (Status::OUT_OF_RESOURCES, 0);
                     }
                     let split = split.unwrap();
@@ -251,7 +251,7 @@ impl Allocator {
                     // If second half bigger than we need, split again but ignore that bit
                     if self.allocations[split].descriptor.number_of_pages > page_count {
                         let second_split = self.split_allocation(split, page_count);
-                        if second_split == None {
+                        if second_split.is_none() {
                             return (Status::OUT_OF_RESOURCES, 0);
                         }
                     }
@@ -262,7 +262,7 @@ impl Allocator {
             efi::ALLOCATE_MAX_ADDRESS | efi::ALLOCATE_ANY_PAGES => {
                 // With the more general allocation we always put at the start of the range
                 let split = self.split_allocation(dest, page_count);
-                if split == None {
+                if split.is_none() {
                     return (Status::OUT_OF_RESOURCES, 0);
                 }
 
@@ -288,7 +288,7 @@ impl Allocator {
     fn merge_free_memory(&mut self) {
         let mut cur = self.first_allocation;
 
-        while cur != None {
+        while cur.is_some() {
             let next_allocation = self.allocations[cur.unwrap()].next_allocation;
 
             if next_allocation.is_none() {
@@ -322,7 +322,7 @@ impl Allocator {
     pub fn free_pages(&mut self, address: u64) -> Status {
         let mut cur = self.first_allocation;
 
-        while cur != None {
+        while cur.is_some() {
             let a = &mut self.allocations[cur.unwrap()];
 
             if address == a.descriptor.physical_start {
@@ -340,7 +340,7 @@ impl Allocator {
         let mut count = 0;
         let mut cur = self.first_allocation;
 
-        while cur != None {
+        while cur.is_some() {
             cur = self.allocations[cur.unwrap()].next_allocation;
             count += 1;
         }
@@ -354,7 +354,7 @@ impl Allocator {
         let mut count = 0;
         let mut cur = self.first_allocation;
 
-        while cur != None {
+        while cur.is_some() {
             out[count] = self.allocations[cur.unwrap()].descriptor;
             cur = self.allocations[cur.unwrap()].next_allocation;
             count += 1;
@@ -368,7 +368,7 @@ impl Allocator {
 
         'outer: while i < descriptors.len() {
             let mut cur = self.first_allocation;
-            while cur != None {
+            while cur.is_some() {
                 if self.allocations[cur.unwrap()].descriptor.physical_start
                     == descriptors[i].physical_start
                 {
