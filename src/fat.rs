@@ -857,7 +857,7 @@ impl<'a> Filesystem<'a> {
             // residual is what is left
             let sub = match &residual[1..]
                 .find('/')
-                .or_else(|| (&residual[1..]).find('\\'))
+                .or_else(|| (residual[1..]).find('\\'))
             {
                 None => {
                     let sub = &residual[1..];
