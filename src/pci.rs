@@ -192,7 +192,7 @@ impl PciDevice {
 
         //0x24 offset is last bar
         while current_bar_offset <= 0x24 {
-            #[allow(clippy::blacklisted_name)]
+            #[allow(clippy::disallowed_names)]
             let bar = self.read_u32(current_bar_offset);
 
             // lsb is 1 for I/O space bars
@@ -211,7 +211,7 @@ impl PciDevice {
                         self.bars[current_bar].address = u64::from(bar & 0xffff_fff0);
                         current_bar_offset += 4;
 
-                        #[allow(clippy::blacklisted_name)]
+                        #[allow(clippy::disallowed_names)]
                         let bar = self.read_u32(current_bar_offset);
                         self.bars[current_bar].address += u64::from(bar) << 32;
                     }
@@ -223,7 +223,7 @@ impl PciDevice {
             current_bar_offset += 4;
         }
 
-        #[allow(clippy::blacklisted_name)]
+        #[allow(clippy::disallowed_names)]
         for bar in &self.bars {
             log!("Bar: type={:?} address={:x}", bar.bar_type, bar.address);
         }
@@ -308,7 +308,7 @@ impl VirtioTransport for VirtioPciTransport {
                 //         le32 length;    /* Length of the structure, in bytes. */
                 // };
                 let cfg_type = self.device.read_u8(cap_next + 3);
-                #[allow(clippy::blacklisted_name)]
+                #[allow(clippy::disallowed_names)]
                 let bar = self.device.read_u8(cap_next + 4);
                 let offset = self.device.read_u32(cap_next + 8);
                 let length = self.device.read_u32(cap_next + 12);
