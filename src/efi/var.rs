@@ -52,12 +52,8 @@ impl VariableAllocator {
         let mut name: Vec<u16> = Vec::new();
         name.extend_from_slice(s);
         let guid = unsafe { &*guid };
-        for i in 0..self.allocations.len() {
-            if name == self.allocations[i].name && guid == &self.allocations[i].guid {
-                return Some(i);
-            }
-        }
-        None
+        (0..self.allocations.len())
+            .find(|&i| name == self.allocations[i].name && guid == &self.allocations[i].guid)
     }
 
     pub fn get(
