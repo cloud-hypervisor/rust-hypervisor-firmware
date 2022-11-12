@@ -72,7 +72,7 @@ impl VariableAllocator {
             return efi::Status::INVALID_PARAMETER;
         }
         let index = self.find(name, guid);
-        if index == None {
+        if index.is_none() {
             return efi::Status::NOT_FOUND;
         }
         let a = &self.allocations[index.unwrap()];
@@ -113,7 +113,7 @@ impl VariableAllocator {
             return efi::Status::INVALID_PARAMETER;
         }
         let index = self.find(name, guid);
-        if index == None {
+        if index.is_none() {
             // new variable
             if size == 0 {
                 return efi::Status::NOT_FOUND;
