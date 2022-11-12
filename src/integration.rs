@@ -73,7 +73,7 @@ mod tests {
                 .join("cloud-init")
                 .join("clear")
                 .join("openstack");
-            fs::create_dir_all(&cloud_init_directory.join("latest"))
+            fs::create_dir_all(cloud_init_directory.join("latest"))
                 .expect("Expect creating cloud-init directory to succeed");
             let source_file_dir = std::env::current_dir()
                 .unwrap()
@@ -101,15 +101,15 @@ mod tests {
                 .write_all(user_data_string.as_bytes())
                 .expect("Expected writing out user_data to succeed");
             std::process::Command::new("mkdosfs")
-                .args(&["-n", "config-2"])
-                .args(&["-C", cloudinit_file_path.as_str()])
+                .args(["-n", "config-2"])
+                .args(["-C", cloudinit_file_path.as_str()])
                 .arg("8192")
                 .output()
                 .expect("Expect creating disk image to succeed");
             std::process::Command::new("mcopy")
                 .arg("-o")
-                .args(&["-i", cloudinit_file_path.as_str()])
-                .args(&["-s", cloud_init_directory.to_str().unwrap(), "::"])
+                .args(["-i", cloudinit_file_path.as_str()])
+                .args(["-s", cloud_init_directory.to_str().unwrap(), "::"])
                 .output()
                 .expect("Expect copying files to disk image to succeed");
             cloudinit_file_path
@@ -156,8 +156,8 @@ mod tests {
                 .expect("Expected writing out network-config to succeed");
 
             std::process::Command::new("mkdosfs")
-                .args(&["-n", "cidata"])
-                .args(&["-C", cloudinit_file_path.as_str()])
+                .args(["-n", "cidata"])
+                .args(["-C", cloudinit_file_path.as_str()])
                 .arg("8192")
                 .output()
                 .expect("Expect creating disk image to succeed");
@@ -167,8 +167,8 @@ mod tests {
                 .for_each(|x| {
                     std::process::Command::new("mcopy")
                         .arg("-o")
-                        .args(&["-i", cloudinit_file_path.as_str()])
-                        .args(&["-s", cloud_init_directory.join(x).to_str().unwrap(), "::"])
+                        .args(["-i", cloudinit_file_path.as_str()])
+                        .args(["-s", cloud_init_directory.join(x).to_str().unwrap(), "::"])
                         .output()
                         .expect("Expect copying files to disk image to succeed");
                 });
@@ -215,7 +215,7 @@ mod tests {
 
             // losetup -d <loopback_device>
             std::process::Command::new("losetup")
-                .args(&["-d", self.loopback_device.as_str()])
+                .args(["-d", self.loopback_device.as_str()])
                 .output()
                 .expect("Expect removing loopback device to succeed");
         }
@@ -266,7 +266,7 @@ mod tests {
         std::process::Command::new("dmsetup")
             .arg("create")
             .arg(windows_snapshot_cow.as_str())
-            .args(&[
+            .args([
                 "--table",
                 format!(
                     "0 {} linear {} 0",
@@ -289,7 +289,7 @@ mod tests {
         std::process::Command::new("dmsetup")
             .arg("create")
             .arg(windows_snapshot.as_str())
-            .args(&[
+            .args([
                 "--table",
                 format!(
                     "0 {} snapshot /dev/mapper/windows-base /dev/mapper/{} P 8",
@@ -315,14 +315,14 @@ mod tests {
     fn prepare_os_disk(tmp_dir: &TempDir, image_name: &str) -> String {
         let src_osdisk = dirs::home_dir().unwrap().join("workloads").join(image_name);
         let dest_osdisk = tmp_dir.path().join(image_name);
-        fs::copy(&src_osdisk, &dest_osdisk).expect("Expect copying OS disk to succeed");
+        fs::copy(src_osdisk, &dest_osdisk).expect("Expect copying OS disk to succeed");
 
         dest_osdisk.to_str().unwrap().to_owned()
     }
 
     fn prepare_tap(net: &GuestNetworkConfig) {
         assert!(std::process::Command::new("bash")
-            .args(&[
+            .args([
                 "-c",
                 &format!("sudo ip tuntap add name {} mode tap", net.tap_name),
             ])
@@ -331,7 +331,7 @@ mod tests {
             .success());
 
         assert!(std::process::Command::new("bash")
-            .args(&[
+            .args([
                 "-c",
                 &format!("sudo ip addr add {}/24 dev {}", net.host_ip, net.tap_name),
             ])
@@ -340,7 +340,7 @@ mod tests {
             .success());
 
         assert!(std::process::Command::new("bash")
-            .args(&["-c", &format!("sudo ip link set dev {} up", net.tap_name)])
+            .args(["-c", &format!("sudo ip link set dev {} up", net.tap_name)])
             .status()
             .expect("Expected upping interface to work")
             .success());
@@ -348,7 +348,7 @@ mod tests {
 
     fn cleanup_tap(net: &GuestNetworkConfig) {
         assert!(std::process::Command::new("bash")
-            .args(&[
+            .args([
                 "-c",
                 &format!("sudo ip tuntap de name {} mode tap", net.tap_name),
             ])
@@ -491,7 +491,7 @@ mod tests {
                 .join("workloads")
                 .join("cloud-hypervisor");
             let mut c = Command::new(clh_path.to_str().unwrap());
-            c.args(&[
+            c.args([
                 "--console",
                 "off",
                 "--serial",
@@ -523,7 +523,7 @@ mod tests {
             net: &GuestNetworkConfig,
         ) -> Child {
             let mut c = Command::new("qemu-system-x86_64");
-            c.args(&[
+            c.args([
                 "-machine",
                 "q35,accel=kvm",
                 "-cpu",
@@ -685,7 +685,7 @@ mod tests {
             prepare_tap(&net);
 
             let mut c = Command::new("qemu-system-x86_64");
-            c.args(&[
+            c.args([
                 "-machine",
                 "q35,accel=kvm",
                 "-cpu",
@@ -771,7 +771,7 @@ mod tests {
                 .join("workloads")
                 .join("cloud-hypervisor");
             let mut c = Command::new(clh_path.to_str().unwrap());
-            c.args(&[
+            c.args([
                 "--cpus",
                 "boot=2,kvm_hyperv=on",
                 "--memory",
