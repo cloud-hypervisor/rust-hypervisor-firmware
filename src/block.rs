@@ -63,6 +63,7 @@ struct UsedElem {
 pub struct VirtioBlockDevice<'a> {
     transport: &'a mut dyn VirtioTransport,
     state: RefCell<DriverState>,
+    read_only: bool,
 }
 
 #[repr(C)]
@@ -147,12 +148,14 @@ impl<'a> VirtioBlockDevice<'a> {
         VirtioBlockDevice {
             transport,
             state: RefCell::new(DriverState::default()),
+            read_only: false,
         }
     }
 
     pub fn init(&mut self) -> Result<(), VirtioError> {
         const VIRTIO_SUBSYSTEM_BLOCK: u32 = 0x2;
         const VIRTIO_F_VERSION_1: u64 = 1 << 32;
+        const VIRTIO_BLK_F_RO: u64 = 1 << 5;
 
         const VIRTIO_STATUS_RESET: u32 = 0;
         const VIRTIO_STATUS_ACKNOWLEDGE: u32 = 1;
@@ -181,8 +184,11 @@ impl<'a> VirtioBlockDevice<'a> {
             return Err(VirtioError::LegacyOnly);
         }
 
+        // Detect if device is read-only
+        self.read_only = (device_features & VIRTIO_BLK_F_RO) == VIRTIO_BLK_F_RO;
+
         // Don't support any advanced features for now
-        let supported_features = VIRTIO_F_VERSION_1;
+        let supported_features = VIRTIO_F_VERSION_1 | VIRTIO_BLK_F_RO;
 
         // Report driver features
         self.transport
@@ -329,10 +335,16 @@ impl<'a> SectorRead for VirtioBlockDevice<'a> {
 
 impl<'a> SectorWrite for VirtioBlockDevice<'a> {
     fn write(&self, sector: u64, data: &mut [u8]) -> Result<(), Error> {
+        if self.read_only {
+            return Err(Error::BlockNotSupported);
+        }
         self.request(sector, Some(data), RequestType::Write)
     }
 
     fn flush(&self) -> Result<(), Error> {
+        if self.read_only {
+            return Err(Error::BlockNotSupported);
+        }
         self.request(0, None, RequestType::Flush)
     }
 }
