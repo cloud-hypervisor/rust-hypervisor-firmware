@@ -237,6 +237,7 @@ cmd_help() {
 }
 
 cmd_build() {
+    arch="$(uname -m)"
     build="debug"
     features_build=""
     exported_device="dev/kvm"
@@ -262,20 +263,22 @@ cmd_build() {
 
     process_volumes_args
 
+    [ "$arch" = "aarch64" ] && target="aarch64-unknown-none.json"
+    [ "$arch" = "x86_64" ] && target="x86_64-unknown-none.json"
+
     cargo_args=("$@")
     [ $build = "release" ] && cargo_args+=("--release")
 
     rustflags=""
 
     $DOCKER_RUNTIME run \
-	   --user "$(id -u):$(id -g)" \
 	   --workdir "$CTR_RHF_ROOT_DIR" \
 	   --rm \
 	   --volume $exported_device \
 	   --volume "$RHF_ROOT_DIR:$CTR_RHF_ROOT_DIR" $exported_volumes \
 	   --env RUSTFLAGS="$rustflags" \
 	   "$CTR_IMAGE" \
-	   cargo build --target "x86_64-unknown-none.json" \
+	   cargo build --target "$target" \
 	         -Zbuild-std=core,alloc \
 	         -Zbuild-std-features=compiler-builtins-mem \
 	         --target-dir "$CTR_RHF_CARGO_TARGET" \
@@ -289,7 +292,6 @@ cmd_clean() {
     ensure_latest_ctr
 
     $DOCKER_RUNTIME run \
-	   --user "$(id -u):$(id -g)" \
 	   --workdir "$CTR_RHF_ROOT_DIR" \
 	   --rm \
 	   --volume "$RHF_ROOT_DIR:$CTR_RHF_ROOT_DIR" $exported_volumes \
@@ -300,6 +302,7 @@ cmd_clean() {
 }
 
 cmd_tests() {
+    arch="$(uname -m)"
     unit=false
     cargo=false
     integration=false
@@ -319,7 +322,7 @@ cmd_tests() {
                 shift
                 arg_vols="$1"
                 ;;
-            "--all")                 { cargo=true; unit=true; integration=true; } ;;
+            "--all")                 { cargo=true; unit=true;  [ "$arch" = "x86_64" ] && integration=true; } ;;
             "--")                    { shift; break; } ;;
             *)
 		die "Unknown tests argument: $1. Please use --help for help."
@@ -327,6 +330,18 @@ cmd_tests() {
 	esac
 	shift
     done
+
+    if [ "$(uname -m)" = "aarch64" ] ; then
+        if [ "$integration" = true ] ; then
+            die "Integration test is not supported for aarch64."
+        fi
+        if [ "$integration_coreboot" = true ] ; then
+            die "coreboot integration test is not supported for aarch64."
+        fi
+        if [ "$integration_windows" = true ] ; then
+            die "Windows integration test is not supported for aarch64."
+        fi
+    fi
 
     ensure_build_dir
     ensure_latest_ctr
@@ -413,6 +428,8 @@ cmd_tests() {
 
 
 cmd_build-container() {
+    arch="$(uname -m)"
+
     while [ $# -gt 0 ]; do
 	case "$1" in
             "-h"|"--help")  { cmd_help; exit 1; } ;;
@@ -431,7 +448,8 @@ cmd_build-container() {
     mkdir -p $BUILD_DIR
     cp $RHF_DOCKERFILE $BUILD_DIR
 
-    [ $(uname -m) = "x86_64" ] && TARGETARCH="amd64"
+    [ "$arch" = "aarch64" ] && TARGETARCH="arm64"
+    [ "$arch" = "x86_64" ] && TARGETARCH="amd64"
     RUST_TOOLCHAIN="$(rustup show active-toolchain | cut -d ' ' -f1)"
 
     $DOCKER_RUNTIME build \
