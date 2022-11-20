@@ -14,7 +14,8 @@ ENV PATH="$PATH:$CARGO_HOME/bin"
 ENV COREBOOT_DIR=/opt/coreboot/src
 
 # Install all CI dependencies
-RUN apt-get update \
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+	apt-get update \
 	&& apt-get -yq upgrade \
 	&& DEBIAN_FRONTEND=noninteractive apt-get install -yq \
 	build-essential \
@@ -49,7 +50,29 @@ RUN apt-get update \
 	zlib1g-dev \
 	gnat-9 \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+	; fi
+
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+	apt-get update \
+	&& apt-get -yq upgrade \
+	&& DEBIAN_FRONTEND=noninteractive apt-get install -yq \
+	build-essential \
+	docker.io \
+	curl \
+	wget \
+	sudo \
+	mtools \
+	libssl-dev \
+	pkg-config \
+	qemu-utils \
+	libseccomp-dev \
+	libcap-ng-dev \
+	libcap2-bin \
+	dosfstools \
+	&& apt-get clean \
+	&& rm -rf /var/lib/apt/lists/* \
+	; fi
 
 # Fix the libssl-dev install
 RUN export ARCH="$(uname -m)" \
@@ -62,22 +85,26 @@ ENV OPENSSL_INCLUDE_DIR=/usr/include/
 
 # Install the rust toolchain
 RUN export ARCH="$(uname -m)" \
-    && nohup curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain "$RUST_TOOLCHAIN" \
-    && rustup component add rustfmt \
-    && rustup component add clippy \
-    && rustup component add rust-src \
-    && rm -rf "$CARGO_HOME/registry" \
-    && ln -s "$CARGO_REGISTRY_DIR" "$CARGO_HOME/registry" \
-    && rm -rf "$CARGO_HOME/git" \
-    && ln -s "$CARGO_GIT_REGISTRY_DIR" "$CARGO_HOME/git"
+	&& nohup curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain "$RUST_TOOLCHAIN" \
+	&& rustup component add rustfmt \
+	&& rustup component add clippy \
+	&& rustup component add rust-src \
+	&& rustup target add aarch64-unknown-linux-gnu \
+	&& rustup target add x86_64-unknown-linux-gnu \
+	&& rm -rf "$CARGO_HOME/registry" \
+	&& ln -s "$CARGO_REGISTRY_DIR" "$CARGO_HOME/registry" \
+	&& rm -rf "$CARGO_HOME/git" \
+	&& ln -s "$CARGO_GIT_REGISTRY_DIR" "$CARGO_HOME/git"
 
 # Set the rust environment
 RUN echo 'source $CARGO_HOME/env' >> $HOME/.bashrc \
-    && mkdir $HOME/.cargo \
-    && ln -s $CARGO_HOME/env $HOME/.cargo/env
+	&& mkdir $HOME/.cargo \
+	&& ln -s $CARGO_HOME/env $HOME/.cargo/env
 
 # Checkout coreboot repository and setup cross toolchains
-RUN git clone --quiet --branch "$COREBOOT_VERSION" --depth 1 https://github.com/coreboot/coreboot.git "$COREBOOT_DIR" \
-    && cd "$COREBOOT_DIR" \
-    && git submodule update --init --checkout \
-    && make crossgcc-i386 CPUS=`nproc`
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+	git clone --quiet --branch "$COREBOOT_VERSION" --depth 1 https://github.com/coreboot/coreboot.git "$COREBOOT_DIR" \
+	&& cd "$COREBOOT_DIR" \
+	&& git submodule update --init --checkout \
+	&& make crossgcc-i386 CPUS=`nproc`; \
+	fi
