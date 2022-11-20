@@ -9,6 +9,14 @@ jobs:
     if: github.event_name == 'pull_request'
     name: Build
     runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-none.json
+            tests: true
+          - target: aarch64-unknown-none.json
+            tests: false
     steps:
       - name: Code checkout
         uses: actions/checkout@v2
@@ -16,23 +24,20 @@ jobs:
           fetch-depth: 0
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      - name: Install rust-src
-        run: rustup component add rust-src
-      - name: Install clippy
-        run: rustup component add clippy
-      - name: Install rustfmt
-        run: rustup component add rustfmt
+      - name: Install Rust components
+        run: rustup component add rust-src clippy rustfmt
       - name: Build (debug)
-        run: cargo build --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+        run: cargo build --target ${{ matrix.target }} -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
       - name: Build (release)
-        run: cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+        run: cargo build --release --target ${{ matrix.target }} -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
       - name: Clippy (default)
-        run: cargo clippy --target x86_64-unknown-none.json -Zbuild-std=core,alloc
+        run: cargo clippy --target ${{ matrix.target }} -Zbuild-std=core,alloc
       - name: Clippy (all targets, all features)
         run: cargo clippy --all-targets --all-features
       - name: Formatting
         run: cargo fmt --all -- --check 
-      - name: Unit tests
+      - if: ${{ matrix.tests }}
+        name: Unit tests
         run: |
           sudo apt-get install -y mtools
           bash scripts/run_unit_tests.sh

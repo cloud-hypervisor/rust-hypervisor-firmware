@@ -18,24 +18,32 @@ jobs:
       - name: Code checkout
         uses: actions/checkout@v2
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
       - name: Get active Rust toolchain
         id: get-toolchain
         run: echo "toolchain=`rustup show active-toolchain | cut -d ' ' -f1`" >> $GITHUB_ENV
 
       - name: Login to DockerHub
         if: ${{ github.repository == 'cloud-hypervisor/rust-hypervisor-firmware' && github.event_name == 'push' }}
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           file: ./resources/Dockerfile
           build-args: |
             RUST_TOOLCHAIN=${{ env.toolchain }}
-          platforms: linux/amd64
+          platforms: |
+            linux/arm64
+            linux/amd64
           push: ${{ github.repository == 'cloud-hypervisor/rust-hypervisor-firmware' && github.event_name == 'push' }}
           tags: rusthypervisorfirmware/dev:latest
 
