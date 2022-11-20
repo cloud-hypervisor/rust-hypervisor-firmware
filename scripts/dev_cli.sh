@@ -157,9 +157,44 @@ ensure_build_dir() {
 
 # Make sure we're using the latest dev container, by just pulling it.
 ensure_latest_ctr() {
-    $DOCKER_RUNTIME pull "$CTR_IMAGE"
+    if [ "$CTR_IMAGE_VERSION" = "local" ]; then
+        build_container
+    else
+        arch="$(uname -m)"
+        [ "$arch" = "aarch64" ] && PLATFORM="linux/arm64"
+        [ "$arch" = "x86_64" ] && PLATFORM="linux/amd64"
 
-    ok_or_die "Error pulling container image. Aborting."
+        $DOCKER_RUNTIME pull --platform "$PLATFORM" "$CTR_IMAGE"
+
+        if [ $? -ne 0 ]; then
+            build_container
+        fi
+
+        ok_or_die "Error pulling container image. Aborting."
+    fi
+}
+
+build_container() {
+    arch="$(uname -m)"
+
+    ensure_build_dir
+
+    BUILD_DIR="$RHF_CTR_BUILD_DIR"
+
+    mkdir -p $BUILD_DIR
+    cp $RHF_DOCKERFILE $BUILD_DIR
+
+    [ "$arch" = "aarch64" ] && TARGETARCH="arm64"
+    [ "$arch" = "x86_64" ] && TARGETARCH="amd64"
+
+    RUST_TOOLCHAIN="$(rustup show active-toolchain | cut -d ' ' -f1)"
+
+    $DOCKER_RUNTIME build \
+        -t $CTR_IMAGE \
+        -f $BUILD_DIR/Dockerfile \
+        --build-arg TARGETARCH=$TARGETARCH \
+        --build-arg RUST_TOOLCHAIN=$RUST_TOOLCHAIN \
+        $BUILD_DIR
 }
 
 cmd_help() {
@@ -452,6 +487,10 @@ cmd_shell() {
 while [ $# -gt 0 ]; do
     case "$1" in
         -h|--help)              { cmd_help; exit 1; } ;;
+        -l|--local)             {
+            CTR_IMAGE_VERSION="local"
+            CTR_IMAGE="${CTR_IMAGE_TAG}:${CTR_IMAGE_VERSION}"
+        } ;;
         -y|--unattended)        { OPT_UNATTENDED=true; } ;;
         -*)
             die "Unknown arg: $1. Please use \`$0 help\` for help."
