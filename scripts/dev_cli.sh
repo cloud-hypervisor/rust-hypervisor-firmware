@@ -378,12 +378,9 @@ cmd_tests() {
 
 
 cmd_build-container() {
-    container_type="dev"
-
     while [ $# -gt 0 ]; do
 	case "$1" in
             "-h"|"--help")  { cmd_help; exit 1; } ;;
-            "--dev")        { container_type="dev"; } ;;
             "--")           { shift; break; } ;;
             *)
 		die "Unknown build-container argument: $1. Please use --help for help."
