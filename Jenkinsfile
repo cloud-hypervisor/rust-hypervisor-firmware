@@ -62,6 +62,21 @@ pipeline {
                                                 }
                                         }
                                 }
+                                stage ('AArch64 Unit Tests') {
+                                        agent { node { label 'focal-arm64' } }
+                                        stages {
+                                                stage ('Checkout') {
+                                                        steps {
+                                                                checkout scm
+                                                        }
+                                                }
+                                                stage('Run unit tests') {
+                                                          steps {
+                                                                  sh "scripts/dev_cli.sh --local tests --unit"
+                                                          }
+                                                }
+                                        }
+                                }
                         }
                 }
         }
