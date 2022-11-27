@@ -14,7 +14,7 @@
 
 use crate::{
     block::SectorBuf,
-    boot,
+    bootinfo,
     bzimage::{self, Kernel},
     common::ascii_strip,
     fat::{self, Read},
@@ -217,7 +217,10 @@ fn default_entry_path(fs: &fat::Filesystem) -> Result<[u8; 260], Error> {
     Ok(entry_path)
 }
 
-pub fn load_default_entry(fs: &fat::Filesystem, info: &dyn boot::Info) -> Result<Kernel, Error> {
+pub fn load_default_entry(
+    fs: &fat::Filesystem,
+    info: &dyn bootinfo::Info,
+) -> Result<Kernel, Error> {
     let default_entry_path = default_entry_path(fs)?;
     let default_entry_path = ascii_strip(&default_entry_path);
 

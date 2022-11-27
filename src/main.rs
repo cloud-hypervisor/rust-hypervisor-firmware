@@ -35,6 +35,7 @@ mod common;
 mod arch;
 mod block;
 mod boot;
+mod bootinfo;
 mod bzimage;
 #[cfg(target_arch = "x86_64")]
 mod cmos;
@@ -75,7 +76,7 @@ fn panic(_: &PanicInfo) -> ! {
 const VIRTIO_PCI_VENDOR_ID: u16 = 0x1af4;
 const VIRTIO_PCI_BLOCK_DEVICE_ID: u16 = 0x1042;
 
-fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn boot::Info) -> bool {
+fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::Info) -> bool {
     if let Err(err) = device.init() {
         log!("Error configuring block device: {:?}", err);
         return false;
@@ -153,7 +154,7 @@ pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh:
 }
 
 #[cfg(target_arch = "x86_64")]
-fn main(info: &dyn boot::Info) -> ! {
+fn main(info: &dyn bootinfo::Info) -> ! {
     log!("\nBooting with {}", info.name());
 
     pci::print_bus();
