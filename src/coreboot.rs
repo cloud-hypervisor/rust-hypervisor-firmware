@@ -5,7 +5,7 @@
 
 use core::mem::size_of;
 
-use crate::boot::{E820Entry, Info};
+use crate::bootinfo::{EntryType, Info, MemoryEntry};
 
 #[derive(Debug)]
 #[repr(C)]
@@ -38,11 +38,22 @@ struct Forward {
     forward: u64,
 }
 
+#[derive(Clone, Copy)]
 #[repr(packed, C)]
 struct MemMapEntry {
     addr: u64,
     size: u64,
     entry_type: u32,
+}
+
+impl From<MemMapEntry> for MemoryEntry {
+    fn from(value: MemMapEntry) -> Self {
+        Self {
+            addr: value.addr,
+            size: value.size,
+            entry_type: EntryType::from(value.entry_type),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -88,21 +99,17 @@ impl Info for StartInfo {
     fn cmdline(&self) -> &[u8] {
         b""
     }
-    fn num_entries(&self) -> u8 {
+    fn num_entries(&self) -> usize {
         if self.memmap_addr == 0 {
             return 0;
         }
-        self.memmap_entries as u8
+        self.memmap_entries
     }
-    fn entry(&self, idx: u8) -> E820Entry {
+    fn entry(&self, idx: usize) -> MemoryEntry {
         assert!(idx < self.num_entries());
         let ptr = self.memmap_addr as *const MemMapEntry;
-        let entry = unsafe { &*ptr.offset(idx as isize) };
-        E820Entry {
-            addr: entry.addr,
-            size: entry.size,
-            entry_type: entry.entry_type,
-        }
+        let entry = unsafe { &*ptr.add(idx) };
+        MemoryEntry::from(*entry)
     }
 }
 

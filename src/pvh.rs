@@ -1,7 +1,7 @@
 use core::mem::size_of;
 
 use crate::{
-    boot::{E820Entry, Info},
+    bootinfo::{EntryType, Info, MemoryEntry},
     common,
 };
 
@@ -30,6 +30,16 @@ struct MemMapEntry {
     _pad: u32,
 }
 
+impl From<MemMapEntry> for MemoryEntry {
+    fn from(value: MemMapEntry) -> Self {
+        Self {
+            addr: value.addr,
+            size: value.size,
+            entry_type: EntryType::from(value.entry_type),
+        }
+    }
+}
+
 impl Info for StartInfo {
     fn name(&self) -> &str {
         "PVH Boot Protocol"
@@ -40,22 +50,18 @@ impl Info for StartInfo {
     fn cmdline(&self) -> &[u8] {
         unsafe { common::from_cstring(self.cmdline_paddr) }
     }
-    fn num_entries(&self) -> u8 {
+    fn num_entries(&self) -> usize {
         // memmap_paddr and memmap_entries only exist in version 1 or later
         if self.version < 1 || self.memmap_paddr == 0 {
             return 0;
         }
-        self.memmap_entries as u8
+        self.memmap_entries as usize
     }
-    fn entry(&self, idx: u8) -> E820Entry {
+    fn entry(&self, idx: usize) -> MemoryEntry {
         assert!(idx < self.num_entries());
         let ptr = self.memmap_paddr as *const MemMapEntry;
-        let entry = unsafe { *ptr.offset(idx as isize) };
-        E820Entry {
-            addr: entry.addr,
-            size: entry.size,
-            entry_type: entry.entry_type,
-        }
+        let entry = unsafe { *ptr.add(idx) };
+        MemoryEntry::from(entry)
     }
 }
 

@@ -1,23 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (C) 2022 Akira Moroo
+
 use core::mem;
 
 use crate::{
+    bootinfo::{EntryType, Info, MemoryEntry},
     common,
     fat::{Error, Read},
     mem::MemoryRegion,
 };
-
-// Common data needed for all boot paths
-pub trait Info {
-    // Name of for this boot protocol
-    fn name(&self) -> &str;
-    // Starting address of the Root System Descriptor Pointer
-    fn rsdp_addr(&self) -> u64;
-    // The kernel command line (not including null terminator)
-    fn cmdline(&self) -> &[u8];
-    // Methods to access the E820 Memory map
-    fn num_entries(&self) -> u8;
-    fn entry(&self, idx: u8) -> E820Entry;
-}
 
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
@@ -29,6 +20,61 @@ pub struct E820Entry {
 
 impl E820Entry {
     pub const RAM_TYPE: u32 = 1;
+    pub const RESERVED_TYPE: u32 = 2;
+    pub const ACPI_RECLAIMABLE_TYPE: u32 = 3;
+    pub const ACPI_NVS_TYPE: u32 = 4;
+    pub const BAD_TYPE: u32 = 5;
+    pub const VENDOR_RESERVED_TYPE: u32 = 6; // coreboot only
+    pub const COREBOOT_TABLE_TYPE: u32 = 16; // coreboot only
+}
+
+impl From<u32> for EntryType {
+    fn from(value: u32) -> Self {
+        match value {
+            E820Entry::RAM_TYPE => Self::Ram,
+            E820Entry::RESERVED_TYPE => Self::Reserved,
+            E820Entry::ACPI_RECLAIMABLE_TYPE => Self::AcpiReclaimable,
+            E820Entry::ACPI_NVS_TYPE => Self::AcpiNvs,
+            E820Entry::BAD_TYPE => Self::Bad,
+            E820Entry::VENDOR_RESERVED_TYPE => Self::VendorReserved,
+            E820Entry::COREBOOT_TABLE_TYPE => Self::CorebootTable,
+            _ => panic!("Unsupported e820 type"),
+        }
+    }
+}
+
+impl From<EntryType> for u32 {
+    fn from(value: EntryType) -> Self {
+        match value {
+            EntryType::Ram => E820Entry::RAM_TYPE,
+            EntryType::Reserved => E820Entry::RESERVED_TYPE,
+            EntryType::AcpiReclaimable => E820Entry::ACPI_RECLAIMABLE_TYPE,
+            EntryType::AcpiNvs => E820Entry::ACPI_NVS_TYPE,
+            EntryType::Bad => E820Entry::BAD_TYPE,
+            EntryType::VendorReserved => E820Entry::VENDOR_RESERVED_TYPE,
+            EntryType::CorebootTable => E820Entry::COREBOOT_TABLE_TYPE,
+        }
+    }
+}
+
+impl From<MemoryEntry> for E820Entry {
+    fn from(value: MemoryEntry) -> Self {
+        Self {
+            addr: value.addr,
+            size: value.size,
+            entry_type: u32::from(value.entry_type),
+        }
+    }
+}
+
+impl From<E820Entry> for MemoryEntry {
+    fn from(value: E820Entry) -> Self {
+        Self {
+            addr: value.addr,
+            size: value.size,
+            entry_type: EntryType::from(value.entry_type),
+        }
+    }
 }
 
 // The so-called "zeropage"
@@ -80,9 +126,9 @@ impl Default for Params {
 
 impl Params {
     pub fn set_entries(&mut self, info: &dyn Info) {
-        self.e820_entries = info.num_entries();
+        self.e820_entries = info.num_entries() as u8;
         for i in 0..self.e820_entries {
-            self.e820_table[i as usize] = info.entry(i);
+            self.e820_table[i as usize] = info.entry(i as usize).into();
         }
     }
 }
@@ -97,12 +143,13 @@ impl Info for Params {
     fn cmdline(&self) -> &[u8] {
         unsafe { common::from_cstring(self.hdr.cmd_line_ptr as u64) }
     }
-    fn num_entries(&self) -> u8 {
-        self.e820_entries
+    fn num_entries(&self) -> usize {
+        self.e820_entries as usize
     }
-    fn entry(&self, idx: u8) -> E820Entry {
+    fn entry(&self, idx: usize) -> MemoryEntry {
         assert!(idx < self.num_entries());
-        self.e820_table[idx as usize]
+        let entry = self.e820_table[idx];
+        MemoryEntry::from(entry)
     }
 }
 

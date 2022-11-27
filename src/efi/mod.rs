@@ -34,7 +34,7 @@ use r_efi::{
     system::{ConfigurationTable, RuntimeServices},
 };
 
-use crate::boot;
+use crate::bootinfo;
 use crate::layout;
 use crate::rtc;
 
@@ -916,16 +916,19 @@ const PAGE_SIZE: u64 = 4096;
 const HEAP_SIZE: usize = 256 * 1024 * 1024;
 
 // Populate allocator from E820, fixed ranges for the firmware and the loaded binary.
-fn populate_allocator(info: &dyn boot::Info, image_address: u64, image_size: u64) {
+fn populate_allocator(info: &dyn bootinfo::Info, image_address: u64, image_size: u64) {
     for i in 0..info.num_entries() {
         let entry = info.entry(i);
-        if entry.entry_type == boot::E820Entry::RAM_TYPE {
-            ALLOCATOR.borrow_mut().add_initial_allocation(
-                efi::CONVENTIONAL_MEMORY,
-                entry.size / PAGE_SIZE,
-                entry.addr,
-                efi::MEMORY_WB,
-            );
+        match entry.entry_type {
+            bootinfo::EntryType::Ram => {
+                ALLOCATOR.borrow_mut().add_initial_allocation(
+                    efi::CONVENTIONAL_MEMORY,
+                    entry.size / PAGE_SIZE,
+                    entry.addr,
+                    efi::MEMORY_WB,
+                );
+            }
+            _ => continue,
         }
     }
 
@@ -1057,7 +1060,7 @@ pub fn efi_exec(
     address: u64,
     loaded_address: u64,
     loaded_size: u64,
-    info: &dyn boot::Info,
+    info: &dyn bootinfo::Info,
     fs: &crate::fat::Filesystem,
     block: *const crate::block::VirtioBlockDevice,
 ) {

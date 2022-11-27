@@ -15,7 +15,8 @@ use atomic_refcell::AtomicRefCell;
 
 use crate::{
     block::SectorBuf,
-    boot::{E820Entry, Header, Info, Params},
+    boot::{Header, Params},
+    bootinfo::{EntryType, Info},
     fat::{self, Read},
     mem::MemoryRegion,
 };
@@ -95,7 +96,7 @@ impl Kernel {
         let mut current_addr = None;
         for i in 0..self.0.num_entries() {
             let entry = self.0.entry(i);
-            if entry.entry_type != E820Entry::RAM_TYPE {
+            if entry.entry_type != EntryType::Ram {
                 continue;
             }
 
