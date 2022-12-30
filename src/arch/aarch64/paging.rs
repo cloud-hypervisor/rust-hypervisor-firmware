@@ -4,7 +4,7 @@
 
 use core::ops::RangeInclusive;
 
-use cortex_a::{asm::barrier, registers::*};
+use aarch64_cpu::{asm::barrier, registers::*};
 use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 
 use self::interface::Mmu;
