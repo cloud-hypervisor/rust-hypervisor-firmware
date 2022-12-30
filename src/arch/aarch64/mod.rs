@@ -5,4 +5,5 @@
 pub mod asm;
 pub mod layout;
 pub mod paging;
+pub mod simd;
 mod translation;

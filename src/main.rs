@@ -171,6 +171,7 @@ pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh:
 pub extern "C" fn rust64_start(x0: *const u8) -> ! {
     serial::PORT.borrow_mut().init();
 
+    arch::aarch64::simd::setup_simd();
     arch::aarch64::paging::setup();
 
     let info = fdt::StartInfo::new(x0);
