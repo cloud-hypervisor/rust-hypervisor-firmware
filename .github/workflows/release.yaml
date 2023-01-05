@@ -8,7 +8,7 @@ jobs:
   release:
     if: github.event_name == 'create' && github.event.ref_type == 'tag'
     name: Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Code checkout
         uses: actions/checkout@v2
