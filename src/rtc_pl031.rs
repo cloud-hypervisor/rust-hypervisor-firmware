@@ -27,7 +27,7 @@ impl Pl031 {
 
     pub fn read_date(&self) -> Result<(u8, u8, u8), ()> {
         let timestamp = self.read_timestamp();
-        let naive = NaiveDateTime::from_timestamp(timestamp as i64, 0);
+        let naive = NaiveDateTime::from_timestamp_opt(timestamp as i64, 0).ok_or(())?;
         let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
         Ok((
             (datetime.year() - 2000) as u8,
@@ -38,7 +38,7 @@ impl Pl031 {
 
     pub fn read_time(&self) -> Result<(u8, u8, u8), ()> {
         let timestamp = self.read_timestamp();
-        let naive = NaiveDateTime::from_timestamp(timestamp as i64, 0);
+        let naive = NaiveDateTime::from_timestamp_opt(timestamp as i64, 0).ok_or(())?;
         let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
         Ok((
             datetime.hour() as u8,
