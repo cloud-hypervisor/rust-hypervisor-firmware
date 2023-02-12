@@ -148,18 +148,13 @@ pub struct PciDevice {
     device_id: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 enum PciBarType {
+    #[default]
     Unused,
     MemorySpace32,
     MemorySpace64,
     IoSpace,
-}
-
-impl Default for PciBarType {
-    fn default() -> Self {
-        PciBarType::Unused
-    }
 }
 
 #[derive(Default)]
