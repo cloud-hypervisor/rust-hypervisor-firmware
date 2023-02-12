@@ -52,9 +52,9 @@ mod tests {
 
             Self {
                 guest_mac,
-                host_ip: format!("192.168.{}.1", counter),
-                guest_ip: format!("192.168.{}.2", counter),
-                tap_name: format!("fwtap{}", counter),
+                host_ip: format!("192.168.{counter}.1"),
+                guest_ip: format!("192.168.{counter}.2"),
+                tap_name: format!("fwtap{counter}"),
             }
         }
     }
@@ -307,7 +307,7 @@ mod tests {
             .output()
             .expect("Expect device mapper nodes to be ready");
 
-        osdisk.osdisk_path = format!("/dev/mapper/{}", windows_snapshot);
+        osdisk.osdisk_path = format!("/dev/mapper/{windows_snapshot}");
         osdisk.windows_snapshot_cow = windows_snapshot_cow;
         osdisk.windows_snapshot = windows_snapshot;
     }
@@ -379,24 +379,18 @@ mod tests {
                 );
             }
             Some(code) => {
-                eprintln!("\n\n==== child exit code: {} ====", code);
+                eprintln!("\n\n==== child exit code: {code} ====");
             }
         }
 
         let mut stdout = fs::File::open(tmp_dir.path().join("stdout")).unwrap();
         let mut buf = String::new();
         stdout.read_to_string(&mut buf).unwrap();
-        eprintln!(
-            "\n\n==== Start child stdout ====\n\n{}\n\n==== End child stdout ====",
-            buf
-        );
+        eprintln!("\n\n==== Start child stdout ====\n\n{buf}\n\n==== End child stdout ====");
         let mut stderr = fs::File::open(tmp_dir.path().join("stderr")).unwrap();
         let mut buf = String::new();
         stderr.read_to_string(&mut buf).unwrap();
-        eprintln!(
-            "\n\n==== Start child stderr ====\n\n{}\n\n==== End child stderr ====",
-            buf
-        );
+        eprintln!("\n\n==== Start child stderr ====\n\n{buf}\n\n==== End child stderr ====");
 
         panic!("Test failed")
     }
@@ -431,8 +425,8 @@ mod tests {
         let mut counter = 0;
         loop {
             match (|| -> Result<(), SSHCommandError> {
-                let tcp = TcpStream::connect(format!("{}:22", ip))
-                    .map_err(SSHCommandError::Connection)?;
+                let tcp =
+                    TcpStream::connect(format!("{ip}:22")).map_err(SSHCommandError::Connection)?;
                 let mut sess = ssh2::Session::new().unwrap();
                 sess.set_tcp_stream(tcp);
                 sess.handshake().map_err(SSHCommandError::Handshake)?;
@@ -499,8 +493,8 @@ mod tests {
                 "--kernel",
                 "target/x86_64-unknown-none/release/hypervisor-fw",
                 "--disk",
-                &format!("path={}", os),
-                &format!("path={}", ci),
+                &format!("path={os}"),
+                &format!("path={ci}"),
                 "--net",
                 &format!("tap={},mac={}", net.tap_name, net.guest_mac),
             ]);
@@ -508,7 +502,7 @@ mod tests {
             let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
             let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
 
-            eprintln!("Spawning: {:?}", c);
+            eprintln!("Spawning: {c:?}");
             c.stdout(Stdio::from(stdout))
                 .stderr(Stdio::from(stderr))
                 .spawn()
@@ -536,11 +530,11 @@ mod tests {
                 "-serial",
                 "stdio",
                 "-drive",
-                &format!("id=os,file={},if=none", os),
+                &format!("id=os,file={os},if=none"),
                 "-device",
                 "virtio-blk-pci,drive=os,disable-legacy=on",
                 "-drive",
-                &format!("id=ci,file={},if=none,format=raw", ci),
+                &format!("id=ci,file={ci},if=none,format=raw"),
                 "-device",
                 "virtio-blk-pci,drive=ci,disable-legacy=on",
                 "-m",
@@ -557,7 +551,7 @@ mod tests {
             let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
             let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
 
-            eprintln!("Spawning: {:?}", c);
+            eprintln!("Spawning: {c:?}");
             c.stdout(Stdio::from(stdout))
                 .stderr(Stdio::from(stderr))
                 .spawn()
@@ -715,7 +709,7 @@ mod tests {
             let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
             let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
 
-            eprintln!("Spawning: {:?}", c);
+            eprintln!("Spawning: {c:?}");
             let mut child = c
                 .stdout(Stdio::from(stdout))
                 .stderr(Stdio::from(stderr))

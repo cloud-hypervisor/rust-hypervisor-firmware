@@ -273,7 +273,7 @@ mod tests {
 
         assert_eq!(
             default_entry_path,
-            format!("/loader/entries/{}.conf", s).as_str()
+            format!("/loader/entries/{s}.conf").as_str()
         );
 
         let mut f: crate::fat::File = fs.open(default_entry_path).unwrap().try_into().unwrap();
