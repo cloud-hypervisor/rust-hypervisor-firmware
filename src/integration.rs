@@ -509,9 +509,9 @@ mod tests {
                 .expect("Expect launching Cloud Hypervisor to succeed")
         }
 
-        fn spawn_qemu_common<'a>(
+        fn spawn_qemu_common(
             tmp_dir: &TempDir,
-            fw: &'a Firmware,
+            fw: &Firmware,
             os: &str,
             ci: &str,
             net: &GuestNetworkConfig,
