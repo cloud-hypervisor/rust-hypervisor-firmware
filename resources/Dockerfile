@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 as dev
+FROM ubuntu:22.04 as dev
 
 ARG TARGETARCH
 ARG RUST_TOOLCHAIN
@@ -40,7 +40,6 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 	socat \
 	dosfstools \
 	cpio \
-	python \
 	python3 \
 	python3-setuptools \
 	ntfs-3g \
@@ -48,7 +47,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 	uuid-dev \
 	m4 \
 	zlib1g-dev \
-	gnat-9 \
+	gnat \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
 	; fi
