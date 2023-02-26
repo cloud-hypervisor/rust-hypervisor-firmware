@@ -2,26 +2,21 @@
 set -x
 
 source "${CARGO_HOME:-$HOME/.cargo}/env"
+source "$(dirname "$0")/fetch_images.sh"
 
 WORKLOADS_DIR="$HOME/workloads"
 mkdir -p "$WORKLOADS_DIR"
 
 WIN_IMAGE_FILE="$WORKLOADS_DIR/windows-server-2019.raw"
 
-CH_VERSION="v20.0"
-CH_URL="https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/$CH_VERSION/cloud-hypervisor"
-CH_PATH="$WORKLOADS_DIR/cloud-hypervisor"
-if [ ! -f "$CH_PATH" ]; then
-    wget --quiet $CH_URL -O $CH_PATH
-    chmod +x $CH_PATH
-    sudo setcap cap_net_admin+ep $CH_PATH
-fi
-
 # Check if the image is present
 if [ ! -f "$WIN_IMAGE_FILE" ]; then
     echo "Windows image not present in the host"
     exit 1
 fi
+
+CH_PATH="$WORKLOADS_DIR/cloud-hypervisor"
+fetch_ch "$CH_PATH"
 
 # Use device mapper to create a snapshot of the Windows image
 img_blk_size=$(du -b -B 512 ${WIN_IMAGE_FILE} | awk '{print $1;}')
