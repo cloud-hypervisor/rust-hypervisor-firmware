@@ -1,6 +1,17 @@
 #!/bin/bash
 set -x
 
+fetch_ch() {
+    CH_PATH="$1"
+    CH_VERSION="v23.0"
+    CH_URL="https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/$CH_VERSION/cloud-hypervisor"
+    if [ ! -f "$CH_PATH" ]; then
+        wget --quiet $CH_URL -O $CH_PATH
+        chmod +x $CH_PATH
+        sudo setcap cap_net_admin+ep $CH_PATH
+    fi
+}
+
 fetch_image() {
     OS_IMAGE="$1"
     OS_IMAGE_URL="$2"

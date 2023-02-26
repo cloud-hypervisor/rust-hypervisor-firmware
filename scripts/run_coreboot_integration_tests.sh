@@ -4,7 +4,7 @@ set -x
 RHF_ROOT_DIR=$(cd "$(dirname "$0")/../" && pwd)
 
 source "${CARGO_HOME:-$HOME/.cargo}/env"
-source "$(dirnam "$0")/fetch_disk_images.sh"
+source "$(dirnam "$0")/fetch_images.sh"
 
 WORKLOADS_DIR="$HOME/workloads"
 mkdir -p "$WORKLOADS_DIR"
