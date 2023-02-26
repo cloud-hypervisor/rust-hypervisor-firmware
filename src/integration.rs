@@ -494,6 +494,7 @@ mod tests {
                 "target/x86_64-unknown-none/release/hypervisor-fw",
                 "--disk",
                 &format!("path={os}"),
+                "--disk",
                 &format!("path={ci}"),
                 "--net",
                 &format!("tap={},mac={}", net.tap_name, net.guest_mac),
