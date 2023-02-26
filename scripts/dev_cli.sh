@@ -210,9 +210,8 @@ cmd_help() {
     echo "        --release             Build the release binary."
     echo "        --volumes             Hash separated volumes to be exported. Example --volumes /mnt:/mnt#/myvol:/myvol"
     echo ""
-    echo "    build-container [--type]"
+    echo "    build-container"
     echo "        Build the Rust Hypervisor Firmware container."
-    echo "        --dev                Build dev container. This is the default."
     echo ""
     echo "    clean [<cargo args>]]"
     echo "        Remove the Rust Hypervisor Firmware artifacts."
@@ -453,7 +452,6 @@ cmd_build-container() {
     RUST_TOOLCHAIN="$(rustup show active-toolchain | cut -d ' ' -f1)"
 
     $DOCKER_RUNTIME build \
-	   --target $container_type \
 	   -t $CTR_IMAGE \
 	   -f $BUILD_DIR/Dockerfile \
        --build-arg TARGETARCH=$TARGETARCH \
