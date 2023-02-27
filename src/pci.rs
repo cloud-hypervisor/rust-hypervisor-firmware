@@ -15,7 +15,7 @@
 use atomic_refcell::AtomicRefCell;
 
 #[cfg(target_arch = "x86_64")]
-use x86_64::instructions::port::{PortReadOnly, PortWriteOnly};
+use x86_64::instructions::port::{Port, PortWriteOnly};
 
 use crate::{
     mem,
@@ -38,7 +38,7 @@ struct PciConfig {
 #[cfg(target_arch = "x86_64")]
 struct PciConfig {
     address_port: PortWriteOnly<u32>,
-    data_port: PortReadOnly<u32>,
+    data_port: Port<u32>,
 }
 
 impl PciConfig {
@@ -53,7 +53,7 @@ impl PciConfig {
         // We use the legacy, port-based Configuration Access Mechanism (CAM).
         Self {
             address_port: PortWriteOnly::new(0xcf8),
-            data_port: PortReadOnly::new(0xcfc),
+            data_port: Port::new(0xcfc),
         }
     }
 
