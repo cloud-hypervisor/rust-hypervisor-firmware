@@ -30,7 +30,7 @@ const INVALID_VENDOR_ID: u16 = 0xffff;
 
 static PCI_CONFIG: AtomicRefCell<PciConfig> = AtomicRefCell::new(PciConfig::new());
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(not(target_arch = "x86_64"))]
 struct PciConfig {
     region: Option<mem::MemoryRegion>,
 }
@@ -42,7 +42,7 @@ struct PciConfig {
 }
 
 impl PciConfig {
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(not(target_arch = "x86_64"))]
     const fn new() -> Self {
         // We use Enhanced Configuration Access Mechanism (ECAM).
         Self { region: None }
@@ -57,12 +57,12 @@ impl PciConfig {
         }
     }
 
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(not(target_arch = "x86_64"))]
     fn init(&mut self, base: u64, length: u64) {
         self.region = Some(mem::MemoryRegion::new(base, length));
     }
 
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(not(target_arch = "x86_64"))]
     fn read_at(&mut self, addr: u32) -> u32 {
         self.region
             .as_ref()
@@ -98,7 +98,7 @@ impl PciConfig {
     }
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(not(target_arch = "x86_64"))]
 pub fn init(base: u64, length: u64) {
     PCI_CONFIG.borrow_mut().init(base, length);
 }
