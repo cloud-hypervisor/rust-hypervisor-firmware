@@ -82,7 +82,29 @@ impl PciConfig {
         }
     }
 
-    fn read(&mut self, bus: u8, device: u8, func: u8, offset: u8) -> u32 {
+    #[cfg(not(target_arch = "x86_64"))]
+    #[allow(unused)]
+    fn write_at(&mut self, addr: u32, value: u32) {
+        self.region
+            .as_ref()
+            .expect("PCI config space is not initialized")
+            .io_write_u32(addr as u64, value)
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[allow(unused)]
+    fn write_at(&mut self, addr: u32, value: u32) {
+        let addr = addr | 1u32 << 31; // enable bit 31
+
+        // SAFETY: We have exclusive access to the ports, so the data read will
+        // correspond to the address written.
+        unsafe {
+            self.address_port.write(addr);
+            self.data_port.write(value);
+        }
+    }
+
+    fn calculate_pci_address(bus: u8, device: u8, func: u8, offset: u8) -> u32 {
         assert_eq!(offset % 4, 0);
         assert!(bus < MAX_BUSES);
         assert!(device < MAX_DEVICES);
@@ -94,7 +116,18 @@ impl PciConfig {
         addr |= u32::from(func) << 8; // function bits 10-8
         addr |= u32::from(offset & 0xfc); // register 7-0
 
+        addr
+    }
+
+    fn read(&mut self, bus: u8, device: u8, func: u8, offset: u8) -> u32 {
+        let addr = Self::calculate_pci_address(bus, device, func, offset);
         self.read_at(addr)
+    }
+
+    #[allow(unused)]
+    fn write(&mut self, bus: u8, device: u8, func: u8, offset: u8, value: u32) {
+        let addr = Self::calculate_pci_address(bus, device, func, offset);
+        self.write_at(addr, value);
     }
 }
 
