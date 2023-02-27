@@ -83,7 +83,6 @@ impl PciConfig {
     }
 
     #[cfg(not(target_arch = "x86_64"))]
-    #[allow(unused)]
     fn write_at(&mut self, addr: u32, value: u32) {
         self.region
             .as_ref()
@@ -92,7 +91,6 @@ impl PciConfig {
     }
 
     #[cfg(target_arch = "x86_64")]
-    #[allow(unused)]
     fn write_at(&mut self, addr: u32, value: u32) {
         let addr = addr | 1u32 << 31; // enable bit 31
 
@@ -124,7 +122,6 @@ impl PciConfig {
         self.read_at(addr)
     }
 
-    #[allow(unused)]
     fn write(&mut self, bus: u8, device: u8, func: u8, offset: u8, value: u32) {
         let addr = Self::calculate_pci_address(bus, device, func, offset);
         self.write_at(addr, value);
@@ -194,6 +191,7 @@ enum PciBarType {
 struct PciBar {
     bar_type: PciBarType,
     address: u64,
+    size: u64,
 }
 
 impl PciDevice {
@@ -229,6 +227,12 @@ impl PciDevice {
             .read(self.bus, self.device, self.func, offset)
     }
 
+    fn write_u32(&self, offset: u8, value: u32) {
+        PCI_CONFIG
+            .borrow_mut()
+            .write(self.bus, self.device, self.func, offset, value)
+    }
+
     fn init(&mut self) {
         let (vendor_id, device_id) = get_device_details(self.bus, self.device, self.func);
 
@@ -256,21 +260,42 @@ impl PciDevice {
             if bar & 1 == 1 {
                 self.bars[current_bar].bar_type = PciBarType::IoSpace;
                 self.bars[current_bar].address = u64::from(bar & 0xffff_fffc);
+                self.write_u32(current_bar_offset, 0xffff_ffff);
+                let size = !(self.read_u32(current_bar_offset) & 0xffff_fff0) + 1;
+                self.bars[current_bar].size = u64::from(size);
+                self.write_u32(current_bar_offset, bar);
             } else {
                 // bits 2-1 are the type 0 is 32-but, 2 is 64 bit
                 match bar >> 1 & 3 {
                     0 => {
                         self.bars[current_bar].bar_type = PciBarType::MemorySpace32;
                         self.bars[current_bar].address = u64::from(bar & 0xffff_fff0);
+
+                        self.write_u32(current_bar_offset, 0xffff_ffff);
+                        let size = !(self.read_u32(current_bar_offset) & 0xffff_fff0) + 1;
+                        self.bars[current_bar].size = u64::from(size);
+                        self.write_u32(current_bar_offset, bar);
                     }
                     2 => {
                         self.bars[current_bar].bar_type = PciBarType::MemorySpace64;
                         self.bars[current_bar].address = u64::from(bar & 0xffff_fff0);
+
+                        self.write_u32(current_bar_offset, 0xffff_ffff);
+                        let lo_size = self.read_u32(current_bar_offset) & 0xffff_fff0;
+                        self.write_u32(current_bar_offset, bar);
+
                         current_bar_offset += 4;
 
                         #[allow(clippy::disallowed_names)]
                         let bar = self.read_u32(current_bar_offset);
                         self.bars[current_bar].address += u64::from(bar) << 32;
+
+                        self.write_u32(current_bar_offset, 0xffff_ffff);
+                        let hi_size = self.read_u32(current_bar_offset);
+                        self.write_u32(current_bar_offset, bar);
+
+                        let size = !(u64::from(lo_size) | u64::from(hi_size) << 32) + 1;
+                        self.bars[current_bar].size = size;
                     }
                     _ => panic!("Unsupported BAR type"),
                 }
@@ -282,7 +307,12 @@ impl PciDevice {
 
         #[allow(clippy::disallowed_names)]
         for bar in &self.bars {
-            log!("Bar: type={:?} address={:x}", bar.bar_type, bar.address);
+            log!(
+                "Bar: type={:?} address=0x{:x} size=0x{:x}",
+                bar.bar_type,
+                bar.address,
+                bar.size
+            );
         }
     }
 }
