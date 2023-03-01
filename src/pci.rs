@@ -258,12 +258,16 @@ impl PciDevice {
 
             // lsb is 1 for I/O space bars
             if bar & 1 == 1 {
-                self.bars[current_bar].bar_type = PciBarType::IoSpace;
-                self.bars[current_bar].address = u64::from(bar & 0xffff_fffc);
-                self.write_u32(current_bar_offset, 0xffff_ffff);
-                let size = !(self.read_u32(current_bar_offset) & 0xffff_fff0) + 1;
-                self.bars[current_bar].size = u64::from(size);
-                self.write_u32(current_bar_offset, bar);
+                if cfg!(target_arch = "x86_64") {
+                    self.bars[current_bar].bar_type = PciBarType::IoSpace;
+                    self.bars[current_bar].address = u64::from(bar & 0xffff_fffc);
+                    self.write_u32(current_bar_offset, 0xffff_ffff);
+                    let size = !(self.read_u32(current_bar_offset) & 0xffff_fff0) + 1;
+                    self.bars[current_bar].size = u64::from(size);
+                    self.write_u32(current_bar_offset, bar);
+                } else {
+                    panic!("I/O BARs are not supported on this platform");
+                }
             } else {
                 // bits 2-1 are the type 0 is 32-but, 2 is 64 bit
                 match bar >> 1 & 3 {
