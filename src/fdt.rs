@@ -7,6 +7,7 @@ use crate::bootinfo::{EntryType, Info, MemoryEntry};
 
 pub struct StartInfo<'a> {
     acpi_rsdp_addr: Option<u64>,
+    fdt_addr: u64,
     fdt: Fdt<'a>,
 }
 
@@ -19,7 +20,10 @@ impl StartInfo<'_> {
             }
         };
 
+        let fdt_addr = ptr as u64;
+
         Self {
+            fdt_addr,
             fdt,
             acpi_rsdp_addr,
         }
@@ -41,6 +45,10 @@ impl Info for StartInfo<'_> {
 
     fn rsdp_addr(&self) -> Option<u64> {
         self.acpi_rsdp_addr
+    }
+
+    fn fdt_addr(&self) -> Option<u64> {
+        Some(self.fdt_addr)
     }
 
     fn cmdline(&self) -> &[u8] {

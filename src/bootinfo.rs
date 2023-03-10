@@ -9,6 +9,10 @@ pub trait Info {
     fn rsdp_addr(&self) -> Option<u64> {
         None
     }
+    // Address of FDT to use for booting if present
+    fn fdt_addr(&self) -> Option<u64> {
+        None
+    }
     // The kernel command line (not including null terminator)
     fn cmdline(&self) -> &[u8];
     // Methods to access the Memory map
