@@ -3,17 +3,26 @@
 
 use fdt::Fdt;
 
-use crate::bootinfo::{EntryType, Info, MemoryEntry};
+use crate::{
+    bootinfo::{EntryType, Info, MemoryEntry},
+    layout::MemoryDescriptor,
+};
 
 pub struct StartInfo<'a> {
     acpi_rsdp_addr: Option<u64>,
     fdt_addr: u64,
     fdt: Fdt<'a>,
     kernel_load_addr: u64,
+    memory_layout: &'static [MemoryDescriptor],
 }
 
 impl StartInfo<'_> {
-    pub fn new(ptr: *const u8, acpi_rsdp_addr: Option<u64>, kernel_load_addr: u64) -> Self {
+    pub fn new(
+        ptr: *const u8,
+        acpi_rsdp_addr: Option<u64>,
+        kernel_load_addr: u64,
+        memory_layout: &'static [MemoryDescriptor],
+    ) -> Self {
         let fdt = unsafe {
             match Fdt::from_ptr(ptr) {
                 Ok(fdt) => fdt,
@@ -28,6 +37,7 @@ impl StartInfo<'_> {
             fdt,
             acpi_rsdp_addr,
             kernel_load_addr,
+            memory_layout,
         }
     }
 
@@ -79,5 +89,9 @@ impl Info for StartInfo<'_> {
 
     fn kernel_load_addr(&self) -> u64 {
         self.kernel_load_addr
+    }
+
+    fn memory_layout(&self) -> &'static [MemoryDescriptor] {
+        self.memory_layout
     }
 }

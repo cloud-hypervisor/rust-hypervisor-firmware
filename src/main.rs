@@ -172,6 +172,7 @@ pub extern "C" fn rust64_start(x0: *const u8) -> ! {
         x0,
         Some(arch::aarch64::layout::map::dram::ACPI_START as u64),
         arch::aarch64::layout::map::dram::KERNEL_START as u64,
+        &crate::arch::aarch64::layout::MEM_LAYOUT[..],
     );
 
     if let Some((base, length)) = info.find_compatible_region(&["pci-host-ecam-generic"]) {

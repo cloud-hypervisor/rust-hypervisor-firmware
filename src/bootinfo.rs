@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2022 Akira Moroo
 
+use crate::layout::MemoryDescriptor;
+
 // Common data needed for all boot paths
 pub trait Info {
     // Name of for this boot protocol
@@ -20,6 +22,8 @@ pub trait Info {
     fn entry(&self, idx: usize) -> MemoryEntry;
     // Where to load kernel
     fn kernel_load_addr(&self) -> u64;
+    // Reference to memory layout
+    fn memory_layout(&self) -> &'static [MemoryDescriptor];
 }
 
 pub struct MemoryEntry {
