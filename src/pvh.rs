@@ -3,6 +3,7 @@ use core::mem::size_of;
 use crate::{
     bootinfo::{EntryType, Info, MemoryEntry},
     common,
+    layout::MemoryDescriptor,
 };
 
 // Structures from xen/include/public/arch-x86/hvm/start_info.h
@@ -65,6 +66,9 @@ impl Info for StartInfo {
     }
     fn kernel_load_addr(&self) -> u64 {
         crate::arch::x86_64::layout::KERNEL_START
+    }
+    fn memory_layout(&self) -> &'static [MemoryDescriptor] {
+        &crate::arch::x86_64::layout::MEM_LAYOUT[..]
     }
 }
 

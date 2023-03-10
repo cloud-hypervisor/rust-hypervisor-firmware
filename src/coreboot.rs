@@ -114,6 +114,9 @@ impl Info for StartInfo {
     fn kernel_load_addr(&self) -> u64 {
         crate::arch::x86_64::layout::KERNEL_START
     }
+    fn memory_layout(&self) -> &'static [crate::layout::MemoryDescriptor] {
+        &crate::arch::x86_64::layout::MEM_LAYOUT[..]
+    }
 }
 
 fn find_header(start: u64, len: usize) -> Option<u64> {

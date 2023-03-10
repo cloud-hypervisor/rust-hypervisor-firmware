@@ -936,13 +936,7 @@ fn populate_allocator(info: &dyn bootinfo::Info, image_address: u64, image_size:
         }
     }
 
-    #[cfg(target_arch = "aarch64")]
-    use crate::arch::aarch64::layout::MEM_LAYOUT;
-
-    #[cfg(target_arch = "x86_64")]
-    use crate::arch::x86_64::layout::MEM_LAYOUT;
-
-    for descriptor in MEM_LAYOUT {
+    for descriptor in info.memory_layout() {
         let memory_type = match descriptor.attribute {
             layout::MemoryAttribute::Code => efi::RUNTIME_SERVICES_CODE,
             layout::MemoryAttribute::Data => efi::RUNTIME_SERVICES_DATA,
