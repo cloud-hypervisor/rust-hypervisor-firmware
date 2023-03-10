@@ -43,7 +43,7 @@ pub struct Kernel(Params);
 impl Kernel {
     pub fn new(info: &dyn Info) -> Self {
         let mut kernel = Self(Params::default());
-        kernel.0.acpi_rsdp_addr = info.rsdp_addr();
+        kernel.0.acpi_rsdp_addr = info.rsdp_addr().unwrap_or_default();
         kernel.0.set_entries(info);
         kernel
     }

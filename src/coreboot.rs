@@ -93,8 +93,8 @@ impl Info for StartInfo {
     fn name(&self) -> &str {
         "coreboot"
     }
-    fn rsdp_addr(&self) -> u64 {
-        self.rsdp_addr
+    fn rsdp_addr(&self) -> Option<u64> {
+        Some(self.rsdp_addr)
     }
     fn cmdline(&self) -> &[u8] {
         b""

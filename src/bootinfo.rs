@@ -6,7 +6,9 @@ pub trait Info {
     // Name of for this boot protocol
     fn name(&self) -> &str;
     // Starting address of the Root System Descriptor Pointer
-    fn rsdp_addr(&self) -> u64;
+    fn rsdp_addr(&self) -> Option<u64> {
+        None
+    }
     // The kernel command line (not including null terminator)
     fn cmdline(&self) -> &[u8];
     // Methods to access the Memory map

@@ -44,8 +44,8 @@ impl Info for StartInfo {
     fn name(&self) -> &str {
         "PVH Boot Protocol"
     }
-    fn rsdp_addr(&self) -> u64 {
-        self.rsdp_paddr
+    fn rsdp_addr(&self) -> Option<u64> {
+        Some(self.rsdp_paddr)
     }
     fn cmdline(&self) -> &[u8] {
         unsafe { common::from_cstring(self.cmdline_paddr) }

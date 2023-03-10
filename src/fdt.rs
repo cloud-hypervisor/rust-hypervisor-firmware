@@ -6,11 +6,12 @@ use fdt::Fdt;
 use crate::bootinfo::{EntryType, Info, MemoryEntry};
 
 pub struct StartInfo<'a> {
+    acpi_rsdp_addr: Option<u64>,
     fdt: Fdt<'a>,
 }
 
 impl StartInfo<'_> {
-    pub fn new(ptr: *const u8) -> Self {
+    pub fn new(ptr: *const u8, acpi_rsdp_addr: Option<u64>) -> Self {
         let fdt = unsafe {
             match Fdt::from_ptr(ptr) {
                 Ok(fdt) => fdt,
@@ -18,7 +19,10 @@ impl StartInfo<'_> {
             }
         };
 
-        Self { fdt }
+        Self {
+            fdt,
+            acpi_rsdp_addr,
+        }
     }
 
     pub fn find_compatible_region(&self, with: &[&str]) -> Option<(*const u8, usize)> {
@@ -35,9 +39,8 @@ impl Info for StartInfo<'_> {
         "FDT"
     }
 
-    fn rsdp_addr(&self) -> u64 {
-        // TODO: Remove reference to a platform specific value.
-        crate::arch::aarch64::layout::map::dram::ACPI_START as u64
+    fn rsdp_addr(&self) -> Option<u64> {
+        self.acpi_rsdp_addr
     }
 
     fn cmdline(&self) -> &[u8] {
