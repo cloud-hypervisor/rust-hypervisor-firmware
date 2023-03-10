@@ -5,7 +5,6 @@ use core::mem;
 
 use crate::{
     bootinfo::{EntryType, Info, MemoryEntry},
-    common,
     fat::{Error, Read},
     mem::MemoryRegion,
 };
@@ -131,22 +130,12 @@ impl Params {
             self.e820_table[i as usize] = info.entry(i as usize).into();
         }
     }
-}
 
-impl Info for Params {
-    fn name(&self) -> &str {
-        "Linux Boot Protocol"
-    }
-    fn rsdp_addr(&self) -> u64 {
-        self.acpi_rsdp_addr
-    }
-    fn cmdline(&self) -> &[u8] {
-        unsafe { common::from_cstring(self.hdr.cmd_line_ptr as u64) }
-    }
-    fn num_entries(&self) -> usize {
+    pub fn num_entries(&self) -> usize {
         self.e820_entries as usize
     }
-    fn entry(&self, idx: usize) -> MemoryEntry {
+
+    pub fn entry(&self, idx: usize) -> MemoryEntry {
         assert!(idx < self.num_entries());
         let entry = self.e820_table[idx];
         MemoryEntry::from(entry)
