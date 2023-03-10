@@ -33,6 +33,8 @@ pub fn stack_range() -> Range<usize> {
 
 const NUM_MEM_DESCS: usize = 4;
 
+pub const KERNEL_START: u64 = 0x20_0000;
+
 pub static MEM_LAYOUT: MemoryLayout<NUM_MEM_DESCS> = [
     MemoryDescriptor {
         name: "PVH Header",

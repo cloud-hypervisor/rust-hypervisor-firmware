@@ -111,6 +111,9 @@ impl Info for StartInfo {
         let entry = unsafe { &*ptr.add(idx) };
         MemoryEntry::from(*entry)
     }
+    fn kernel_load_addr(&self) -> u64 {
+        crate::arch::x86_64::layout::KERNEL_START
+    }
 }
 
 fn find_header(start: u64, len: usize) -> Option<u64> {

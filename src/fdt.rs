@@ -9,10 +9,11 @@ pub struct StartInfo<'a> {
     acpi_rsdp_addr: Option<u64>,
     fdt_addr: u64,
     fdt: Fdt<'a>,
+    kernel_load_addr: u64,
 }
 
 impl StartInfo<'_> {
-    pub fn new(ptr: *const u8, acpi_rsdp_addr: Option<u64>) -> Self {
+    pub fn new(ptr: *const u8, acpi_rsdp_addr: Option<u64>, kernel_load_addr: u64) -> Self {
         let fdt = unsafe {
             match Fdt::from_ptr(ptr) {
                 Ok(fdt) => fdt,
@@ -26,6 +27,7 @@ impl StartInfo<'_> {
             fdt_addr,
             fdt,
             acpi_rsdp_addr,
+            kernel_load_addr,
         }
     }
 
@@ -73,5 +75,9 @@ impl Info for StartInfo<'_> {
             }
         }
         panic!("No valid memory entry found");
+    }
+
+    fn kernel_load_addr(&self) -> u64 {
+        self.kernel_load_addr
     }
 }

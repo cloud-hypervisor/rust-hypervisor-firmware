@@ -63,6 +63,9 @@ impl Info for StartInfo {
         let entry = unsafe { *ptr.add(idx) };
         MemoryEntry::from(entry)
     }
+    fn kernel_load_addr(&self) -> u64 {
+        crate::arch::x86_64::layout::KERNEL_START
+    }
 }
 
 // The PVH Boot Protocol starts at the 32-bit entrypoint to our firmware.
