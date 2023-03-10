@@ -39,6 +39,7 @@ mod bootinfo;
 mod bzimage;
 #[cfg(target_arch = "x86_64")]
 mod cmos;
+#[cfg(target_arch = "x86_64")]
 mod coreboot;
 mod delay;
 mod efi;
