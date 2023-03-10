@@ -170,7 +170,10 @@ pub extern "C" fn rust64_start(x0: *const u8) -> ! {
     arch::aarch64::simd::setup_simd();
     arch::aarch64::paging::setup();
 
-    let info = fdt::StartInfo::new(x0);
+    let info = fdt::StartInfo::new(
+        x0,
+        Some(arch::aarch64::layout::map::dram::ACPI_START as u64),
+    );
 
     if let Some((base, length)) = info.find_compatible_region(&["pci-host-ecam-generic"]) {
         pci::init(base as u64, length as u64);

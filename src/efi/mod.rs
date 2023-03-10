@@ -1072,9 +1072,8 @@ pub fn efi_exec(
     block: *const crate::block::VirtioBlockDevice,
 ) {
     let vendor_data = 0u32;
-    let acpi_rsdp_ptr = info.rsdp_addr();
 
-    let ct_entry = if acpi_rsdp_ptr != 0 {
+    let ct_entry = if let Some(acpi_rsdp_ptr) = info.rsdp_addr() {
         efi::ConfigurationTable {
             vendor_guid: Guid::from_fields(
                 0x8868_e871,
