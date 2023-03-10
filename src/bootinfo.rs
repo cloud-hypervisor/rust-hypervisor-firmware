@@ -18,6 +18,8 @@ pub trait Info {
     // Methods to access the Memory map
     fn num_entries(&self) -> usize;
     fn entry(&self, idx: usize) -> MemoryEntry;
+    // Where to load kernel
+    fn kernel_load_addr(&self) -> u64;
 }
 
 pub struct MemoryEntry {

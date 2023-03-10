@@ -237,7 +237,7 @@ pub fn load_default_entry(
     let mut kernel = Kernel::new(info);
 
     let mut bzimage_file = fs.open(bzimage_path)?;
-    kernel.load_kernel(&mut bzimage_file)?;
+    kernel.load_kernel(info, &mut bzimage_file)?;
 
     if !initrd_path.is_empty() {
         let mut initrd_file = fs.open(initrd_path)?;

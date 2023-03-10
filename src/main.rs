@@ -129,11 +129,8 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::
     log!("Found bootloader: {}", efi::EFI_BOOT_PATH);
 
     let mut l = pe::Loader::new(&mut file);
-    #[cfg(target_arch = "aarch64")]
-    let load_addr = arch::aarch64::layout::map::dram::KERNEL_START as u64;
-    #[cfg(target_arch = "x86_64")]
-    let load_addr = 0x20_0000;
-    let (entry_addr, load_addr, size) = match l.load(load_addr) {
+
+    let (entry_addr, load_addr, size) = match l.load(info.kernel_load_addr()) {
         Ok(load_info) => load_info,
         Err(err) => {
             log!("Error loading executable: {:?}", err);
@@ -174,6 +171,7 @@ pub extern "C" fn rust64_start(x0: *const u8) -> ! {
     let info = fdt::StartInfo::new(
         x0,
         Some(arch::aarch64::layout::map::dram::ACPI_START as u64),
+        arch::aarch64::layout::map::dram::KERNEL_START as u64,
     );
 
     if let Some((base, length)) = info.find_compatible_region(&["pci-host-ecam-generic"]) {

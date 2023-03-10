@@ -35,8 +35,6 @@ impl From<fat::Error> for Error {
     }
 }
 
-const KERNEL_LOCATION: u64 = 0x20_0000;
-
 #[repr(transparent)]
 pub struct Kernel(Params);
 
@@ -48,7 +46,7 @@ impl Kernel {
         kernel
     }
 
-    pub fn load_kernel(&mut self, f: &mut dyn Read) -> Result<(), Error> {
+    pub fn load_kernel(&mut self, info: &dyn Info, f: &mut dyn Read) -> Result<(), Error> {
         self.0.hdr = Header::from_file(f)?;
 
         if self.0.hdr.boot_flag != 0xAA55 || self.0.hdr.header != *b"HdrS" {
@@ -67,13 +65,13 @@ impl Kernel {
         let setup_bytes = (setup_sects + 1) * SectorBuf::len() as u32;
         let remaining_bytes = f.get_size() - setup_bytes;
 
-        let mut region = MemoryRegion::new(KERNEL_LOCATION, remaining_bytes as u64);
+        let mut region = MemoryRegion::new(info.kernel_load_addr(), remaining_bytes as u64);
         f.seek(setup_bytes)?;
         f.load_file(&mut region)?;
 
         // Fill out "write/modify" fields
         self.0.hdr.type_of_loader = 0xff; // Unknown Loader
-        self.0.hdr.code32_start = KERNEL_LOCATION as u32; // Where we load the kernel
+        self.0.hdr.code32_start = info.kernel_load_addr() as u32; // Where we load the kernel
         self.0.hdr.cmd_line_ptr = CMDLINE_START as u32; // Where we load the cmdline
         Ok(())
     }
