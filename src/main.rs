@@ -117,18 +117,15 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::
     }
 
     log!("Using EFI boot.");
-    #[cfg(target_arch = "aarch64")]
-    let efi_boot_path = "/EFI/BOOT/BOOTAA64.EFI";
-    #[cfg(target_arch = "x86_64")]
-    let efi_boot_path = "/EFI/BOOT/BOOTX64 EFI";
-    let mut file = match f.open(efi_boot_path) {
+
+    let mut file = match f.open(efi::EFI_BOOT_PATH) {
         Ok(file) => file,
         Err(err) => {
             log!("Failed to load default EFI binary: {:?}", err);
             return false;
         }
     };
-    log!("Found bootloader: {}", efi_boot_path);
+    log!("Found bootloader: {}", efi::EFI_BOOT_PATH);
 
     let mut l = pe::Loader::new(&mut file);
     #[cfg(target_arch = "aarch64")]

@@ -46,6 +46,10 @@ mod var;
 
 use alloc::Allocator;
 use var::VariableAllocator;
+#[cfg(target_arch = "aarch64")]
+pub const EFI_BOOT_PATH: &str = "\\EFI\\BOOT\\BOOTAA64.EFI";
+#[cfg(target_arch = "x86_64")]
+pub const EFI_BOOT_PATH: &str = "\\EFI\\BOOT\\BOOTX64.EFI";
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum HandleType {
@@ -1117,10 +1121,7 @@ pub fn efi_exec(
     let wrapped_fs = file::FileSystemWrapper::new(fs, efi_part_id);
 
     let image = new_image_handle(
-        #[cfg(target_arch = "aarch64")]
-        "\\EFI\\BOOT\\BOOTAA64.EFI",
-        #[cfg(target_arch = "x86_64")]
-        "\\EFI\\BOOT\\BOOTX64.EFI",
+        crate::efi::EFI_BOOT_PATH,
         0 as Handle,
         &wrapped_fs as *const _ as Handle,
         loaded_address,
