@@ -1067,8 +1067,28 @@ pub fn efi_exec(
 ) {
     let vendor_data = 0u32;
 
-    let ct_entry = if let Some(acpi_rsdp_ptr) = info.rsdp_addr() {
-        efi::ConfigurationTable {
+    let ct = unsafe { &mut CT };
+    let mut ct_index = 0;
+
+    // Populate with FDT table if present
+    if let Some(fdt_addr) = info.fdt_addr() {
+        ct[ct_index] = efi::ConfigurationTable {
+            vendor_guid: Guid::from_fields(
+                0xb1b621d5,
+                0xf19c,
+                0x41a5,
+                0x83,
+                0x0b,
+                &[0xd9, 0x15, 0x2c, 0x69, 0xaa, 0xe0],
+            ),
+            vendor_table: fdt_addr as *const u64 as *mut _,
+        };
+        ct_index += 1;
+    }
+
+    // Populate with ACPI RSDP table if present
+    if let Some(acpi_rsdp_ptr) = info.rsdp_addr() {
+        ct[ct_index] = efi::ConfigurationTable {
             vendor_guid: Guid::from_fields(
                 0x8868_e871,
                 0xe4f1,
@@ -1078,9 +1098,13 @@ pub fn efi_exec(
                 &[0x00, 0x80, 0xc7, 0x3c, 0x88, 0x81],
             ),
             vendor_table: acpi_rsdp_ptr as *mut _,
-        }
-    } else {
-        efi::ConfigurationTable {
+        };
+        ct_index += 1;
+    }
+
+    // Othwerwise fill with zero vendor data
+    if ct_index == 0 {
+        ct[ct_index] = efi::ConfigurationTable {
             vendor_guid: Guid::from_fields(
                 0x678a_9665,
                 0x9957,
@@ -1092,9 +1116,6 @@ pub fn efi_exec(
             vendor_table: &vendor_data as *const _ as *mut _,
         }
     };
-
-    let ct = unsafe { &mut CT };
-    ct[0] = ct_entry;
 
     let mut stdin = console::STDIN;
     let mut stdout = console::STDOUT;
