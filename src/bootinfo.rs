@@ -24,15 +24,20 @@ pub trait Info {
     fn kernel_load_addr(&self) -> u64;
     // Reference to memory layout
     fn memory_layout(&self) -> &'static [MemoryDescriptor];
+    // MMIO address space that can be used for PCI BARs if needed
+    fn pci_bar_memory(&self) -> Option<MemoryEntry> {
+        None
+    }
 }
 
+#[derive(Clone, Copy)]
 pub struct MemoryEntry {
     pub addr: u64,
     pub size: u64,
     pub entry_type: EntryType,
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum EntryType {
     Ram,
     Reserved,
