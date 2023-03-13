@@ -14,6 +14,7 @@ pub struct StartInfo<'a> {
     fdt: Fdt<'a>,
     kernel_load_addr: u64,
     memory_layout: &'static [MemoryDescriptor],
+    pci_bar_memory: Option<MemoryEntry>,
 }
 
 impl StartInfo<'_> {
@@ -22,6 +23,7 @@ impl StartInfo<'_> {
         acpi_rsdp_addr: Option<u64>,
         kernel_load_addr: u64,
         memory_layout: &'static [MemoryDescriptor],
+        pci_bar_memory: Option<MemoryEntry>,
     ) -> Self {
         let fdt = unsafe {
             match Fdt::from_ptr(ptr) {
@@ -38,6 +40,7 @@ impl StartInfo<'_> {
             acpi_rsdp_addr,
             kernel_load_addr,
             memory_layout,
+            pci_bar_memory,
         }
     }
 
@@ -93,5 +96,9 @@ impl Info for StartInfo<'_> {
 
     fn memory_layout(&self) -> &'static [MemoryDescriptor] {
         self.memory_layout
+    }
+
+    fn pci_bar_memory(&self) -> Option<MemoryEntry> {
+        self.pci_bar_memory
     }
 }
