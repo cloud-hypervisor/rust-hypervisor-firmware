@@ -153,9 +153,9 @@ pub fn print_bus() {
     }
 }
 
-pub fn with_devices<F>(target_vendor_id: u16, target_device_id: u16, per_device: F)
+pub fn with_devices<F>(target_vendor_id: u16, target_device_id: u16, mut per_device: F)
 where
-    F: Fn(PciDevice) -> bool,
+    F: FnMut(PciDevice) -> bool,
 {
     for device in 0..MAX_DEVICES {
         let (vendor_id, device_id) = get_device_details(0, device, 0);
@@ -168,6 +168,10 @@ where
     }
 }
 
+fn naturally_align(address: u64, size: u64) -> u64 {
+    ((address + size - 1) / size) * size
+}
+
 #[derive(Default)]
 pub struct PciDevice {
     bus: u8,
@@ -178,7 +182,7 @@ pub struct PciDevice {
     device_id: u16,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 enum PciBarType {
     #[default]
     Unused,
@@ -187,7 +191,7 @@ enum PciBarType {
     IoSpace,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 struct PciBar {
     bar_type: PciBarType,
     address: u64,
@@ -233,7 +237,7 @@ impl PciDevice {
             .write(self.bus, self.device, self.func, offset, value)
     }
 
-    fn init(&mut self) {
+    pub fn init(&mut self) {
         let (vendor_id, device_id) = get_device_details(self.bus, self.device, self.func);
 
         self.vendor_id = vendor_id;
@@ -247,6 +251,9 @@ impl PciDevice {
             self.vendor_id,
             self.device_id
         );
+
+        // Enable responses in memory space
+        self.write_u32(0x4, self.read_u32(0x4) | 0x2);
 
         let mut current_bar_offset = 0x10;
         let mut current_bar = 0;
@@ -319,6 +326,59 @@ impl PciDevice {
             );
         }
     }
+
+    pub fn allocate_bars(&mut self, start_address: Option<u64>) -> Option<u64> {
+        let mut next_address = start_address;
+
+        let mut current_bar_offset = 0x10;
+        let mut current_bar = 0;
+
+        //0x24 offset is last bar
+        while current_bar_offset <= 0x24 {
+            let bar = self.bars[current_bar];
+            if bar.size != 0 && bar.address == 0 {
+                if let Some(next_address) = next_address.as_mut() {
+                    match bar.bar_type {
+                        PciBarType::IoSpace | PciBarType::Unused => {}
+                        PciBarType::MemorySpace32 => {
+                            let address = naturally_align(*next_address, bar.size);
+                            self.write_u32(current_bar_offset, (address).try_into().unwrap());
+                            self.bars[current_bar].address = address;
+                            *next_address = address + bar.size;
+                        }
+                        PciBarType::MemorySpace64 => {
+                            let address = naturally_align(*next_address, bar.size);
+                            self.write_u32(
+                                current_bar_offset,
+                                (address & 0xffff_ffff).try_into().unwrap(),
+                            );
+                            current_bar_offset += 4;
+                            self.write_u32(current_bar_offset, (address >> 32).try_into().unwrap());
+                            self.bars[current_bar].address = address;
+                            *next_address = address + bar.size;
+                        }
+                    }
+                } else {
+                    panic!("Zero BAR address and no allocation available to allocate from")
+                }
+            }
+
+            current_bar += 1;
+            current_bar_offset += 4;
+        }
+
+        #[allow(clippy::disallowed_names)]
+        for bar in &self.bars {
+            log!(
+                "Updated BARs: type={:?} address={:x} size={:x}",
+                bar.bar_type,
+                bar.address,
+                bar.size
+            );
+        }
+
+        next_address
+    }
 }
 
 #[allow(clippy::enum_variant_names)]
@@ -370,8 +430,6 @@ impl VirtioPciTransport {
 
 impl VirtioTransport for VirtioPciTransport {
     fn init(&mut self, _device_type: u32) -> Result<(), VirtioError> {
-        self.device.init();
-
         // Read status register
         let status = self.device.read_u16(0x06);
 

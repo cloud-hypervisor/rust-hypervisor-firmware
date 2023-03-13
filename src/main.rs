@@ -187,10 +187,20 @@ fn main(info: &dyn bootinfo::Info) -> ! {
 
     pci::print_bus();
 
+    let mut next_address = info.pci_bar_memory().map(|m| m.addr);
+    let max_address = info.pci_bar_memory().map(|m| m.addr + m.size);
+
     pci::with_devices(
         VIRTIO_PCI_VENDOR_ID,
         VIRTIO_PCI_BLOCK_DEVICE_ID,
-        |pci_device| {
+        |mut pci_device| {
+            pci_device.init();
+
+            next_address = pci_device.allocate_bars(next_address);
+            if next_address > max_address {
+                panic!("PCI BAR allocation space exceeded")
+            }
+
             let mut pci_transport = pci::VirtioPciTransport::new(pci_device);
             let mut device = block::VirtioBlockDevice::new(&mut pci_transport);
             boot_from_device(&mut device, info)
