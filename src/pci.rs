@@ -102,6 +102,8 @@ impl PciConfig {
         }
     }
 
+    // This is the logic for calculating I/O port address
+    #[cfg(target_arch = "x86_64")]
     fn calculate_pci_address(bus: u8, device: u8, func: u8, offset: u8) -> u32 {
         assert_eq!(offset % 4, 0);
         assert!(bus < MAX_BUSES);
@@ -113,6 +115,23 @@ impl PciConfig {
         addr |= u32::from(device) << 11; // slot/device bits 15-11
         addr |= u32::from(func) << 8; // function bits 10-8
         addr |= u32::from(offset & 0xfc); // register 7-0
+
+        addr
+    }
+
+    // This is the logic for calculating PCI ECAM
+    #[cfg(not(target_arch = "x86_64"))]
+    fn calculate_pci_address(bus: u8, device: u8, func: u8, offset: u8) -> u32 {
+        assert_eq!(offset % 4, 0);
+        assert!(bus < MAX_BUSES);
+        assert!(device < MAX_DEVICES);
+        assert!(func < MAX_FUNCTIONS);
+
+        let mut addr = 0;
+        addr |= u32::from(bus) << 20; // bus bits 20-27
+        addr |= u32::from(device) << 15; // slot/device bits 15-19
+        addr |= u32::from(func) << 12; // function bits 12-14
+        addr |= offset as u32 & 0x3ff; // register
 
         addr
     }
