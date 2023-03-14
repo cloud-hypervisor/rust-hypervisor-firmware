@@ -23,10 +23,10 @@ bitflags::bitflags! {
 
         // All segments are nonconforming, non-system, ring-0 only, and present.
         // We set ACCESSED in advance to avoid writing to the descriptor.
-        const COMMON = Self::ACCESSED.bits | Self::USER_SEGMENT.bits | Self::PRESENT.bits;
+        const COMMON = Self::ACCESSED.bits() | Self::USER_SEGMENT.bits() | Self::PRESENT.bits();
         // BIT32 must be 0, all other bits (not yet mentioned) are ignored.
-        const CODE64 = Self::COMMON.bits | Self::READABLE.bits | Self::EXECUTABLE.bits | Self::BIT64.bits;
-        const DATA64 = Self::COMMON.bits | Self::WRITABLE.bits | Self::BIT64.bits;
+        const CODE64 = Self::COMMON.bits() | Self::READABLE.bits() | Self::EXECUTABLE.bits() | Self::BIT64.bits();
+        const DATA64 = Self::COMMON.bits() | Self::WRITABLE.bits() | Self::BIT64.bits();
     }
 }
 
