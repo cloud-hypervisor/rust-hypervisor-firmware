@@ -924,7 +924,7 @@ fn extract_path(device_path: &DevicePathProtocol, path: &mut [u8]) {
 }
 
 const PAGE_SIZE: u64 = 4096;
-const HEAP_SIZE: usize = 256 * 1024 * 1024;
+const HEAP_SIZE: usize = 2 << 20; /* 2MiB */
 
 // Populate allocator from E820, fixed ranges for the firmware and the loaded binary.
 fn populate_allocator(info: &dyn bootinfo::Info, image_address: u64, image_size: u64) {
