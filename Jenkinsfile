@@ -72,7 +72,7 @@ pipeline {
                                                 }
                                                 stage('Run unit tests') {
                                                           steps {
-                                                                  sh "scripts/dev_cli.sh --local tests --unit"
+                                                                  sh "scripts/dev_cli.sh tests --unit"
                                                           }
                                                 }
                                         }
