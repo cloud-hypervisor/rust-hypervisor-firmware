@@ -107,3 +107,5 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 	&& git submodule update --init --checkout \
 	&& make crossgcc-i386 CPUS=`nproc`; \
 	fi
+
+# Whitespace
