@@ -165,6 +165,9 @@ static mut CT: [efi::ConfigurationTable; MAX_CT_ENTRIES] = [efi::ConfigurationTa
     vendor_table: null_mut(),
 }; MAX_CT_ENTRIES];
 
+// RHF string in UCS-2
+const FIRMWARE_STRING: [u16; 4] = [0x0052, 0x0048, 0x0046, 0x0000];
+
 static mut ST: efi::SystemTable = efi::SystemTable {
     hdr: efi::TableHeader {
         signature: efi::SYSTEM_TABLE_SIGNATURE,
@@ -173,7 +176,7 @@ static mut ST: efi::SystemTable = efi::SystemTable {
         crc32: 0, // TODO
         reserved: 0,
     },
-    firmware_vendor: null_mut(), // TODO,
+    firmware_vendor: FIRMWARE_STRING.as_ptr() as *mut u16,
     firmware_revision: 0,
     console_in_handle: console::STDIN_HANDLE,
     con_in: null_mut(),
