@@ -883,9 +883,13 @@ pub extern "efiapi" fn calculate_crc32(_: *mut c_void, _: usize, _: *mut u32) ->
     Status::UNSUPPORTED
 }
 
-pub extern "efiapi" fn copy_mem(_: *mut c_void, _: *mut c_void, _: usize) {}
+pub extern "efiapi" fn copy_mem(dst: *mut c_void, src: *mut c_void, count: usize) {
+    unsafe { core::ptr::copy(src as *const u8, dst as *mut u8, count) }
+}
 
-pub extern "efiapi" fn set_mem(_: *mut c_void, _: usize, _: u8) {}
+pub extern "efiapi" fn set_mem(dst: *mut c_void, count: usize, val: u8) {
+    unsafe { core::ptr::write_bytes(dst as *mut u8, val, count) }
+}
 
 pub extern "efiapi" fn create_event_ex(
     _: u32,
