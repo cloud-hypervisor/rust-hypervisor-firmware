@@ -166,10 +166,6 @@ ensure_latest_ctr() {
 
         $DOCKER_RUNTIME pull --platform "$PLATFORM" "$CTR_IMAGE"
 
-        if [ $? -ne 0 ]; then
-            build_container
-        fi
-
         ok_or_die "Error pulling container image. Aborting."
     fi
 }
