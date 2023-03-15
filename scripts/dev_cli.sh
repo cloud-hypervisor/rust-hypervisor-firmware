@@ -6,7 +6,7 @@
 
 CLI_NAME="Rust Hypervisor Firmware"
 
-CTR_IMAGE_TAG="rusthypervisorfirmware/dev"
+CTR_IMAGE_TAG="ghcr.io/cloud-hypervisor/rust-hypervisor-firmware"
 CTR_IMAGE_VERSION="latest"
 CTR_IMAGE="${CTR_IMAGE_TAG}:${CTR_IMAGE_VERSION}"
 
