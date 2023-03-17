@@ -11,8 +11,8 @@ pub trait Info {
     fn rsdp_addr(&self) -> Option<u64> {
         None
     }
-    // Address of FDT to use for booting if present
-    fn fdt_addr(&self) -> Option<u64> {
+    // Address/size of FDT used for booting
+    fn fdt_reservation(&self) -> Option<MemoryEntry> {
         None
     }
     // The kernel command line (not including null terminator)
