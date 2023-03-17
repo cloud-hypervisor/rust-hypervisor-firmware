@@ -957,6 +957,15 @@ fn populate_allocator(info: &dyn bootinfo::Info, image_address: u64, image_size:
         );
     }
 
+    if let Some(fdt_entry) = info.fdt_reservation() {
+        ALLOCATOR.borrow_mut().allocate_pages(
+            efi::ALLOCATE_ADDRESS,
+            efi::UNUSABLE_MEMORY,
+            (fdt_entry.size + 4095) / 4096,
+            fdt_entry.addr,
+        );
+    }
+
     // Add the loaded binary
     ALLOCATOR.borrow_mut().allocate_pages(
         efi::ALLOCATE_ADDRESS,
@@ -1078,7 +1087,7 @@ pub fn efi_exec(
     let mut ct_index = 0;
 
     // Populate with FDT table if present
-    if let Some(fdt_addr) = info.fdt_addr() {
+    if let Some(fdt_entry) = info.fdt_reservation() {
         ct[ct_index] = efi::ConfigurationTable {
             vendor_guid: Guid::from_fields(
                 0xb1b621d5,
@@ -1088,7 +1097,7 @@ pub fn efi_exec(
                 0x0b,
                 &[0xd9, 0x15, 0x2c, 0x69, 0xaa, 0xe0],
             ),
-            vendor_table: fdt_addr as *const u64 as *mut _,
+            vendor_table: fdt_entry.addr as *const u64 as *mut _,
         };
         ct_index += 1;
     }

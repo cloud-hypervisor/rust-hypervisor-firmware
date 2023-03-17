@@ -10,7 +10,7 @@ use crate::{
 
 pub struct StartInfo<'a> {
     acpi_rsdp_addr: Option<u64>,
-    fdt_addr: u64,
+    fdt_entry: MemoryEntry,
     fdt: Fdt<'a>,
     kernel_load_addr: u64,
     memory_layout: &'static [MemoryDescriptor],
@@ -32,10 +32,14 @@ impl StartInfo<'_> {
             }
         };
 
-        let fdt_addr = ptr as u64;
+        let fdt_entry = MemoryEntry {
+            addr: ptr as u64,
+            size: fdt.total_size() as u64,
+            entry_type: EntryType::Reserved,
+        };
 
         Self {
-            fdt_addr,
+            fdt_entry,
             fdt,
             acpi_rsdp_addr,
             kernel_load_addr,
@@ -62,8 +66,8 @@ impl Info for StartInfo<'_> {
         self.acpi_rsdp_addr
     }
 
-    fn fdt_addr(&self) -> Option<u64> {
-        Some(self.fdt_addr)
+    fn fdt_reservation(&self) -> Option<MemoryEntry> {
+        Some(self.fdt_entry)
     }
 
     fn cmdline(&self) -> &[u8] {
