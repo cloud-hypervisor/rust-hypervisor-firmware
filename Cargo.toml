@@ -42,7 +42,7 @@ uart_16550 = "0.2.18"
 x86_64 = "0.14.10"
 
 [dev-dependencies]
-dirs = "4.0.0"
+dirs = "5.0.0"
 rand = "0.8.5"
 ssh2 = { version = "0.9.4", features = ["vendored-openssl"] }
 tempfile = "3.4.0"
