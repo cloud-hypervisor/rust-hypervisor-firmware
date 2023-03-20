@@ -57,6 +57,8 @@ mod pe;
 #[cfg(target_arch = "x86_64")]
 mod pvh;
 mod rtc;
+#[cfg(target_arch = "riscv64")]
+mod rtc_goldfish;
 #[cfg(target_arch = "aarch64")]
 mod rtc_pl031;
 #[cfg(target_arch = "aarch64")]
