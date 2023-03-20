@@ -24,16 +24,6 @@ This project was originally developed using
 currently support resetting the virtio block device it is not possible to boot
 all the way into the OS.
 
-## Building
-
-To compile:
-
-cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
-
-The result will be in:
-
-target/x86_64-unknown-none/release/hypervisor-fw
-
 ## Features
 
 * virtio (PCI) block support
@@ -44,7 +34,23 @@ target/x86_64-unknown-none/release/hypervisor-fw
 * PE32+ loader
 * Minimal EFI environment (sufficient to boot shim + GRUB2 as used by Ubuntu)
 
-## Running
+## x86-64 Support
+
+### Building
+
+To compile:
+
+```
+cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+```
+
+The result will be in:
+
+```
+target/x86_64-unknown-none/release/hypervisor-fw
+```
+
+### Running
 
 Works with Cloud Hypervisor and QEMU via their PVH loaders as an alternative to
 the Linux kernel.
@@ -52,7 +58,7 @@ the Linux kernel.
 Cloud Hypervisor and QEMU are currently the primary development targets for the
 firmware although support for other VMMs will be considered.
 
-### Cloud Hypervisor
+#### Cloud Hypervisor
 
 As per [getting
 started](https://github.com/cloud-hypervisor/cloud-hypervisor/blob/master/README.md#2-getting-started)
@@ -73,7 +79,7 @@ $ ./cloud-hypervisor/target/release/cloud-hypervisor \
 $ popd
 ```
 
-### QEMU
+#### QEMU
 
 Use the QEMU `-kernel` parameter to specify the path to the firmware.
 
@@ -86,6 +92,39 @@ $ qemu-system-x86_64 -machine q35,accel=kvm -cpu host,-vmx -m 1G\
     -serial stdio \
     -drive id=os,file=focal-server-cloudimg-amd64.raw,if=none \
     -device virtio-blk-pci,drive=os,disable-legacy=on
+```
+
+## RISC-V Support
+
+Experimental RISC-V support is available. This is currently designed to run as a
+payload from OpenSBI under QEMU virt. It is expected wider platform support
+will become available in the future.
+
+### Building
+
+To compile:
+
+```
+cargo build --release --target riscv64gcv-unknown-none-elf.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+```
+
+The result will be in:
+
+```
+target/riscv64gcv-unknown-none-elf/release/hypervisor-fw
+```
+
+### Running
+
+Currently only QEMU has been tested.
+
+#### QEMU
+
+```
+$ qemu-system-riscv64  -M virt -cpu rv64 -smp 1 -m 1024 \
+    -nographic -kernel target/riscv64gcv-unknown-none-elf/release/hypervisor-fw \
+    -drive id=mydrive,file=root.img,format=raw \
+    -device virtio-blk-pci,drive=mydrive,disable-legacy=on
 ```
 
 ## Testing
