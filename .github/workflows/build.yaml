@@ -17,6 +17,8 @@ jobs:
             tests: true
           - target: aarch64-unknown-none.json
             tests: false
+          - target: riscv64gcv-unknown-none-elf.json
+            tests: false
     steps:
       - name: Code checkout
         uses: actions/checkout@v2
