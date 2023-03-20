@@ -43,6 +43,7 @@ x86_64 = "0.14.10"
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 chrono = { version = "0.4", default-features = false }
+fdt = "0.1.5"
 
 [dev-dependencies]
 dirs = "5.0.0"
