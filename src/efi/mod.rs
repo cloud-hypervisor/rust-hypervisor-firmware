@@ -34,6 +34,9 @@ use r_efi::{
     system::{ConfigurationTable, RuntimeServices},
 };
 
+#[cfg(target_arch = "riscv64")]
+use r_efi::{eficall, eficall_abi};
+
 use crate::bootinfo;
 use crate::layout;
 use crate::rtc;
@@ -856,11 +859,45 @@ pub extern "efiapi" fn locate_handle_buffer(
     Status::UNSUPPORTED
 }
 
+#[cfg(target_arch = "riscv64")]
+#[repr(C)]
+struct RiscVBootProtocol {
+    revision: u64,
+    get_boot_hart_id: eficall! {fn(*const RiscVBootProtocol, *mut u64) -> Status },
+}
+
+#[cfg(target_arch = "riscv64")]
+extern "efiapi" fn get_boot_hart_id(_: *const RiscVBootProtocol, hart: *mut u64) -> Status {
+    unsafe { *hart = 0 };
+    Status::SUCCESS
+}
+
+#[cfg(target_arch = "riscv64")]
+const RISC_V_BOOT_PROTOCOL: RiscVBootProtocol = RiscVBootProtocol {
+    revision: 0,
+    get_boot_hart_id,
+};
+
+#[cfg(target_arch = "riscv64")]
+pub const RISV_V_BOOT_PROTOCOL_GUID: Guid = Guid::from_fields(
+    0xccd15fec,
+    0x6f73,
+    0x4eec,
+    0x83,
+    0x95,
+    &[0x3e, 0x69, 0xe4, 0xb9, 0x40, 0xbf],
+);
+
 pub extern "efiapi" fn locate_protocol(
-    _: *mut Guid,
+    _guid: *mut Guid,
     _: *mut c_void,
-    _: *mut *mut c_void,
+    _out: *mut *mut c_void,
 ) -> Status {
+    #[cfg(target_arch = "riscv64")]
+    if unsafe { *_guid } == RISV_V_BOOT_PROTOCOL_GUID {
+        unsafe { *_out = &RISC_V_BOOT_PROTOCOL as *const RiscVBootProtocol as *mut c_void };
+        return Status::SUCCESS;
+    }
     // XXX: A recent version of Linux kernel fails to boot if EFI_UNSUPPORTED returned.
     Status::NOT_FOUND
 }
