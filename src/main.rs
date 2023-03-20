@@ -62,6 +62,8 @@ mod rtc;
 mod rtc_goldfish;
 #[cfg(target_arch = "aarch64")]
 mod rtc_pl031;
+#[cfg(target_arch = "riscv64")]
+mod uart_mmio;
 #[cfg(target_arch = "aarch64")]
 mod uart_pl011;
 mod virtio;
