@@ -45,7 +45,7 @@ mod coreboot;
 mod delay;
 mod efi;
 mod fat;
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "riscv64"))]
 mod fdt;
 #[cfg(all(test, feature = "integration_tests"))]
 mod integration;
@@ -186,6 +186,43 @@ pub extern "C" fn rust64_start(x0: *const u8) -> ! {
     }
 
     main(&info)
+}
+
+#[cfg(target_arch = "riscv64")]
+#[no_mangle]
+pub extern "C" fn rust64_start(a0: u64, a1: *const u8) -> ! {
+    use crate::bootinfo::{EntryType, Info, MemoryEntry};
+
+    serial::PORT.borrow_mut().init();
+
+    log!("Starting on RV64 0x{:x} 0x{:x}", a0, a1 as u64,);
+
+    let info = fdt::StartInfo::new(
+        a1,
+        None,
+        0x8040_0000,
+        &crate::arch::riscv64::layout::MEM_LAYOUT[..],
+        Some(MemoryEntry {
+            addr: 0x4000_0000,
+            size: 2 << 20,
+            entry_type: EntryType::Reserved,
+        }),
+    );
+
+    for i in 0..info.num_entries() {
+        let region = info.entry(i);
+        log!(
+            "Memory region {}MiB@0x{:x}",
+            region.size / 1024 / 1024,
+            region.addr
+        );
+    }
+
+    if let Some((base, length)) = info.find_compatible_region(&["pci-host-ecam-generic"]) {
+        pci::init(base as u64, length as u64);
+    }
+
+    main(&info);
 }
 
 fn main(info: &dyn bootinfo::Info) -> ! {
