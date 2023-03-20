@@ -3,12 +3,10 @@
 // Copyright (C) 2018 Google LLC
 
 use core::arch::asm;
+#[cfg(target_arch = "riscv64")]
+use core::arch::riscv64::pause;
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::_rdtsc;
-
-const NSECS_PER_SEC: u64 = 1000000000;
-const CPU_KHZ_DEFAULT: u64 = 200;
-const PAUSE_THRESHOLD_TICKS: u64 = 150;
 
 #[cfg(target_arch = "aarch64")]
 #[inline]
@@ -16,6 +14,13 @@ unsafe fn rdtsc() -> u64 {
     let value: u64;
     asm!("mrs {}, cntvct_el0", out(reg) value);
     value
+}
+
+#[cfg(target_arch = "riscv64")]
+unsafe fn rdtsc() -> u64 {
+    let r: u64;
+    unsafe { asm!("csrr {rd}, time", rd = out(reg) r) };
+    r
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -37,6 +42,13 @@ unsafe fn pause() {
 }
 
 pub fn ndelay(ns: u64) {
+    #[cfg(not(target_arch = "riscv64"))]
+    const CPU_KHZ_DEFAULT: u64 = 200;
+    #[cfg(target_arch = "riscv64")]
+    const CPU_KHZ_DEFAULT: u64 = 1_000_000; /* QEMU currently defines as 1GHz */
+    const NSECS_PER_SEC: u64 = 1_000_000_000;
+    const PAUSE_THRESHOLD_TICKS: u64 = 150;
+
     let delta = ns * CPU_KHZ_DEFAULT / NSECS_PER_SEC;
     let mut pause_delta = 0;
     unsafe {
