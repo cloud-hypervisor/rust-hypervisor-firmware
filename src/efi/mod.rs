@@ -50,6 +50,8 @@ use var::VariableAllocator;
 pub const EFI_BOOT_PATH: &str = "\\EFI\\BOOT\\BOOTAA64.EFI";
 #[cfg(target_arch = "x86_64")]
 pub const EFI_BOOT_PATH: &str = "\\EFI\\BOOT\\BOOTX64.EFI";
+#[cfg(target_arch = "riscv64")]
+pub const EFI_BOOT_PATH: &str = "\\EFI\\BOOT\\BOOTRISCV64.EFI";
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum HandleType {
