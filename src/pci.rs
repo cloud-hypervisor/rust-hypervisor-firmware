@@ -302,7 +302,9 @@ impl PciDevice {
                         self.bars[current_bar].address = u64::from(bar & 0xffff_fff0);
 
                         self.write_u32(current_bar_offset, 0xffff_ffff);
-                        let size = !(self.read_u32(current_bar_offset) & 0xffff_fff0) + 1;
+                        let size = (!(self.read_u32(current_bar_offset) & 0xffff_fff0))
+                            .checked_add(1)
+                            .unwrap_or(0);
                         self.bars[current_bar].size = u64::from(size);
                         self.write_u32(current_bar_offset, bar);
                     }
