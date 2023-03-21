@@ -295,7 +295,7 @@ impl PciDevice {
                     panic!("I/O BARs are not supported on this platform");
                 }
             } else {
-                // bits 2-1 are the type 0 is 32-but, 2 is 64 bit
+                // bits 2-1 are the type 0 is 32-bit, 2 is 64 bit
                 match bar >> 1 & 3 {
                     0 => {
                         self.bars[current_bar].bar_type = PciBarType::MemorySpace32;
