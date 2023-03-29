@@ -94,6 +94,22 @@ $ qemu-system-x86_64 -machine q35,accel=kvm -cpu host,-vmx -m 1G\
     -device virtio-blk-pci,drive=os,disable-legacy=on
 ```
 
+## AArch64 Support
+
+### Building
+
+To compile:
+
+```
+cargo build --release --target aarch64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+```
+
+The result will be in:
+
+```
+target/aarch64-unknown-none/release/hypervisor-fw
+```
+
 ## RISC-V Support
 
 Experimental RISC-V support is available. This is currently designed to run as a
