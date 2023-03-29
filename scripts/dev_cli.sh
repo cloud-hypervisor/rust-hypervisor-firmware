@@ -235,7 +235,7 @@ cmd_build() {
     arch="$(uname -m)"
     build="debug"
     features_build=""
-    exported_device="dev/kvm"
+    exported_device="/dev/kvm"
     while [ $# -gt 0 ]; do
 	case "$1" in
             "-h"|"--help")  { cmd_help; exit 1; } ;;
