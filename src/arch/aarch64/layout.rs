@@ -21,22 +21,21 @@ extern "Rust" {
 }
 
 pub mod map {
-    pub const END: usize = 0x1_0000_0000;
+    // Create page table for 128G is enough
+    pub const END: usize = 0x20_0000_0000;
 
-    pub mod fw {
-        pub const START: usize = 0x0000_0000;
-        pub const END: usize = 0x0040_0000;
-    }
+    // Firmware region won't be used by this firmware, so merge it into mmio region
+    // is harmless and better for management.
     pub mod mmio {
-        pub const START: usize = super::fw::END;
+        pub const START: usize = 0x0000_0000;
         pub const PL011_START: usize = 0x0900_0000;
         pub const PL031_START: usize = 0x0901_0000;
         pub const END: usize = 0x4000_0000;
     }
 
     pub mod dram {
-        const FDT_SIZE: usize = 0x0020_0000;
-        const ACPI_SIZE: usize = 0x0020_0000;
+        pub const FDT_SIZE: usize = 0x0020_0000;
+        pub const ACPI_SIZE: usize = 0x0020_0000;
 
         pub const START: usize = super::mmio::END;
         pub const FDT_START: usize = START;
@@ -48,21 +47,11 @@ pub mod map {
 
 pub type KernelAddrSpace = AddressSpace<{ map::END }>;
 
-const NUM_MEM_RANGES: usize = 3;
+const NUM_MEM_RANGES: usize = 2;
 
 pub static LAYOUT: KernelVirtualLayout<NUM_MEM_RANGES> = KernelVirtualLayout::new(
     map::END - 1,
     [
-        TranslationDescriptor {
-            name: "Firmware",
-            virtual_range: RangeInclusive::new(map::fw::START, map::fw::END - 1),
-            physical_range_translation: Translation::Identity,
-            attribute_fields: AttributeFields {
-                mem_attributes: MemAttributes::CacheableDRAM,
-                acc_perms: AccessPermissions::ReadWrite,
-                execute_never: false,
-            },
-        },
         TranslationDescriptor {
             name: "Device MMIO",
             virtual_range: RangeInclusive::new(map::mmio::START, map::mmio::END - 1),
