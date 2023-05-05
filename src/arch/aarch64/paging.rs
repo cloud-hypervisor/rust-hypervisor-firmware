@@ -9,7 +9,9 @@ use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 
 use self::interface::Mmu;
 
+use super::layout::map::dram::{ACPI_SIZE, FDT_SIZE, FDT_START};
 use super::{layout::KernelAddrSpace, translation::TranslationTable};
+use crate::arch::aarch64::layout::code_range;
 
 /// MMU enable errors variants.
 #[derive(Debug)]
@@ -100,6 +102,9 @@ impl<const GRANULE_SIZE: usize> TranslationGranule<GRANULE_SIZE> {
     /// The granule's shift, aka log2(size).
     pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
 
+    /// The page descriptor's output address mask (48bits)
+    pub const ADDR_MASK: usize = 0xffffffff << Self::SHIFT;
+
     const fn size_checked() -> usize {
         assert!(GRANULE_SIZE.is_power_of_two());
 
@@ -144,6 +149,25 @@ impl<const NUM_SPECIAL_RANGES: usize> KernelVirtualLayout<{ NUM_SPECIAL_RANGES }
     ) -> Result<(usize, AttributeFields), &'static str> {
         if virt_addr > self.max_virt_addr_inclusive {
             return Err("Address out of range");
+        }
+
+        // Enhance security for fdt, acpi and code memory range
+        let code = code_range();
+        let fdt_acpi = FDT_START..(FDT_START + FDT_SIZE + ACPI_SIZE);
+        if code.contains(&virt_addr) {
+            let attr = AttributeFields {
+                mem_attributes: MemAttributes::CacheableDRAM,
+                acc_perms: AccessPermissions::ReadOnly,
+                execute_never: false,
+            };
+            return Ok((virt_addr, attr));
+        } else if fdt_acpi.contains(&virt_addr) {
+            let attr = AttributeFields {
+                mem_attributes: MemAttributes::CacheableDRAM,
+                acc_perms: AccessPermissions::ReadOnly,
+                execute_never: true,
+            };
+            return Ok((virt_addr, attr));
         }
 
         for i in self.inner.iter() {

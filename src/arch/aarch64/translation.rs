@@ -7,18 +7,21 @@
 //! Only 64 KiB granule is supported.
 
 use core::convert;
-
 use tock_registers::{
     interfaces::{Readable, Writeable},
     register_bitfields,
     registers::InMemoryRegister,
 };
 
-use super::{layout, paging::*};
+use crate::arch::aarch64::layout::code_range;
+use layout::map::dram::{ACPI_START, FDT_START, KERNEL_START};
 
+use super::{layout, paging::*};
 // A table descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-15.
 register_bitfields! {u64,
     STAGE1_TABLE_DESCRIPTOR [
+        BLOCK_OUTPUT_ADDR_64KiB OFFSET(29) NUMBITS(19) [], // [47:29]
+
         /// Physical address of the next descriptor.
         NEXT_LEVEL_TABLE_ADDR_64KiB OFFSET(16) NUMBITS(32) [], // [47:16]
 
@@ -36,7 +39,7 @@ register_bitfields! {u64,
 
 // A level 3 page descriptor, as per ARMv8-A Architecture Reference Manual Figure D5-17.
 register_bitfields! {u64,
-    STAGE1_PAGE_DESCRIPTOR [
+    pub STAGE1_PAGE_DESCRIPTOR [
         /// Unprivileged execute-never.
         UXN OFFSET(54) NUMBITS(1) [
             False = 0,
@@ -105,6 +108,8 @@ struct PageDescriptor {
     value: u64,
 }
 
+const PAGE_DESC_ADDR_MASK_64KB: u64 = Granule64KiB::ADDR_MASK as u64;
+
 trait StartAddr {
     fn phys_start_addr_u64(&self) -> u64;
     fn phys_start_addr_usize(&self) -> usize;
@@ -158,6 +163,38 @@ impl TableDescriptor {
         );
 
         Self { value: val.get() }
+    }
+
+    pub fn block_attr(attribute_fields: &AttributeFields) -> Self {
+        let val = InMemoryRegister::<u64, STAGE1_PAGE_DESCRIPTOR::Register>::new(0);
+
+        val.write(
+            STAGE1_PAGE_DESCRIPTOR::AF::True
+                + STAGE1_PAGE_DESCRIPTOR::VALID::True
+                + (*attribute_fields).into(),
+        );
+
+        let v = val.get();
+        let v = v >> 2 << 2;
+        Self { value: v }
+    }
+
+    pub fn block_table_from_addr(addr: usize) -> Self {
+        let val = InMemoryRegister::<u64, STAGE1_TABLE_DESCRIPTOR::Register>::new(0);
+        let shifted = addr >> Granule512MiB::SHIFT;
+        let (_, attribute_fields) = layout::virt_mem_layout()
+            .virt_addr_properties(addr)
+            .unwrap();
+        let attr = Self::block_attr(&attribute_fields).value;
+        let addr_shifted = STAGE1_TABLE_DESCRIPTOR::BLOCK_OUTPUT_ADDR_64KiB.val(shifted as u64);
+        val.write(
+            addr_shifted
+                + STAGE1_TABLE_DESCRIPTOR::TYPE::Block
+                + STAGE1_TABLE_DESCRIPTOR::VALID::True,
+        );
+        let v = val.get() + attr;
+
+        Self { value: v }
     }
 }
 
@@ -241,17 +278,43 @@ impl<const NUM_TABLES: usize> FixedSizeTranslationTable<NUM_TABLES> {
     ///
     /// - Modifies a `static mut`. Ensure it only happens from here.
     pub unsafe fn populate_tt_entries(&mut self) -> Result<(), &'static str> {
+        // Use 512M block to map the whole memory region and update 0x40000000 ~ 0x60000000 later
         for (l2_nr, l2_entry) in self.lvl2.iter_mut().enumerate() {
+            let higher_addr = l2_nr << Granule512MiB::SHIFT;
+            *l2_entry = TableDescriptor::block_table_from_addr(higher_addr);
+        }
+
+        // Use 64K page table to remap up to size of 512MB from layout::map::dram::START where DT, ACPI and fw reside.
+        for (l2_nr, l2_entry) in self.lvl2.iter_mut().enumerate() {
+            let higher_addr = l2_nr << Granule512MiB::SHIFT;
+            if higher_addr < layout::map::dram::START {
+                continue;
+            } else if higher_addr >= layout::map::dram::START + 0x2000_0000 {
+                break;
+            }
+
             *l2_entry =
                 TableDescriptor::from_next_lvl_table_addr(self.lvl3[l2_nr].phys_start_addr_usize());
 
+            let code = code_range();
+            let mut l3_temp: u64 = 0;
             for (l3_nr, l3_entry) in self.lvl3[l2_nr].iter_mut().enumerate() {
-                let virt_addr = (l2_nr << Granule512MiB::SHIFT) + (l3_nr << Granule64KiB::SHIFT);
+                let virt_addr = higher_addr + (l3_nr << Granule64KiB::SHIFT);
+                l3_temp = if virt_addr == FDT_START
+                    || virt_addr == ACPI_START
+                    || virt_addr == KERNEL_START
+                    || virt_addr == code.start
+                    || virt_addr == code.end
+                {
+                    let (_, attr) = layout::virt_mem_layout().virt_addr_properties(virt_addr)?;
+                    PageDescriptor::from_output_addr(virt_addr, &attr).value
+                } else {
+                    l3_temp
+                };
 
-                let (phys_output_addr, attribute_fields) =
-                    layout::virt_mem_layout().virt_addr_properties(virt_addr)?;
-
-                *l3_entry = PageDescriptor::from_output_addr(phys_output_addr, &attribute_fields);
+                l3_temp &= !PAGE_DESC_ADDR_MASK_64KB;
+                l3_temp += virt_addr as u64 & PAGE_DESC_ADDR_MASK_64KB;
+                *l3_entry = PageDescriptor { value: l3_temp };
             }
         }
 
