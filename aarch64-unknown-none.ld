@@ -18,7 +18,7 @@ SECTIONS
   code_start = .;
   .text.boot  : { *(.text.boot)        }
   .text       : { *(.text .text.*)     }
-  . = ALIGN(4K);
+  . = ALIGN(64K);
   code_end = .;
 
   data_start = .;
