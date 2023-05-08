@@ -168,10 +168,11 @@ pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh:
 #[cfg(target_arch = "aarch64")]
 #[no_mangle]
 pub extern "C" fn rust64_start(x0: *const u8) -> ! {
-    serial::PORT.borrow_mut().init();
-
     arch::aarch64::simd::setup_simd();
     arch::aarch64::paging::setup();
+
+    // Use atomic operation before MMU enabled may cause exception, see https://www.ipshop.xyz/5909.html
+    serial::PORT.borrow_mut().init();
 
     let info = fdt::StartInfo::new(
         x0,
