@@ -84,6 +84,14 @@ ENV AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu/
 ENV AARCH64_UNKNOWN_LINUX_MUSL_OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu/
 ENV OPENSSL_INCLUDE_DIR=/usr/include/
 
+# Checkout coreboot repository and setup cross toolchains
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+	git clone --quiet --branch "$COREBOOT_VERSION" --depth 1 https://github.com/coreboot/coreboot.git "$COREBOOT_DIR" \
+	&& cd "$COREBOOT_DIR" \
+	&& git submodule update --init --checkout \
+	&& make crossgcc-i386 CPUS=`nproc`; \
+	fi
+
 # Install the rust toolchain
 RUN export ARCH="$(uname -m)" \
 	&& nohup curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain "$RUST_TOOLCHAIN" \
@@ -102,11 +110,3 @@ RUN export ARCH="$(uname -m)" \
 RUN echo 'source $CARGO_HOME/env' >> $HOME/.bashrc \
 	&& mkdir $HOME/.cargo \
 	&& ln -s $CARGO_HOME/env $HOME/.cargo/env
-
-# Checkout coreboot repository and setup cross toolchains
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-	git clone --quiet --branch "$COREBOOT_VERSION" --depth 1 https://github.com/coreboot/coreboot.git "$COREBOOT_DIR" \
-	&& cd "$COREBOOT_DIR" \
-	&& git submodule update --init --checkout \
-	&& make crossgcc-i386 CPUS=`nproc`; \
-	fi
