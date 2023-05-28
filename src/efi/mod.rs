@@ -212,8 +212,8 @@ fn convert_internal_pointer(descriptors: &[alloc::MemoryDescriptor], ptr: u64) -
 }
 
 unsafe fn fixup_at_virtual(descriptors: &[alloc::MemoryDescriptor]) {
-    let mut st = &mut ST;
-    let mut rs = &mut RS;
+    let st = &mut ST;
+    let rs = &mut RS;
 
     let ptr = convert_internal_pointer(descriptors, (not_available as *const ()) as u64).unwrap();
     rs.get_time = transmute(ptr);
@@ -1174,7 +1174,7 @@ pub fn efi_exec(
 
     let mut stdin = console::STDIN;
     let mut stdout = console::STDOUT;
-    let mut st = unsafe { &mut ST };
+    let st = unsafe { &mut ST };
     st.con_in = &mut stdin;
     st.con_out = &mut stdout;
     st.std_err = &mut stdout;

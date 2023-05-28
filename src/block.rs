@@ -262,14 +262,14 @@ impl<'a> VirtioBlockDevice<'a> {
         let mut state = self.state.borrow_mut();
 
         let next_head = state.next_head;
-        let mut d = &mut state.descriptors[next_head];
+        let d = &mut state.descriptors[next_head];
         let next_desc = (next_head + 1) % QUEUE_SIZE;
         d.addr = (&header as *const _) as u64;
         d.length = core::mem::size_of::<BlockRequestHeader>() as u32;
         d.flags = VIRTQ_DESC_F_NEXT;
         d.next = next_desc as u16;
 
-        let mut d = &mut state.descriptors[next_desc];
+        let d = &mut state.descriptors[next_desc];
         let next_desc = (next_desc + 1) % QUEUE_SIZE;
         if request != RequestType::Flush {
             match data {
@@ -294,7 +294,7 @@ impl<'a> VirtioBlockDevice<'a> {
             };
         d.next = next_desc as u16;
 
-        let mut d = &mut state.descriptors[next_desc];
+        let d = &mut state.descriptors[next_desc];
         d.addr = (&footer as *const _) as u64;
         d.length = core::mem::size_of::<BlockRequestFooter>() as u32;
         d.flags = VIRTQ_DESC_F_WRITE;
