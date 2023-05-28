@@ -39,13 +39,6 @@ fetch_disk_images() {
     CLEAR_OS_IMAGE_URL="$CLEAR_OS_URL_BASE/$CLEAR_OS_IMAGE_NAME"
     fetch_image "$CLEAR_OS_IMAGE_NAME" "$CLEAR_OS_IMAGE_URL"
 
-    BIONIC_OS_IMAGE_NAME="bionic-server-cloudimg-amd64.img"
-    BIONIC_OS_RAW_IMAGE_NAME="bionic-server-cloudimg-amd64-raw.img"
-    BIONIC_OS_IMAGE_BASE="https://cloud-images.ubuntu.com/bionic/current"
-    BIONIC_OS_IMAGE_URL="$BIONIC_OS_IMAGE_BASE/$BIONIC_OS_IMAGE_NAME"
-    fetch_image "$BIONIC_OS_IMAGE_NAME" "$BIONIC_OS_IMAGE_URL"
-    convert_image "$BIONIC_OS_IMAGE_NAME" "$BIONIC_OS_RAW_IMAGE_NAME"
-
     FOCAL_OS_IMAGE_NAME="focal-server-cloudimg-amd64.img"
     FOCAL_OS_RAW_IMAGE_NAME="focal-server-cloudimg-amd64-raw.img"
     FOCAL_OS_IMAGE_BASE="https://cloud-images.ubuntu.com/focal/current"
