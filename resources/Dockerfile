@@ -91,6 +91,7 @@ RUN export ARCH="$(uname -m)" \
 	&& rustup component add clippy \
 	&& rustup component add rust-src \
 	&& rustup target add aarch64-unknown-linux-gnu \
+	&& rustup target add riscv64gc-unknown-linux-gnu \
 	&& rustup target add x86_64-unknown-linux-gnu \
 	&& rm -rf "$CARGO_HOME/registry" \
 	&& ln -s "$CARGO_REGISTRY_DIR" "$CARGO_HOME/registry" \
