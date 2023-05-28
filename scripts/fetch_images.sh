@@ -3,7 +3,7 @@ set -x
 
 fetch_ch() {
     CH_PATH="$1"
-    CH_VERSION="v30.0"
+    CH_VERSION="v32.0"
     CH_URL="https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/$CH_VERSION/cloud-hypervisor"
     if [ ! -f "$CH_PATH" ]; then
         wget --quiet $CH_URL -O $CH_PATH
