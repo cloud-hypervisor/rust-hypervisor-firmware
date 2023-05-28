@@ -609,15 +609,9 @@ mod tests {
             handle_child_output(&tmp_dir, r, &output);
         }
 
-        const BIONIC_IMAGE_NAME: &str = "bionic-server-cloudimg-amd64-raw.img";
         const FOCAL_IMAGE_NAME: &str = "focal-server-cloudimg-amd64-raw.img";
         const JAMMY_IMAGE_NAME: &str = "jammy-server-cloudimg-amd64-raw.img";
         const CLEAR_IMAGE_NAME: &str = "clear-31311-cloudguest.img";
-
-        #[test]
-        fn test_boot_qemu_bionic() {
-            test_boot(BIONIC_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
-        }
 
         #[test]
         fn test_boot_qemu_focal() {
@@ -632,12 +626,6 @@ mod tests {
         #[test]
         fn test_boot_qemu_clear() {
             test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_qemu)
-        }
-
-        #[test]
-        #[cfg(not(feature = "coreboot"))]
-        fn test_boot_ch_bionic() {
-            test_boot(BIONIC_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
         }
 
         #[test]
