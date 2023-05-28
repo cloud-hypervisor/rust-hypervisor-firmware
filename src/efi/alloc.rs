@@ -55,7 +55,7 @@ impl Allocator {
         self.key += 1;
 
         if self.first_allocation.is_none() {
-            let mut a = &mut self.allocations[0];
+            let a = &mut self.allocations[0];
 
             a.in_use = true;
             a.next_allocation = None;
