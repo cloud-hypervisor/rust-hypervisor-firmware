@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2020 Google LLC
+
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{PageSize, PageTable, PageTableFlags, PhysFrame, Size2MiB},
