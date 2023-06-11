@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2020 Google LLC
+
 .section .text32, "ax"
 .global ram32_start
 .code32
