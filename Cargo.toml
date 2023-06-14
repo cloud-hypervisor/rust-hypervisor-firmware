@@ -26,7 +26,7 @@ coreboot = []
 efi-var = []
 
 [dependencies]
-bitflags = "2.3.1"
+bitflags = "2.3.2"
 atomic_refcell = "0.1.10"
 r-efi = { version = "4.2.0", features = ["efiapi"] }
 linked_list_allocator = "0.10.4"
