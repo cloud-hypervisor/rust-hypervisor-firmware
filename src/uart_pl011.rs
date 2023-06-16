@@ -26,6 +26,10 @@ impl Pl011 {
 impl fmt::Write for Pl011 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for byte in s.bytes() {
+            // Unix-like OS treats LF as CRLF
+            if byte == b'\n' {
+                self.send(b'\r');
+            }
             self.send(byte);
         }
         Ok(())
