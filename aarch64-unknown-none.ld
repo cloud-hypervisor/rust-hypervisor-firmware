@@ -4,9 +4,17 @@ ENTRY(ram64_start)
     DRAM:   [0x4000_0000-0xfc00_0000]
     FDT:    [0x4000_0000-0x401f_ffff)
     ACPI:   [0x4020_0000-0x403f_ffff)
-    kernel: [0x4048_0000-]
-   The stack start is at the end of the DRAM region. */
-ram_min = 0x40480000;
+    payload:[0x4040_0000-0x405f_ffff)
+    RHF:    [0x40600000-]
+   Assuming 2MB is enough to load payload.
+   The stack start is at the end of the RHF region. */
+ram_min = 0x40600000;
+
+/* This value must be identical with arch::aarch64::layout::map::dram::KERNEL_START. */
+PAYLOAD_START = 0x40400000;
+
+efi_image_size = rhf_end - ram_min;
+efi_image_offset = ram_min - PAYLOAD_START;
 
 SECTIONS
 {
@@ -41,4 +49,7 @@ SECTIONS
     *(.symtab)
     *(.strtab)
   }
+
+  . = ALIGN(4K);
+  rhf_end = .;
 }

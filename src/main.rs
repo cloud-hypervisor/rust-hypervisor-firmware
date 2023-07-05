@@ -16,6 +16,9 @@ use core::panic::PanicInfo;
 #[cfg(target_arch = "x86_64")]
 use x86_64::instructions::hlt;
 
+#[cfg(target_arch = "aarch64")]
+use crate::arch::aarch64::layout::code_range;
+
 #[macro_use]
 mod serial;
 
@@ -131,6 +134,12 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::
             return false;
         }
     };
+
+    #[cfg(target_arch = "aarch64")]
+    if code_range().start < (info.kernel_load_addr() + size) as usize {
+        log!("Error Boot Image is too large");
+        return false;
+    }
 
     log!("Executable loaded");
     efi::efi_exec(entry_addr, load_addr, size, info, &f, device);

@@ -3,6 +3,8 @@
 
 .section .text.boot, "ax"
 .global ram64_start
+.global efi_image_size
+.global efi_image_offset
 
 ram64_start:
   /*
@@ -11,18 +13,18 @@ ram64_start:
    *
    * [1] https://docs.kernel.org/arm64/booting.html#call-the-kernel-image
    */
-  add x13, x18, #0x16   /* code0: UEFI "MZ" signature magic instruction */
-  b jump_to_rust        /* code1 */
+  add x13, x18, #0x16     /* code0: UEFI "MZ" signature magic instruction */
+  b jump_to_rust          /* code1 */
 
-  .quad 0               /* text_offset */
-  .quad 0               /* image_size */
-  .quad 0               /* flags */
-  .quad 0               /* res2 */
-  .quad 0               /* res3 */
-  .quad 0               /* res4 */
+  .quad efi_image_offset	/* text_offset */
+  .quad efi_image_size    /* image_size */
+  .quad 0                 /* flags */
+  .quad 0                 /* res2 */
+  .quad 0                 /* res3 */
+  .quad 0                 /* res4 */
 
-  .long 0x644d5241      /* "ARM\x64" magic number */
-  .long 0               /* res5 */
+  .long 0x644d5241        /* "ARM\x64" magic number */
+  .long 0                 /* res5 */
   .align 3
 
 jump_to_rust:
