@@ -232,6 +232,17 @@ fn name_to_str(input: &str, output: &mut [u8]) {
             break;
         }
     }
+
+    // If name is exactly 11 characters long then ensure separator is correctly added
+    if (output[10] >= b'a' && output[10] <= b'z' || output[10] >= b'A' && output[10] <= b'Z')
+        && output[7] != b' '
+        && output[7] != b'.'
+    {
+        output[11] = output[10];
+        output[10] = output[9];
+        output[9] = output[8];
+        output[8] = b'.';
+    }
 }
 
 impl<'a> Read for Node<'a> {
@@ -403,9 +414,9 @@ impl<'a> Directory<'a> {
         }
     }
 
-    pub fn next_node(&mut self) -> Result<(Node, [u8; 11]), Error> {
+    pub fn next_node(&mut self) -> Result<(Node, [u8; 12]), Error> {
         let de = self.next_entry()?;
-        let mut name = [0_u8; 11];
+        let mut name = [0_u8; 12];
         name_to_str(core::str::from_utf8(&de.name).unwrap(), &mut name);
 
         match de.file_type {
@@ -1172,17 +1183,17 @@ mod tests {
 
     #[test]
     fn test_name_to_str() {
-        let mut s = [0_u8; 11];
+        let mut s = [0_u8; 12];
         super::name_to_str("X       ABC", &mut s);
         assert_eq!(crate::common::ascii_strip(&s), "X.ABC");
-        let mut s = [0_u8; 11];
+        let mut s = [0_u8; 12];
         super::name_to_str(".", &mut s);
         assert_eq!(crate::common::ascii_strip(&s), ".");
-        let mut s = [0_u8; 11];
+        let mut s = [0_u8; 12];
         super::name_to_str("..", &mut s);
         assert_eq!(crate::common::ascii_strip(&s), "..");
-        let mut s = [0_u8; 11];
+        let mut s = [0_u8; 12];
         super::name_to_str("ABCDEFGHIJK", &mut s);
-        assert_eq!(crate::common::ascii_strip(&s), "ABCDEFGHIJK");
+        assert_eq!(crate::common::ascii_strip(&s), "ABCDEFGH.IJK");
     }
 }
