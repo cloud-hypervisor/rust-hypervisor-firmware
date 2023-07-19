@@ -614,7 +614,6 @@ pub extern "efiapi" fn install_configuration_table(guid: *mut Guid, table: *mut 
 
     for entry in ct.iter_mut() {
         if entry.vendor_guid == unsafe { *guid } {
-            entry.vendor_table = table;
             if table.is_null() {
                 entry.vendor_guid = INVALID_GUID;
                 entry.vendor_table = null_mut();
