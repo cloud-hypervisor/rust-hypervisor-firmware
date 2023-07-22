@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright © 2019 Intel Corporation
 
+#[cfg(all(not(test), not(feature = "integration_tests")))]
+use core::alloc as heap_alloc;
+
 use core::{
-    alloc as heap_alloc,
     ffi::c_void,
     mem::{size_of, transmute},
     ptr::null_mut,
@@ -65,7 +67,7 @@ pub static ALLOCATOR: AtomicRefCell<Allocator> = AtomicRefCell::new(Allocator::n
 #[global_allocator]
 pub static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-#[cfg(not(test))]
+#[cfg(all(not(test), not(feature = "integration_tests")))]
 #[alloc_error_handler]
 fn heap_alloc_error_handler(layout: heap_alloc::Layout) -> ! {
     panic!("heap allocation error: {:?}", layout);
