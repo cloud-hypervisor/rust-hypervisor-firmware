@@ -2,18 +2,27 @@
 // Copyright © 2019 Intel Corporation
 
 #![feature(asm_const)]
-#![feature(alloc_error_handler)]
 #![feature(slice_take)]
 #![feature(stdsimd)]
 #![feature(stmt_expr_attributes)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
+#![cfg_attr(
+    all(not(test), not(feature = "integration_tests")),
+    feature(alloc_error_handler)
+)]
 #![cfg_attr(test, allow(unused_imports, dead_code))]
 #![cfg_attr(not(feature = "log-serial"), allow(unused_variables, unused_imports))]
 
+#[cfg(all(not(test), not(feature = "integration_tests")))]
 use core::panic::PanicInfo;
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(
+    not(test),
+    not(feature = "integration_tests"),
+    target_arch = "x86_64",
+    feature = "log-panic"
+))]
 use x86_64::instructions::hlt;
 
 #[cfg(target_arch = "aarch64")]
@@ -60,7 +69,7 @@ mod uart_mmio;
 mod uart_pl011;
 mod virtio;
 
-#[cfg(all(not(test), feature = "log-panic"))]
+#[cfg(all(not(test), not(feature = "integration_tests"), feature = "log-panic"))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     log!("PANIC: {}", info);
@@ -70,7 +79,11 @@ fn panic(info: &PanicInfo) -> ! {
     }
 }
 
-#[cfg(all(not(test), not(feature = "log-panic")))]
+#[cfg(all(
+    not(test),
+    not(feature = "integration_tests"),
+    not(feature = "log-panic")
+))]
 #[panic_handler]
 fn panic(_: &PanicInfo) -> ! {
     loop {}
