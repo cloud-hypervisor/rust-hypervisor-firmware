@@ -465,6 +465,12 @@ mod tests {
         path: &'a str,
     }
 
+    #[cfg(target_arch = "x86_64")]
+    const TARGET_TRIPLE: &str = "x86_64-unknown-none";
+
+    #[cfg(target_arch = "x86_64")]
+    const QEMU_NAME: &str = "qemu-system-x86_64";
+
     mod linux {
         use crate::integration::tests::*;
 
@@ -480,7 +486,7 @@ mod tests {
                 "--serial",
                 "tty",
                 "--kernel",
-                "target/x86_64-unknown-none/release/hypervisor-fw",
+                &format!("target/{TARGET_TRIPLE}/release/hypervisor-fw"),
                 "--disk",
                 &format!("path={os}"),
                 "--disk",
@@ -506,7 +512,7 @@ mod tests {
             ci: &str,
             net: &GuestNetworkConfig,
         ) -> Child {
-            let mut c = Command::new("qemu-system-x86_64");
+            let mut c = Command::new(QEMU_NAME);
             c.args([
                 "-machine",
                 "q35,accel=kvm",
@@ -550,9 +556,10 @@ mod tests {
 
         #[cfg(not(feature = "coreboot"))]
         fn spawn_qemu(tmp_dir: &TempDir, os: &str, ci: &str, net: &GuestNetworkConfig) -> Child {
+            let path = format!("target/{TARGET_TRIPLE}/release/hypervisor-fw");
             let fw = Firmware {
                 fw_type: "-kernel",
-                path: "target/x86_64-unknown-none/release/hypervisor-fw",
+                path: path.as_str(),
             };
             spawn_qemu_common(tmp_dir, &fw, os, ci, net)
         }
@@ -660,7 +667,7 @@ mod tests {
 
             prepare_tap(&net);
 
-            let mut c = Command::new("qemu-system-x86_64");
+            let mut c = Command::new(QEMU_NAME);
             c.args([
                 "-machine",
                 "q35,accel=kvm",
@@ -720,9 +727,10 @@ mod tests {
             #[ignore] // Windows guest test on QEMU is not supported yet.
             #[cfg(not(feature = "coreboot"))]
             fn test_boot_qemu_windows() {
+                let path = format!("target/{TARGET_TRIPLE}/release/hypervisor-fw");
                 let fw = Firmware {
                     fw_type: "-kernel",
-                    path: "target/x86_64-unknown-none/release/hypervisor-fw",
+                    path: path.as_str(),
                 };
                 test_boot_qemu_windows_common(&fw);
             }
@@ -761,7 +769,7 @@ mod tests {
                     "--serial",
                     "tty",
                     "--kernel",
-                    "target/x86_64-unknown-none/release/hypervisor-fw",
+                    &format!("target/{TARGET_TRIPLE}/release/hypervisor-fw"),
                     "--disk",
                     &format!("path={}", disk.osdisk_path),
                     "--net",

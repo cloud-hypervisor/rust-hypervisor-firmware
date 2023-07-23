@@ -3,8 +3,13 @@ set -x
 
 fetch_ch() {
     CH_PATH="$1"
+    CH_ARCH="$2"
     CH_VERSION="v32.0"
-    CH_URL="https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/$CH_VERSION/cloud-hypervisor"
+    CH_URL_BASE="https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/$CH_VERSION"
+
+    [ "$CH_ARCH" = "x86_64" ] && CH_NAME="cloud-hypervisor"
+    CH_URL="$CH_URL_BASE/$CH_NAME"
+
     if [ ! -f "$CH_PATH" ]; then
         wget --quiet $CH_URL -O $CH_PATH
         chmod +x $CH_PATH
@@ -30,28 +35,34 @@ convert_image() {
     fi
 }
 
-fetch_disk_images() {
-    WORKLOADS_DIR="$1"
-    pushd "$WORKLOADS_DIR"
+fetch_raw_ubuntu_image() {
+    OS_NAME="$1"
+    OS_ARCH="$2"
+    OS_IMAGE_NAME="$OS_NAME-server-cloudimg-$OS_ARCH.img"
+    OS_RAW_IMAGE_NAME="$OS_NAME-server-cloudimg-$OS_ARCH-raw.img"
+    OS_IMAGE_BASE="https://cloud-images.ubuntu.com"
+    OS_IMAGE_URL="$OS_IMAGE_BASE/$OS_NAME/current/$OS_IMAGE_NAME"
+    fetch_image "$OS_IMAGE_NAME" "$OS_IMAGE_URL"
+    convert_image "$OS_IMAGE_NAME" "$OS_RAW_IMAGE_NAME"
+}
 
+x86_64_fetch_disk_images() {
     CLEAR_OS_IMAGE_NAME="clear-31311-cloudguest.img"
     CLEAR_OS_URL_BASE="https://cloud-hypervisor.azureedge.net/"
     CLEAR_OS_IMAGE_URL="$CLEAR_OS_URL_BASE/$CLEAR_OS_IMAGE_NAME"
     fetch_image "$CLEAR_OS_IMAGE_NAME" "$CLEAR_OS_IMAGE_URL"
 
-    FOCAL_OS_IMAGE_NAME="focal-server-cloudimg-amd64.img"
-    FOCAL_OS_RAW_IMAGE_NAME="focal-server-cloudimg-amd64-raw.img"
-    FOCAL_OS_IMAGE_BASE="https://cloud-images.ubuntu.com/focal/current"
-    FOCAL_OS_IMAGE_URL="$FOCAL_OS_IMAGE_BASE/$FOCAL_OS_IMAGE_NAME"
-    fetch_image "$FOCAL_OS_IMAGE_NAME" "$FOCAL_OS_IMAGE_URL"
-    convert_image "$FOCAL_OS_IMAGE_NAME" "$FOCAL_OS_RAW_IMAGE_NAME"
+    fetch_raw_ubuntu_image "focal" "amd64"
+    fetch_raw_ubuntu_image "jammy" "amd64"
+}
 
-    JAMMY_OS_IMAGE_NAME="jammy-server-cloudimg-amd64.img"
-    JAMMY_OS_RAW_IMAGE_NAME="jammy-server-cloudimg-amd64-raw.img"
-    JAMMY_OS_IMAGE_BASE="https://cloud-images.ubuntu.com/jammy/current"
-    JAMMY_OS_IMAGE_URL="$JAMMY_OS_IMAGE_BASE/$JAMMY_OS_IMAGE_NAME"
-    fetch_image "$JAMMY_OS_IMAGE_NAME" "$JAMMY_OS_IMAGE_URL"
-    convert_image "$JAMMY_OS_IMAGE_NAME" "$JAMMY_OS_RAW_IMAGE_NAME"
+fetch_disk_images() {
+    WORKLOADS_DIR="$1"
+    ARCH="$2"
+
+    pushd "$WORKLOADS_DIR"
+
+    [ "$ARCH" = "x86_64" ] && x86_64_fetch_disk_images
 
     popd
 }
