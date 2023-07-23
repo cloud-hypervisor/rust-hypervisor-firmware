@@ -465,9 +465,13 @@ mod tests {
         path: &'a str,
     }
 
+    #[cfg(target_arch = "aarch64")]
+    const TARGET_TRIPLE: &str = "aarch64-unknown-none";
     #[cfg(target_arch = "x86_64")]
     const TARGET_TRIPLE: &str = "x86_64-unknown-none";
 
+    #[cfg(target_arch = "aarch64")]
+    const QEMU_NAME: &str = "qemu-system-aarch64";
     #[cfg(target_arch = "x86_64")]
     const QEMU_NAME: &str = "qemu-system-x86_64";
 
@@ -603,6 +607,25 @@ mod tests {
             cleanup_tap(&net);
 
             handle_child_output(&tmp_dir, r, &output);
+        }
+
+        mod aarch64 {
+            use super::*;
+
+            const FOCAL_IMAGE_NAME: &str = "focal-server-cloudimg-arm64-raw.img";
+            const JAMMY_IMAGE_NAME: &str = "jammy-server-cloudimg-arm64-raw.img";
+
+            #[test]
+            #[cfg(not(feature = "coreboot"))]
+            fn test_boot_ch_focal() {
+                test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
+            }
+
+            #[test]
+            #[cfg(not(feature = "coreboot"))]
+            fn test_boot_ch_jammy() {
+                test_boot(JAMMY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
+            }
         }
 
         mod x86_64 {

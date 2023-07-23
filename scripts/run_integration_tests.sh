@@ -14,6 +14,7 @@ fetch_ch "$CH_PATH" "$arch"
 
 fetch_disk_images "$WORKLOADS_DIR" "$arch"
 
+[ "$arch" = "aarch64" ] && target="aarch64-unknown-none"
 [ "$arch" = "x86_64" ] && target="x86_64-unknown-none"
 
 rustup component add rust-src

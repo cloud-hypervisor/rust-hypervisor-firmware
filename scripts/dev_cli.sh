@@ -317,7 +317,7 @@ cmd_tests() {
                 shift
                 arg_vols="$1"
                 ;;
-            "--all")                 { cargo=true; unit=true;  [ "$arch" = "x86_64" ] && integration=true; } ;;
+            "--all")                 { cargo=true; unit=true; integration=true; } ;;
             "--")                    { shift; break; } ;;
             *)
 		die "Unknown tests argument: $1. Please use --help for help."
@@ -326,10 +326,7 @@ cmd_tests() {
 	shift
     done
 
-    if [ "$(uname -m)" = "aarch64" ] ; then
-        if [ "$integration" = true ] ; then
-            die "Integration test is not supported for aarch64."
-        fi
+    if [ "$arch" = "aarch64" ] ; then
         if [ "$integration_coreboot" = true ] ; then
             die "coreboot integration test is not supported for aarch64."
         fi
