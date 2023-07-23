@@ -4,6 +4,8 @@ set -x
 source "${CARGO_HOME:-$HOME/.cargo}/env"
 source "$(dirname "$0")/fetch_images.sh"
 
+arch="$(uname -m)"
+
 WORKLOADS_DIR="$HOME/workloads"
 mkdir -p "$WORKLOADS_DIR"
 
@@ -16,7 +18,7 @@ if [ ! -f "$WIN_IMAGE_FILE" ]; then
 fi
 
 CH_PATH="$WORKLOADS_DIR/cloud-hypervisor"
-fetch_ch "$CH_PATH"
+fetch_ch "$CH_PATH" "$arch"
 
 # Use device mapper to create a snapshot of the Windows image
 img_blk_size=$(du -b -B 512 ${WIN_IMAGE_FILE} | awk '{print $1;}')
@@ -26,11 +28,13 @@ dmsetup mknodes
 dmsetup create windows-snapshot-base --table "0 $img_blk_size snapshot-origin /dev/mapper/windows-base"
 dmsetup mknodes
 
+[ "$arch" = "x86_64" ] && target="x86_64-unknown-none"
+
 rustup component add rust-src
-cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+cargo build --release --target "$target.json" -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
 
 export RUST_BACKTRACE=1
-time cargo test --features "integration_tests" "integration::tests::windows::x86_64"
+time cargo test --features "integration_tests" "integration::tests::windows::$arch"
 RES=$?
 
 dmsetup remove_all -f
