@@ -62,7 +62,7 @@ pipeline {
                                                 }
                                         }
                                 }
-                                stage ('AArch64 Unit Tests') {
+                                stage ('AArch64 Tests') {
                                         agent { node { label 'focal-arm64' } }
                                         stages {
                                                 stage ('Checkout') {
@@ -73,6 +73,14 @@ pipeline {
                                                 stage('Run unit tests') {
                                                           steps {
                                                                   sh "scripts/dev_cli.sh tests --unit"
+                                                          }
+                                                }
+                                                stage('Run integration tests') {
+                                                          options {
+                                                                  timeout(time: 1, unit: 'HOURS')
+                                                          }
+                                                          steps {
+                                                                  sh "scripts/dev_cli.sh tests --integration"
                                                           }
                                                 }
                                         }

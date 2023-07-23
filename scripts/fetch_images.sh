@@ -7,6 +7,7 @@ fetch_ch() {
     CH_VERSION="v32.0"
     CH_URL_BASE="https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/$CH_VERSION"
 
+    [ "$CH_ARCH" = "aarch64" ] && CH_NAME="cloud-hypervisor-static-aarch64"
     [ "$CH_ARCH" = "x86_64" ] && CH_NAME="cloud-hypervisor"
     CH_URL="$CH_URL_BASE/$CH_NAME"
 
@@ -46,6 +47,11 @@ fetch_raw_ubuntu_image() {
     convert_image "$OS_IMAGE_NAME" "$OS_RAW_IMAGE_NAME"
 }
 
+aarch64_fetch_disk_images() {
+    fetch_raw_ubuntu_image "focal" "arm64"
+    fetch_raw_ubuntu_image "jammy" "arm64"
+}
+
 x86_64_fetch_disk_images() {
     CLEAR_OS_IMAGE_NAME="clear-31311-cloudguest.img"
     CLEAR_OS_URL_BASE="https://cloud-hypervisor.azureedge.net/"
@@ -62,6 +68,7 @@ fetch_disk_images() {
 
     pushd "$WORKLOADS_DIR"
 
+    [ "$ARCH" = "aarch64" ] && aarch64_fetch_disk_images
     [ "$ARCH" = "x86_64" ] && x86_64_fetch_disk_images
 
     popd
