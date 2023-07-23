@@ -16,4 +16,4 @@ rustup component add rust-src
 cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
 
 export RUST_BACKTRACE=1
-time cargo test --features "integration_tests" "integration::tests::linux"
+time cargo test --features "integration_tests" "integration::tests::linux::x86_64"

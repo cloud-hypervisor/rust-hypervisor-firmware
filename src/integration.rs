@@ -598,41 +598,45 @@ mod tests {
             handle_child_output(&tmp_dir, r, &output);
         }
 
-        const FOCAL_IMAGE_NAME: &str = "focal-server-cloudimg-amd64-raw.img";
-        const JAMMY_IMAGE_NAME: &str = "jammy-server-cloudimg-amd64-raw.img";
-        const CLEAR_IMAGE_NAME: &str = "clear-31311-cloudguest.img";
+        mod x86_64 {
+            use super::*;
 
-        #[test]
-        fn test_boot_qemu_focal() {
-            test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
-        }
+            const FOCAL_IMAGE_NAME: &str = "focal-server-cloudimg-amd64-raw.img";
+            const JAMMY_IMAGE_NAME: &str = "jammy-server-cloudimg-amd64-raw.img";
+            const CLEAR_IMAGE_NAME: &str = "clear-31311-cloudguest.img";
 
-        #[test]
-        fn test_boot_qemu_jammy() {
-            test_boot(JAMMY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
-        }
+            #[test]
+            fn test_boot_qemu_focal() {
+                test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
+            }
 
-        #[test]
-        fn test_boot_qemu_clear() {
-            test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_qemu)
-        }
+            #[test]
+            fn test_boot_qemu_jammy() {
+                test_boot(JAMMY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_qemu)
+            }
 
-        #[test]
-        #[cfg(not(feature = "coreboot"))]
-        fn test_boot_ch_focal() {
-            test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
-        }
+            #[test]
+            fn test_boot_qemu_clear() {
+                test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_qemu)
+            }
 
-        #[test]
-        #[cfg(not(feature = "coreboot"))]
-        fn test_boot_ch_jammy() {
-            test_boot(JAMMY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
-        }
+            #[test]
+            #[cfg(not(feature = "coreboot"))]
+            fn test_boot_ch_focal() {
+                test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
+            }
 
-        #[test]
-        #[cfg(not(feature = "coreboot"))]
-        fn test_boot_ch_clear() {
-            test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_ch)
+            #[test]
+            #[cfg(not(feature = "coreboot"))]
+            fn test_boot_ch_jammy() {
+                test_boot(JAMMY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
+            }
+
+            #[test]
+            #[cfg(not(feature = "coreboot"))]
+            fn test_boot_ch_clear() {
+                test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_ch)
+            }
         }
     }
 
@@ -709,78 +713,83 @@ mod tests {
             handle_child_output(&tmp_dir, r, &output);
         }
 
-        #[test]
-        #[ignore] // Windows guest test on QEMU is not supported yet.
-        #[cfg(not(feature = "coreboot"))]
-        fn test_boot_qemu_windows() {
-            let fw = Firmware {
-                fw_type: "-kernel",
-                path: "target/x86_64-unknown-none/release/hypervisor-fw",
-            };
-            test_boot_qemu_windows_common(&fw);
-        }
+        mod x86_64 {
+            use super::*;
 
-        #[test]
-        #[ignore] // Windows guest test on QEMU is not supported yet.
-        #[cfg(feature = "coreboot")]
-        fn test_boot_qemu_windows() {
-            let fw = Firmware {
-                fw_type: "-bios",
-                path: "resources/coreboot/coreboot/build/coreboot.rom",
-            };
-            test_boot_qemu_windows_common(&fw);
-        }
+            #[test]
+            #[ignore] // Windows guest test on QEMU is not supported yet.
+            #[cfg(not(feature = "coreboot"))]
+            fn test_boot_qemu_windows() {
+                let fw = Firmware {
+                    fw_type: "-kernel",
+                    path: "target/x86_64-unknown-none/release/hypervisor-fw",
+                };
+                test_boot_qemu_windows_common(&fw);
+            }
 
-        #[test]
-        #[cfg(not(feature = "coreboot"))]
-        fn test_boot_ch_windows() {
-            let mut disk = WindowsDiskConfig::new(WINDOWS_IMAGE_NAME.to_string());
-            let tmp_dir = TempDir::new().expect("Expect creating temporary directory to succeed");
-            prepare_windows_os_disk(&mut disk, &tmp_dir);
+            #[test]
+            #[ignore] // Windows guest test on QEMU is not supported yet.
+            #[cfg(feature = "coreboot")]
+            fn test_boot_qemu_windows() {
+                let fw = Firmware {
+                    fw_type: "-bios",
+                    path: "resources/coreboot/coreboot/build/coreboot.rom",
+                };
+                test_boot_qemu_windows_common(&fw);
+            }
 
-            let clh_path = dirs::home_dir()
-                .unwrap()
-                .join("workloads")
-                .join("cloud-hypervisor");
-            let mut c = Command::new(clh_path.to_str().unwrap());
-            c.args([
-                "--cpus",
-                "boot=2,kvm_hyperv=on",
-                "--memory",
-                "size=4G",
-                "--console",
-                "off",
-                "--serial",
-                "tty",
-                "--kernel",
-                "target/x86_64-unknown-none/release/hypervisor-fw",
-                "--disk",
-                &format!("path={}", disk.osdisk_path),
-                "--net",
-                "tap=",
-            ]);
+            #[test]
+            #[cfg(not(feature = "coreboot"))]
+            fn test_boot_ch_windows() {
+                let mut disk = WindowsDiskConfig::new(WINDOWS_IMAGE_NAME.to_string());
+                let tmp_dir =
+                    TempDir::new().expect("Expect creating temporary directory to succeed");
+                prepare_windows_os_disk(&mut disk, &tmp_dir);
 
-            let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
-            let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
+                let clh_path = dirs::home_dir()
+                    .unwrap()
+                    .join("workloads")
+                    .join("cloud-hypervisor");
+                let mut c = Command::new(clh_path.to_str().unwrap());
+                c.args([
+                    "--cpus",
+                    "boot=2,kvm_hyperv=on",
+                    "--memory",
+                    "size=4G",
+                    "--console",
+                    "off",
+                    "--serial",
+                    "tty",
+                    "--kernel",
+                    "target/x86_64-unknown-none/release/hypervisor-fw",
+                    "--disk",
+                    &format!("path={}", disk.osdisk_path),
+                    "--net",
+                    "tap=",
+                ]);
 
-            eprintln!("Spawning: {:?}", c);
-            let mut child = c
-                .stdout(Stdio::from(stdout))
-                .stderr(Stdio::from(stderr))
-                .spawn()
-                .expect("Expect launching Cloud Hypervisor to succeed");
+                let stdout = fs::File::create(tmp_dir.path().join("stdout")).unwrap();
+                let stderr = fs::File::create(tmp_dir.path().join("stderr")).unwrap();
 
-            thread::sleep(std::time::Duration::from_secs(60));
-            let r = std::panic::catch_unwind(|| {
-                let auth = windows_auth();
-                ssh_command_with_auth("192.168.249.2", "shutdown /s", &auth)
-                    .expect("Expect SSH command to work");
-            });
+                eprintln!("Spawning: {:?}", c);
+                let mut child = c
+                    .stdout(Stdio::from(stdout))
+                    .stderr(Stdio::from(stderr))
+                    .spawn()
+                    .expect("Expect launching Cloud Hypervisor to succeed");
 
-            child.kill().unwrap();
-            let output = child.wait_with_output().unwrap();
+                thread::sleep(std::time::Duration::from_secs(60));
+                let r = std::panic::catch_unwind(|| {
+                    let auth = windows_auth();
+                    ssh_command_with_auth("192.168.249.2", "shutdown /s", &auth)
+                        .expect("Expect SSH command to work");
+                });
 
-            handle_child_output(&tmp_dir, r, &output);
+                child.kill().unwrap();
+                let output = child.wait_with_output().unwrap();
+
+                handle_child_output(&tmp_dir, r, &output);
+            }
         }
     }
 }
