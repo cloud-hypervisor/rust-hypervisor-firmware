@@ -37,10 +37,11 @@ impl MemoryRegion {
     /// Read a value from a given offset
     fn read<T>(&self, offset: u64) -> T
     where
-        T: Copy,
+        T: Copy + Sized,
     {
         assert!((offset + (core::mem::size_of::<T>() - 1) as u64) < self.length);
-        unsafe { *((self.base + offset) as *const T) }
+        let ptr: *const T = core::ptr::from_exposed_addr((self.base + offset) as usize);
+        unsafe { ptr.read_unaligned() }
     }
 
     /// Read a single byte at a given offset
@@ -64,11 +65,13 @@ impl MemoryRegion {
     }
 
     /// Write a value at the given offset
-    pub fn write<T>(&self, offset: u64, value: T) {
+    pub fn write<T>(&self, offset: u64, value: T)
+    where
+        T: Sized,
+    {
         assert!((offset + (core::mem::size_of::<T>() - 1) as u64) < self.length);
-        unsafe {
-            *((self.base + offset) as *mut T) = value;
-        }
+        let ptr: *mut T = core::ptr::from_exposed_addr_mut((self.base + offset) as usize);
+        unsafe { core::ptr::write_unaligned(ptr, value) }
     }
 
     /// Write a single byte at given offset
@@ -95,9 +98,13 @@ impl MemoryRegion {
     }
 
     /// Read a value at given offset with a mechanism suitable for MMIO
-    fn io_read<T>(&self, offset: u64) -> T {
+    fn io_read<T>(&self, offset: u64) -> T
+    where
+        T: Copy + Sized,
+    {
         assert!((offset + (core::mem::size_of::<T>() - 1) as u64) < self.length);
-        unsafe { core::ptr::read_volatile((self.base + offset) as *const T) }
+        let ptr: *const T = core::ptr::from_exposed_addr((self.base + offset) as usize);
+        unsafe { ptr.read_volatile() }
     }
 
     /// Read a single byte at given offset with a mechanism suitable for MMIO
@@ -121,11 +128,13 @@ impl MemoryRegion {
     }
 
     /// Write a value at given offset using a mechanism suitable for MMIO
-    fn io_write<T>(&self, offset: u64, value: T) {
+    pub fn io_write<T>(&self, offset: u64, value: T)
+    where
+        T: Sized,
+    {
         assert!((offset + (core::mem::size_of::<T>() - 1) as u64) < self.length);
-        unsafe {
-            core::ptr::write_volatile((self.base + offset) as *mut T, value);
-        }
+        let ptr: *mut T = core::ptr::from_exposed_addr_mut((self.base + offset) as usize);
+        unsafe { core::ptr::write_volatile(ptr, value) }
     }
 
     /// Write a single byte at given offset with a mechanism suitable for MMIO
