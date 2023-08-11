@@ -5,6 +5,7 @@
 #![feature(slice_take)]
 #![feature(stdsimd)]
 #![feature(stmt_expr_attributes)]
+#![feature(strict_provenance)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(
