@@ -48,7 +48,7 @@ impl VariableAllocator {
             return None;
         }
 
-        let s = unsafe { core::slice::from_raw_parts(name as *const u16, len + 1) };
+        let s = unsafe { core::slice::from_raw_parts(name, len + 1) };
         let mut name: Vec<u16> = Vec::new();
         name.extend_from_slice(s);
         let guid = unsafe { &*guid };
@@ -118,7 +118,7 @@ impl VariableAllocator {
                 return efi::Status::INVALID_PARAMETER;
             }
             let mut a = Descriptor::new();
-            let name = unsafe { core::slice::from_raw_parts(name as *const u16, len + 1) };
+            let name = unsafe { core::slice::from_raw_parts(name, len + 1) };
             a.name.extend_from_slice(name);
             a.guid = unsafe { *guid };
             a.attr = attr & !efi::VARIABLE_APPEND_WRITE;
@@ -225,13 +225,7 @@ mod tests {
 
         let size = 0;
         let attr = ATTR | efi::VARIABLE_APPEND_WRITE;
-        let status = allocator.set(
-            NAME.as_ptr(),
-            &GUID,
-            attr,
-            size,
-            core::ptr::null() as *const core::ffi::c_void,
-        );
+        let status = allocator.set(NAME.as_ptr(), &GUID, attr, size, core::ptr::null());
 
         assert_eq!(status, efi::Status::SUCCESS);
         assert_eq!(allocator.allocations[0].name, NAME);
@@ -263,13 +257,7 @@ mod tests {
 
         let size = 0;
         let attr = ATTR;
-        let status = allocator.set(
-            NAME.as_ptr(),
-            &GUID,
-            attr,
-            size,
-            core::ptr::null() as *const core::ffi::c_void,
-        );
+        let status = allocator.set(NAME.as_ptr(), &GUID, attr, size, core::ptr::null());
 
         assert_eq!(status, efi::Status::SUCCESS);
         assert!(allocator.allocations.is_empty());
@@ -316,7 +304,7 @@ mod tests {
         let status = allocator.get(
             NAME.as_ptr(),
             &GUID,
-            core::ptr::null_mut() as *mut u32,
+            core::ptr::null_mut(),
             &mut size,
             data.as_mut_ptr() as *mut core::ffi::c_void,
         );

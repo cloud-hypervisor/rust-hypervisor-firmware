@@ -586,8 +586,7 @@ pub extern "efiapi" fn locate_handle(
 
         let wrappers_as_handles: &[Handle] = unsafe {
             core::slice::from_raw_parts_mut(
-                BLOCK_WRAPPERS.wrappers.as_mut_ptr() as *mut *mut block::BlockWrapper
-                    as *mut Handle,
+                BLOCK_WRAPPERS.wrappers.as_mut_ptr() as *mut Handle,
                 count,
             )
         };
