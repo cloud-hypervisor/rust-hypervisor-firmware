@@ -122,7 +122,7 @@ mod tests {
                 .join("cloud-init")
                 .join("ubuntu");
 
-            vec!["meta-data", "user-data"].iter().for_each(|x| {
+            ["meta-data", "user-data"].iter().for_each(|x| {
                 fs::copy(source_file_dir.join(x), cloud_init_directory.join(x))
                     .expect("Expect copying cloud-init meta-data to succeed");
             });
@@ -151,7 +151,7 @@ mod tests {
                 .output()
                 .expect("Expect creating disk image to succeed");
 
-            vec!["user-data", "meta-data", "network-config"]
+            ["user-data", "meta-data", "network-config"]
                 .iter()
                 .for_each(|x| {
                     std::process::Command::new("mcopy")
