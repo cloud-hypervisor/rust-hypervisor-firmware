@@ -1,5 +1,5 @@
 [toolchain]
-channel = "nightly-2023-05-26"
+channel = "nightly-2023-08-11"
 components = ["rust-src", "clippy", "rustfmt"]
 targets = [
     "aarch64-unknown-linux-gnu",
