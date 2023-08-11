@@ -16,7 +16,7 @@ impl MemoryRegion {
     }
 
     /// Take a slice and turn it into a region of memory
-    pub fn from_bytes(data: &mut [u8]) -> MemoryRegion {
+    pub fn from_bytes(data: &[u8]) -> MemoryRegion {
         MemoryRegion {
             base: data.as_ptr() as u64,
             length: data.len() as u64,

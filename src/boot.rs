@@ -191,8 +191,8 @@ pub struct Header {
 impl Header {
     // Read a kernel header from the first two sectors of a file
     pub fn from_file(f: &mut dyn Read) -> Result<Self, Error> {
-        let mut data: [u8; 1024] = [0; 1024];
-        let mut region = MemoryRegion::from_bytes(&mut data);
+        let data: [u8; 1024] = [0; 1024];
+        let mut region = MemoryRegion::from_bytes(&data);
 
         f.seek(0)?;
         f.load_file(&mut region)?;

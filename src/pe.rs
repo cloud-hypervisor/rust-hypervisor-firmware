@@ -78,7 +78,7 @@ impl<'a> Loader<'a> {
             return Err(Error::FileError);
         }
 
-        let dos_region = MemoryRegion::from_bytes(&mut data);
+        let dos_region = MemoryRegion::from_bytes(&data);
 
         // 'MZ' magic
         if dos_region.read_u16(0) != 0x5a4d {
@@ -92,7 +92,7 @@ impl<'a> Loader<'a> {
             return Err(Error::InvalidExecutable);
         }
 
-        let pe_region = MemoryRegion::from_bytes(&mut data[pe_header_offset as usize..]);
+        let pe_region = MemoryRegion::from_bytes(&data[pe_header_offset as usize..]);
 
         // The Microsoft specification uses offsets relative to the COFF area
         // which is 4 after the signature (so all offsets are +4 relative to the spec)
@@ -109,8 +109,7 @@ impl<'a> Loader<'a> {
         self.num_sections = pe_region.read_u16(6);
 
         let optional_header_size = pe_region.read_u16(20);
-        let optional_region =
-            MemoryRegion::from_bytes(&mut data[(24 + pe_header_offset) as usize..]);
+        let optional_region = MemoryRegion::from_bytes(&data[(24 + pe_header_offset) as usize..]);
 
         if optional_region.read_u16(0) != Self::OPTIONAL_HEADER_MAGIC {
             return Err(Error::InvalidExecutable);
