@@ -49,4 +49,4 @@ fdt = "0.1.5"
 dirs = "5.0.1"
 rand = "0.8.5"
 ssh2 = { version = "0.9.4", features = ["vendored-openssl"] }
-tempfile = "3.7.1"
+tempfile = "3.8.0"
