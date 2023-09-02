@@ -2,7 +2,7 @@
 // Copyright (C) 2022 Akira Moroo
 
 use atomic_refcell::AtomicRefCell;
-use chrono::{DateTime, Datelike, NaiveDateTime, Timelike, Utc};
+use chrono::{Datelike, NaiveDateTime, Timelike};
 
 use crate::{arch::aarch64::layout::map, mem};
 
@@ -28,7 +28,7 @@ impl Pl031 {
     pub fn read_date(&self) -> Result<(u8, u8, u8), ()> {
         let timestamp = self.read_timestamp();
         let naive = NaiveDateTime::from_timestamp_opt(timestamp as i64, 0).ok_or(())?;
-        let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+        let datetime = naive.and_utc();
         Ok((
             (datetime.year() - 2000) as u8,
             datetime.month() as u8,
@@ -39,7 +39,7 @@ impl Pl031 {
     pub fn read_time(&self) -> Result<(u8, u8, u8), ()> {
         let timestamp = self.read_timestamp();
         let naive = NaiveDateTime::from_timestamp_opt(timestamp as i64, 0).ok_or(())?;
-        let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+        let datetime = naive.and_utc();
         Ok((
             datetime.hour() as u8,
             datetime.minute() as u8,
