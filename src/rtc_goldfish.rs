@@ -3,7 +3,7 @@
 
 use crate::mem::MemoryRegion;
 use atomic_refcell::AtomicRefCell;
-use chrono::{DateTime, Datelike, NaiveDateTime, Timelike, Utc};
+use chrono::{Datelike, NaiveDateTime, Timelike};
 
 // TODO: Fill from FDT
 const RTC_GOLDFISH_ADDRESS: u64 = 0x101000;
@@ -36,7 +36,7 @@ pub fn read_date() -> Result<(u8, u8, u8), ()> {
     let ts = RTC_GOLDFISH.borrow_mut().read_ts();
 
     let naive = NaiveDateTime::from_timestamp_opt(ts as i64, 0).ok_or(())?;
-    let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+    let datetime = naive.and_utc();
     Ok((
         (datetime.year() - 2000) as u8,
         datetime.month() as u8,
@@ -47,7 +47,7 @@ pub fn read_date() -> Result<(u8, u8, u8), ()> {
 pub fn read_time() -> Result<(u8, u8, u8), ()> {
     let ts = RTC_GOLDFISH.borrow_mut().read_ts();
     let naive = NaiveDateTime::from_timestamp_opt(ts as i64, 0).ok_or(())?;
-    let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+    let datetime = naive.and_utc();
     Ok((
         datetime.hour() as u8,
         datetime.minute() as u8,
