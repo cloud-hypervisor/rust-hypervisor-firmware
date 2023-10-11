@@ -27,7 +27,7 @@ efi-var = []
 
 [dependencies]
 bitflags = "2.4.0"
-atomic_refcell = "0.1.12"
+atomic_refcell = "0.1.13"
 r-efi = { version = "4.2.0", features = ["efiapi"] }
 linked_list_allocator = "0.10.4"
 
