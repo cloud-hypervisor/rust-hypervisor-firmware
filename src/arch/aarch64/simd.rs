@@ -2,8 +2,7 @@
 // Copyright (C) 2023 Akira Moroo
 
 use aarch64_cpu::registers::*;
-use tock_registers::interfaces::ReadWriteable;
 
 pub fn setup_simd() {
-    CPACR_EL1.modify(CPACR_EL1::FPEN::TrapNothing);
+    CPACR_EL1.modify_no_read(CPACR_EL1.extract(), CPACR_EL1::FPEN::TrapNothing);
 }

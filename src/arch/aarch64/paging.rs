@@ -4,8 +4,10 @@
 
 use core::ops::RangeInclusive;
 
-use aarch64_cpu::{asm::barrier, registers::*};
-use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
+use aarch64_cpu::{
+    asm::barrier,
+    registers::{Readable, Writeable, *},
+};
 
 use self::interface::Mmu;
 
@@ -287,7 +289,10 @@ impl interface::Mmu for MemoryManagementUnit {
         barrier::isb(barrier::SY);
 
         // Enable the MMU and turn on data and instruction caching.
-        SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+        SCTLR_EL1.modify_no_read(
+            SCTLR_EL1.extract(),
+            SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable,
+        );
 
         // Force MMU init to complete before next instruction.
         barrier::isb(barrier::SY);
