@@ -995,15 +995,6 @@ fn populate_allocator(info: &dyn bootinfo::Info, image_address: u64, image_size:
         );
     }
 
-    // Add IO map for RTC PL031 on aarch64
-    #[cfg(target_arch = "aarch64")]
-    ALLOCATOR.borrow_mut().add_initial_allocation(
-        efi::MEMORY_MAPPED_IO,
-        1,
-        crate::arch::aarch64::layout::map::mmio::PL031_START as u64,
-        r_efi::efi::MEMORY_RUNTIME,
-    );
-
     // Add the loaded binary
     ALLOCATOR.borrow_mut().allocate_pages(
         efi::ALLOCATE_ADDRESS,
