@@ -3,12 +3,13 @@
 
 use core::ops::Range;
 
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub enum MemoryAttribute {
     Code,
     Data,
-    #[allow(dead_code)]
     Unusable,
+    Mmio,
 }
 
 #[derive(Clone, Copy)]
