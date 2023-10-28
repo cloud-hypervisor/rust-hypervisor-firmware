@@ -976,6 +976,7 @@ fn populate_allocator(info: &dyn bootinfo::Info, image_address: u64, image_size:
             layout::MemoryAttribute::Code => efi::RUNTIME_SERVICES_CODE,
             layout::MemoryAttribute::Data => efi::RUNTIME_SERVICES_DATA,
             layout::MemoryAttribute::Unusable => efi::UNUSABLE_MEMORY,
+            layout::MemoryAttribute::Mmio => efi::MEMORY_MAPPED_IO,
         };
         ALLOCATOR.borrow_mut().allocate_pages(
             efi::ALLOCATE_ADDRESS,
