@@ -32,7 +32,7 @@ r-efi = { version = "4.3.0", features = ["efiapi"] }
 linked_list_allocator = "0.10.4"
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
-tock-registers = "0.8.1"
+tock-registers = "0.9.0"
 aarch64-cpu = "9.4.0"
 fdt = "0.1.5"
 chrono = { version = "0.4", default-features = false }
