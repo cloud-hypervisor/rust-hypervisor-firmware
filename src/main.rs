@@ -28,6 +28,8 @@ use x86_64::instructions::hlt;
 
 #[cfg(target_arch = "aarch64")]
 use crate::arch::aarch64::layout::code_range;
+#[cfg(target_arch = "aarch64")]
+use crate::fdt::KernelInfo;
 
 #[macro_use]
 mod serial;
@@ -156,8 +158,40 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::
     }
 
     log!("Executable loaded");
-    efi::efi_exec(entry_addr, load_addr, size, info, &f, device);
+    efi::efi_exec(entry_addr, load_addr, size, info, Some(&f), Some(device));
     true
+}
+
+#[cfg(target_arch = "aarch64")]
+fn boot_from_kernel(k: KernelInfo, info: &dyn bootinfo::Info) {
+    let load_addr = info.kernel_load_addr();
+    let dsc = load_addr as *mut u8;
+    let src = k.address as *const u8;
+    unsafe {
+        core::ptr::copy(src, dsc, k.size as usize);
+    }
+    // Get pe_header_offset
+    let pe_header_offset = unsafe {
+        let addr = (dsc.wrapping_add(60_usize)) as *const u32;
+        *addr
+    };
+    let entry_addr = unsafe {
+        let addr = (dsc.wrapping_add((pe_header_offset + 40).try_into().unwrap())) as *const u32;
+        *addr
+    };
+    let image_size = unsafe {
+        let addr = (dsc.wrapping_add((pe_header_offset + 80).try_into().unwrap())) as *const u32;
+        *addr
+    };
+
+    efi::efi_exec(
+        load_addr + entry_addr as u64,
+        load_addr,
+        image_size.into(),
+        info,
+        None,
+        None,
+    );
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -193,6 +227,11 @@ pub extern "C" fn rust64_start(x0: *const u8) -> ! {
         &crate::arch::aarch64::layout::MEM_LAYOUT[..],
         None,
     );
+
+    if let Some(kernel_info) = info.find_kernel_info() {
+        log!("Boot with direct kernel");
+        boot_from_kernel(kernel_info, &info);
+    }
 
     if let Some((base, length)) = info.find_compatible_region(&["pci-host-ecam-generic"]) {
         pci::init(base as u64, length as u64);

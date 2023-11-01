@@ -10,6 +10,7 @@ use core::{
     ptr::null_mut,
 };
 
+use crate::efi::file::FileSystemWrapper;
 use atomic_refcell::AtomicRefCell;
 use linked_list_allocator::LockedHeap;
 use r_efi::{
@@ -1107,8 +1108,8 @@ pub fn efi_exec(
     loaded_address: u64,
     loaded_size: u64,
     info: &dyn bootinfo::Info,
-    fs: &crate::fat::Filesystem,
-    block: *const crate::block::VirtioBlockDevice,
+    fs: Option<&crate::fat::Filesystem>,
+    block: Option<*const crate::block::VirtioBlockDevice>,
 ) {
     let vendor_data = 0u32;
 
@@ -1178,14 +1179,23 @@ pub fn efi_exec(
 
     populate_allocator(info, loaded_address, loaded_size);
 
-    let efi_part_id = unsafe { block::populate_block_wrappers(&mut BLOCK_WRAPPERS, block) };
+    let efi_part_id = if let Some(b) = block {
+        unsafe { block::populate_block_wrappers(&mut BLOCK_WRAPPERS, b) }
+    } else {
+        None
+    };
 
-    let wrapped_fs = file::FileSystemWrapper::new(fs, efi_part_id);
+    let wrapfs: FileSystemWrapper;
+    let mut wrapped_fs = core::ptr::null::<u8>() as Handle;
+    if let Some(f) = fs {
+        wrapfs = file::FileSystemWrapper::new(f, efi_part_id);
+        wrapped_fs = &wrapfs as *const _ as Handle;
+    };
 
     let image = new_image_handle(
         crate::efi::EFI_BOOT_PATH,
         0 as Handle,
-        &wrapped_fs as *const _ as Handle,
+        wrapped_fs,
         loaded_address,
         loaded_size,
         address,
