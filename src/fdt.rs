@@ -8,6 +8,13 @@ use crate::{
     layout::MemoryDescriptor,
 };
 
+// Container of kernel image location address and size
+#[cfg(target_arch = "aarch64")]
+pub struct KernelInfo {
+    pub address: u64,
+    pub size: u64,
+}
+
 pub struct StartInfo<'a> {
     acpi_rsdp_addr: Option<u64>,
     fdt_entry: MemoryEntry,
@@ -54,6 +61,52 @@ impl StartInfo<'_> {
             return Some((region.starting_address, region.size?));
         }
         None
+    }
+
+    // kernel info is a self-defind item that lays inside Chosen node which should be guaranteed by VMM
+    #[cfg(target_arch = "aarch64")]
+    pub fn find_kernel_info(&self) -> Option<KernelInfo> {
+        let chosen = self.fdt.find_node("/chosen").unwrap();
+        let address = chosen
+            .properties()
+            .find(|n| n.name == "linux,kernel-start")
+            .map(|n| n.value);
+
+        let addr = match address {
+            Some(addr) => {
+                let mut a: u64 = 0;
+                for p in addr.iter().take(8) {
+                    a = (a << 8) + *p as u64;
+                }
+                a
+            }
+            None => {
+                return None;
+            }
+        };
+
+        let size = chosen
+            .properties()
+            .find(|n| n.name == "linux,kernel-size")
+            .map(|n| n.value);
+
+        let sz = match size {
+            Some(sz) => {
+                let mut s: u64 = 0;
+                for p in sz.iter().take(8) {
+                    s = (s << 8) + *p as u64;
+                }
+                s
+            }
+            None => {
+                return None;
+            }
+        };
+
+        Some(KernelInfo {
+            address: addr,
+            size: sz,
+        })
     }
 }
 
