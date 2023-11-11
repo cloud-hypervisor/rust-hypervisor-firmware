@@ -18,8 +18,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install rust-src
         run: rustup component add rust-src
-      - name: Build (release)
+      - name: Build (release) for x86_64
         run: cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+      - name: Build (release) for aarch64
+        run: cargo build --release --target aarch64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
       - name: Create release
         id: create_release
         uses: actions/create-release@v1
@@ -29,7 +31,7 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
           draft: true
-      - name: Upload hypervisor-fw
+      - name: Upload hypervisor-fw for x86_64
         id: upload-release-hypervisor-fw
         uses: actions/upload-release-asset@v1
         env:
@@ -38,4 +40,14 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: target/x86_64-unknown-none/release/hypervisor-fw
           asset_name: hypervisor-fw
+          asset_content_type: application/octet-stream
+      - name: Upload hypervisor-fw for aarch64
+        id: upload-release-hypervisor-fw-aarch64
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: target/aarch64-unknown-none/release/hypervisor-fw
+          asset_name: hypervisor-fw-aarch64
           asset_content_type: application/octet-stream
