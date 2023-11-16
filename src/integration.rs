@@ -492,9 +492,8 @@ mod tests {
                 "--kernel",
                 &format!("target/{TARGET_TRIPLE}/release/hypervisor-fw"),
                 "--disk",
-                &format!("path={os}"),
-                "--disk",
-                &format!("path={ci}"),
+                format!("path={os}").as_str(),
+                format!("path={ci}").as_str(),
                 "--net",
                 &format!("tap={},mac={}", net.tap_name, net.guest_mac),
             ]);
