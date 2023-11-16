@@ -4,7 +4,7 @@ set -x
 fetch_ch() {
     CH_PATH="$1"
     CH_ARCH="$2"
-    CH_VERSION="v34.0"
+    CH_VERSION="v36.0"
     CH_URL_BASE="https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/$CH_VERSION"
 
     [ "$CH_ARCH" = "aarch64" ] && CH_NAME="cloud-hypervisor-static-aarch64"
