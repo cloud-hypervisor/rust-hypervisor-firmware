@@ -694,6 +694,8 @@ pub extern "efiapi" fn load_image(
         path,
         parent_image_handle,
         wrapped_fs_ref as *const _ as Handle,
+        null_mut(),
+        0,
         load_addr,
         load_size,
         entry_addr,
@@ -1034,10 +1036,13 @@ struct LoadedImageWrapper {
 
 type DevicePaths = [file::FileDevicePathProtocol; 2];
 
+#[allow(clippy::too_many_arguments)]
 fn new_image_handle(
     path: &str,
     parent_handle: Handle,
     device_handle: Handle,
+    load_options: *mut core::ffi::c_void,
+    load_options_size: u32,
     load_addr: u64,
     load_size: u64,
     entry_addr: u64,
@@ -1089,8 +1094,8 @@ fn new_image_handle(
             system_table: unsafe { &mut ST },
             device_handle,
             file_path: &mut file_paths[0].device_path, // Pointer to first path entry
-            load_options_size: 0,
-            load_options: null_mut(),
+            load_options_size,
+            load_options,
             image_base: load_addr as *mut _,
             image_size: load_size,
             image_code_type: efi::LOADER_CODE,
@@ -1101,6 +1106,39 @@ fn new_image_handle(
         entry_point: entry_addr,
     };
     image
+}
+
+#[cfg(target_arch = "aarch64")]
+fn prepare_cmdline(info: &dyn bootinfo::Info) -> (*mut c_void, u32) {
+    let cmdline = info.cmdline();
+    let mut cmdline_size = cmdline.len();
+    let mut cmd_addr = null_mut();
+    // Allocate memory for cmdline
+    // cmdline will be converted to [u16], so size must be double
+    let status = allocate_pool(
+        efi::LOADER_DATA,
+        cmdline_size * 2,
+        &mut cmd_addr as *mut *mut c_void,
+    );
+
+    assert!(status == Status::SUCCESS);
+
+    let cmd_addr = cmd_addr as *mut u16;
+    // Linux asks for cmdline to be in format of utf-16.
+    for (i, p) in cmdline.iter().enumerate().take(cmdline_size) {
+        unsafe {
+            let tmp_addr = cmd_addr.add(i);
+            *tmp_addr = *p as u16;
+        }
+    }
+    cmdline_size *= 2;
+
+    (cmd_addr as *mut c_void, cmdline_size as u32)
+}
+
+#[cfg(not(target_arch = "aarch64"))]
+fn prepare_cmdline(_info: &dyn bootinfo::Info) -> (*mut c_void, u32) {
+    (null_mut(), 0)
 }
 
 pub fn efi_exec(
@@ -1192,10 +1230,14 @@ pub fn efi_exec(
         wrapped_fs = &wrapfs as *const _ as Handle;
     };
 
+    let (cmd_addr, cmdline_size) = prepare_cmdline(info);
+
     let image = new_image_handle(
         crate::efi::EFI_BOOT_PATH,
         0 as Handle,
         wrapped_fs,
+        cmd_addr,
+        cmdline_size,
         loaded_address,
         loaded_size,
         address,
