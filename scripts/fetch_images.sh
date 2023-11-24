@@ -11,11 +11,9 @@ fetch_ch() {
     [ "$CH_ARCH" = "x86_64" ] && CH_NAME="cloud-hypervisor"
     CH_URL="$CH_URL_BASE/$CH_NAME"
 
-    if [ ! -f "$CH_PATH" ]; then
-        wget --quiet $CH_URL -O $CH_PATH
-        chmod +x $CH_PATH
-        sudo setcap cap_net_admin+ep $CH_PATH
-    fi
+    wget --quiet $CH_URL -O $CH_PATH
+    chmod +x $CH_PATH
+    sudo setcap cap_net_admin+ep $CH_PATH
 }
 
 fetch_image() {
