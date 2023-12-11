@@ -37,17 +37,18 @@ convert_image() {
 fetch_raw_ubuntu_image() {
     OS_NAME="$1"
     OS_ARCH="$2"
+    OS_DATE="$3"
     OS_IMAGE_NAME="$OS_NAME-server-cloudimg-$OS_ARCH.img"
     OS_RAW_IMAGE_NAME="$OS_NAME-server-cloudimg-$OS_ARCH-raw.img"
     OS_IMAGE_BASE="https://cloud-images.ubuntu.com"
-    OS_IMAGE_URL="$OS_IMAGE_BASE/$OS_NAME/current/$OS_IMAGE_NAME"
+    OS_IMAGE_URL="$OS_IMAGE_BASE/$OS_NAME/$OS_DATE/$OS_IMAGE_NAME"
     fetch_image "$OS_IMAGE_NAME" "$OS_IMAGE_URL"
     convert_image "$OS_IMAGE_NAME" "$OS_RAW_IMAGE_NAME"
 }
 
 aarch64_fetch_disk_images() {
-    fetch_raw_ubuntu_image "focal" "arm64"
-    fetch_raw_ubuntu_image "jammy" "arm64"
+    fetch_raw_ubuntu_image "focal" "arm64" "current"
+    fetch_raw_ubuntu_image "jammy" "arm64" "20231026"
 }
 
 x86_64_fetch_disk_images() {
@@ -56,8 +57,8 @@ x86_64_fetch_disk_images() {
     CLEAR_OS_IMAGE_URL="$CLEAR_OS_URL_BASE/$CLEAR_OS_IMAGE_NAME"
     fetch_image "$CLEAR_OS_IMAGE_NAME" "$CLEAR_OS_IMAGE_URL"
 
-    fetch_raw_ubuntu_image "focal" "amd64"
-    fetch_raw_ubuntu_image "jammy" "amd64"
+    fetch_raw_ubuntu_image "focal" "amd64" "current"
+    fetch_raw_ubuntu_image "jammy" "amd64" "20231026"
 }
 
 fetch_disk_images() {
