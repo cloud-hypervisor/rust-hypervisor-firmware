@@ -11,6 +11,19 @@ fetch_ch() {
     [ "$CH_ARCH" = "x86_64" ] && CH_NAME="cloud-hypervisor"
     CH_URL="$CH_URL_BASE/$CH_NAME"
 
+    WGET_RETRY_MAX=10
+    WGET_RETRY=0
+
+    until [ "$WGET_RETRY" -ge "$WGET_RETRY_MAX" ]; do
+        wget --quiet $CH_URL -O $CH_PATH && break
+        WGET_RETRY=$[$WGET_RETRY+1]
+    done
+
+    if [ "$WGET_RETRY" -ge "$WGET_RETRY_MAX" ]; then
+        echo "Failed to download $CH_URL"
+        exit 1
+    fi
+
     wget --quiet $CH_URL -O $CH_PATH
     chmod +x $CH_PATH
     sudo setcap cap_net_admin+ep $CH_PATH
