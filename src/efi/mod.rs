@@ -653,54 +653,57 @@ pub extern "efiapi" fn load_image(
 ) -> Status {
     use crate::fat::Read;
 
-    let mut path = [0_u8; 256];
     let device_path = unsafe { &*device_path };
-    extract_path(device_path, &mut path);
-    let path = crate::common::ascii_strip(&path);
+    match DevicePath::parse(device_path) {
+        DevicePath::File(path) => {
+            let path = crate::common::ascii_strip(&path);
 
-    let li = parent_image_handle as *const LoadedImageWrapper;
-    let dh = unsafe { (*li).proto.device_handle };
-    let wrapped_fs_ref = unsafe { &*(dh as *const file::FileSystemWrapper) };
-    let mut file = match wrapped_fs_ref.fs.open(path) {
-        Ok(file) => file,
-        Err(_) => return Status::DEVICE_ERROR,
-    };
+            let li = parent_image_handle as *const LoadedImageWrapper;
+            let dh = unsafe { (*li).proto.device_handle };
+            let wrapped_fs_ref = unsafe { &*(dh as *const file::FileSystemWrapper) };
+            let mut file = match wrapped_fs_ref.fs.open(path) {
+                Ok(file) => file,
+                Err(_) => return Status::DEVICE_ERROR,
+            };
 
-    let file_size = (file.get_size() as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
-    // Get free pages address
-    let load_addr =
-        match ALLOCATOR
-            .borrow_mut()
-            .find_free_pages(efi::ALLOCATE_ANY_PAGES, file_size, 0)
-        {
-            Some(a) => a,
-            None => return Status::OUT_OF_RESOURCES,
-        };
+            let file_size = (file.get_size() as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+            // Get free pages address
+            let load_addr =
+                match ALLOCATOR
+                    .borrow_mut()
+                    .find_free_pages(efi::ALLOCATE_ANY_PAGES, file_size, 0)
+                {
+                    Some(a) => a,
+                    None => return Status::OUT_OF_RESOURCES,
+                };
 
-    let mut l = crate::pe::Loader::new(&mut file);
-    let (entry_addr, load_addr, load_size) = match l.load(load_addr) {
-        Ok(load_info) => load_info,
-        Err(_) => return Status::DEVICE_ERROR,
-    };
-    ALLOCATOR.borrow_mut().allocate_pages(
-        efi::ALLOCATE_ADDRESS,
-        efi::LOADER_CODE,
-        file_size,
-        load_addr,
-    );
+            let mut l = crate::pe::Loader::new(&mut file);
+            let (entry_addr, load_addr, load_size) = match l.load(load_addr) {
+                Ok(load_info) => load_info,
+                Err(_) => return Status::DEVICE_ERROR,
+            };
+            ALLOCATOR.borrow_mut().allocate_pages(
+                efi::ALLOCATE_ADDRESS,
+                efi::LOADER_CODE,
+                file_size,
+                load_addr,
+            );
 
-    let image = new_image_handle(
-        path,
-        parent_image_handle,
-        wrapped_fs_ref as *const _ as Handle,
-        load_addr,
-        load_size,
-        entry_addr,
-    );
+            let image = new_image_handle(
+                path,
+                parent_image_handle,
+                wrapped_fs_ref as *const _ as Handle,
+                load_addr,
+                load_size,
+                entry_addr,
+            );
 
-    unsafe { *image_handle = image as *mut _ as *mut c_void };
+            unsafe { *image_handle = image as *mut _ as *mut c_void };
 
-    Status::SUCCESS
+            Status::SUCCESS
+        }
+        _ => Status::UNSUPPORTED,
+    }
 }
 
 pub extern "efiapi" fn start_image(
@@ -934,20 +937,30 @@ extern "efiapi" fn image_unload(_: Handle) -> Status {
     efi::Status::UNSUPPORTED
 }
 
-fn extract_path(device_path: &DevicePathProtocol, path: &mut [u8]) {
-    let mut dp = device_path;
-    loop {
-        if dp.r#type == r_efi::protocols::device_path::TYPE_MEDIA && dp.sub_type == 0x04 {
-            let ptr =
-                (dp as *const _ as u64 + size_of::<DevicePathProtocol>() as u64) as *const u16;
-            crate::common::ucs2_to_ascii(ptr, path);
-            return;
+#[allow(clippy::large_enum_variant)]
+enum DevicePath {
+    File([u8; 256]),
+    Unsupported,
+}
+
+impl DevicePath {
+    fn parse(dpp: &DevicePathProtocol) -> DevicePath {
+        let mut dpp = dpp;
+        loop {
+            if dpp.r#type == r_efi::protocols::device_path::TYPE_MEDIA && dpp.sub_type == 0x04 {
+                let ptr =
+                    (dpp as *const _ as u64 + size_of::<DevicePathProtocol>() as u64) as *const u16;
+                let mut path = [0u8; 256];
+                crate::common::ucs2_to_ascii(ptr, &mut path);
+                return DevicePath::File(path);
+            }
+            if dpp.r#type == r_efi::protocols::device_path::TYPE_END && dpp.sub_type == 0xff {
+                log!("Unexpected end of device path");
+                return DevicePath::Unsupported;
+            }
+            let len = unsafe { core::mem::transmute::<[u8; 2], u16>(dpp.length) };
+            dpp = unsafe { &*((dpp as *const _ as u64 + len as u64) as *const _) };
         }
-        if dp.r#type == r_efi::protocols::device_path::TYPE_END && dp.sub_type == 0xff {
-            panic!("Failed to extract path");
-        }
-        let len = unsafe { core::mem::transmute::<[u8; 2], u16>(dp.length) };
-        dp = unsafe { &*((dp as *const _ as u64 + len as u64) as *const _) };
     }
 }
 
