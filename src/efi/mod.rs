@@ -690,7 +690,7 @@ pub extern "efiapi" fn load_image(
             );
 
             let image = new_image_handle(
-                path,
+                file_device_path(path),
                 parent_image_handle,
                 wrapped_fs_ref as *const _ as Handle,
                 load_addr,
@@ -1046,14 +1046,7 @@ struct LoadedImageWrapper {
 
 type DevicePaths = [file::FileDevicePathProtocol; 2];
 
-fn new_image_handle(
-    path: &str,
-    parent_handle: Handle,
-    device_handle: Handle,
-    load_addr: u64,
-    load_size: u64,
-    entry_addr: u64,
-) -> *mut LoadedImageWrapper {
+fn file_device_path(path: &str) -> *mut r_efi::protocols::device_path::Protocol {
     let mut file_paths = null_mut();
     let status = allocate_pool(
         efi::LOADER_DATA,
@@ -1083,8 +1076,19 @@ fn new_image_handle(
 
     crate::common::ascii_to_ucs2(path, &mut file_paths[0].filename);
 
+    &mut file_paths[0].device_path // Pointer to first path entry
+}
+
+fn new_image_handle(
+    file_path: *mut r_efi::protocols::device_path::Protocol,
+    parent_handle: Handle,
+    device_handle: Handle,
+    load_addr: u64,
+    load_size: u64,
+    entry_addr: u64,
+) -> *mut LoadedImageWrapper {
     let mut image = null_mut();
-    allocate_pool(
+    let status = allocate_pool(
         efi::LOADER_DATA,
         size_of::<LoadedImageWrapper>(),
         &mut image as *mut *mut c_void,
@@ -1100,7 +1104,7 @@ fn new_image_handle(
             parent_handle,
             system_table: unsafe { &mut ST },
             device_handle,
-            file_path: &mut file_paths[0].device_path, // Pointer to first path entry
+            file_path,
             load_options_size: 0,
             load_options: null_mut(),
             image_base: load_addr as *mut _,
@@ -1196,7 +1200,7 @@ pub fn efi_exec(
     let wrapped_fs = file::FileSystemWrapper::new(fs, efi_part_id);
 
     let image = new_image_handle(
-        crate::efi::EFI_BOOT_PATH,
+        file_device_path(crate::efi::EFI_BOOT_PATH),
         0 as Handle,
         &wrapped_fs as *const _ as Handle,
         loaded_address,
