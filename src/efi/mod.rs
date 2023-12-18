@@ -1206,8 +1206,12 @@ pub fn efi_exec(
 
     let wrapped_fs = file::FileSystemWrapper::new(fs, efi_part_id);
 
+    let mut path = [0u8; 256];
+    path[0..crate::efi::EFI_BOOT_PATH.as_bytes().len()]
+        .copy_from_slice(crate::efi::EFI_BOOT_PATH.as_bytes());
+    let device_path = DevicePath::File(path);
     let image = new_image_handle(
-        file_device_path(crate::efi::EFI_BOOT_PATH),
+        device_path.generate(),
         0 as Handle,
         &wrapped_fs as *const _ as Handle,
         loaded_address,
