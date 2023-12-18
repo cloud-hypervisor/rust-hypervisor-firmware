@@ -654,9 +654,9 @@ pub extern "efiapi" fn load_image(
     use crate::fat::Read;
 
     let device_path = unsafe { &*device_path };
-    match DevicePath::parse(device_path) {
-        DevicePath::File(path) => {
-            let path = crate::common::ascii_strip(&path);
+    match &DevicePath::parse(device_path) {
+        dp @ DevicePath::File(path) => {
+            let path = crate::common::ascii_strip(path);
 
             let li = parent_image_handle as *const LoadedImageWrapper;
             let dh = unsafe { (*li).proto.device_handle };
@@ -690,7 +690,7 @@ pub extern "efiapi" fn load_image(
             );
 
             let image = new_image_handle(
-                file_device_path(path),
+                dp.generate(),
                 parent_image_handle,
                 wrapped_fs_ref as *const _ as Handle,
                 load_addr,
@@ -960,6 +960,13 @@ impl DevicePath {
             }
             let len = unsafe { core::mem::transmute::<[u8; 2], u16>(dpp.length) };
             dpp = unsafe { &*((dpp as *const _ as u64 + len as u64) as *const _) };
+        }
+    }
+
+    fn generate(&self) -> *mut r_efi::protocols::device_path::Protocol {
+        match self {
+            Self::File(path) => file_device_path(crate::common::ascii_strip(path)),
+            Self::Unsupported => panic!("Cannot generate from unsupported Device Path type"),
         }
     }
 }
