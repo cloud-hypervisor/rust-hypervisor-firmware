@@ -6,18 +6,11 @@ use core::ffi::c_void;
 use r_efi::{
     efi::{self, Char16, Guid, Status},
     protocols::{
-        device_path::Protocol as DevicePathProtocol, file::Protocol as FileProtocol,
-        simple_file_system::Protocol as SimpleFileSystemProtocol,
+        file::Protocol as FileProtocol, simple_file_system::Protocol as SimpleFileSystemProtocol,
     },
 };
 
 use crate::block::SectorBuf;
-
-#[repr(C)]
-pub struct FileDevicePathProtocol {
-    pub device_path: DevicePathProtocol,
-    pub filename: [u16; 64],
-}
 
 pub extern "efiapi" fn filesystem_open_volume(
     fs_proto: *mut SimpleFileSystemProtocol,
