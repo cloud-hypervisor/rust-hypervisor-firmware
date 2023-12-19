@@ -16,7 +16,7 @@ use crate::block::SectorBuf;
 #[repr(C)]
 pub struct FileDevicePathProtocol {
     pub device_path: DevicePathProtocol,
-    pub filename: [u16; 64],
+    pub filename: [u16; 128],
 }
 
 pub extern "efiapi" fn filesystem_open_volume(

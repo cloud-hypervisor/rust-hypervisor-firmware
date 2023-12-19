@@ -1067,9 +1067,9 @@ fn file_device_path(path: &str) -> *mut r_efi::protocols::device_path::Protocol 
             device_path: DevicePathProtocol {
                 r#type: r_efi::protocols::device_path::TYPE_MEDIA,
                 sub_type: 4, // Media Path type file
-                length: [132, 0],
+                length: [(260u16 & 0xff) as u8, (260u16 >> 8) as u8],
             },
-            filename: [0; 64],
+            filename: [0; 128],
         },
         file::FileDevicePathProtocol {
             device_path: DevicePathProtocol {
@@ -1077,7 +1077,7 @@ fn file_device_path(path: &str) -> *mut r_efi::protocols::device_path::Protocol 
                 sub_type: 0xff, // End of full path
                 length: [4, 0],
             },
-            filename: [0; 64],
+            filename: [0; 128],
         },
     ];
 
