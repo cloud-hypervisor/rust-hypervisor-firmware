@@ -1057,17 +1057,17 @@ struct FileDevicePathProtocol {
     pub filename: [u16; 256],
 }
 
-type DevicePaths = [FileDevicePathProtocol; 2];
+type FileDevicePaths = [FileDevicePathProtocol; 2];
 
 fn file_device_path(path: &str) -> *mut r_efi::protocols::device_path::Protocol {
     let mut file_paths = null_mut();
     let status = allocate_pool(
         efi::LOADER_DATA,
-        size_of::<DevicePaths>(),
+        size_of::<FileDevicePaths>(),
         &mut file_paths as *mut *mut c_void,
     );
     assert!(status == Status::SUCCESS);
-    let file_paths = unsafe { &mut *(file_paths as *mut DevicePaths) };
+    let file_paths = unsafe { &mut *(file_paths as *mut FileDevicePaths) };
     *file_paths = [
         FileDevicePathProtocol {
             device_path: DevicePathProtocol {
