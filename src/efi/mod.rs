@@ -1051,7 +1051,13 @@ struct LoadedImageWrapper {
     entry_point: u64,
 }
 
-type DevicePaths = [file::FileDevicePathProtocol; 2];
+#[repr(C)]
+struct FileDevicePathProtocol {
+    pub device_path: DevicePathProtocol,
+    pub filename: [u16; 64],
+}
+
+type DevicePaths = [FileDevicePathProtocol; 2];
 
 fn file_device_path(path: &str) -> *mut r_efi::protocols::device_path::Protocol {
     let mut file_paths = null_mut();
@@ -1063,7 +1069,7 @@ fn file_device_path(path: &str) -> *mut r_efi::protocols::device_path::Protocol 
     assert!(status == Status::SUCCESS);
     let file_paths = unsafe { &mut *(file_paths as *mut DevicePaths) };
     *file_paths = [
-        file::FileDevicePathProtocol {
+        FileDevicePathProtocol {
             device_path: DevicePathProtocol {
                 r#type: r_efi::protocols::device_path::TYPE_MEDIA,
                 sub_type: 4, // Media Path type file
@@ -1071,7 +1077,7 @@ fn file_device_path(path: &str) -> *mut r_efi::protocols::device_path::Protocol 
             },
             filename: [0; 64],
         },
-        file::FileDevicePathProtocol {
+        FileDevicePathProtocol {
             device_path: DevicePathProtocol {
                 r#type: r_efi::protocols::device_path::TYPE_END,
                 sub_type: 0xff, // End of full path
