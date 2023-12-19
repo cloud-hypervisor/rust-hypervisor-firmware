@@ -717,8 +717,6 @@ pub extern "efiapi" fn load_image(
     _source_size: usize,
     image_handle: *mut Handle,
 ) -> Status {
-    use crate::fat::Read;
-
     let device_path = unsafe { &*device_path };
     match &DevicePath::parse(device_path) {
         dp @ DevicePath::File(path) => {
@@ -727,87 +725,71 @@ pub extern "efiapi" fn load_image(
             let li = parent_image_handle as *const LoadedImageWrapper;
             let dh = unsafe { (*li).proto.device_handle };
             let wrapped_fs_ref = unsafe { &*(dh as *const file::FileSystemWrapper) };
+            let device_handle = wrapped_fs_ref as *const _ as Handle;
+
             let mut file = match wrapped_fs_ref.fs.open(path) {
                 Ok(file) => file,
                 Err(_) => return Status::DEVICE_ERROR,
             };
 
-            let file_size = (file.get_size() as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
-            // Get free pages address
-            let load_addr =
-                match ALLOCATOR
-                    .borrow_mut()
-                    .find_free_pages(efi::ALLOCATE_ANY_PAGES, file_size, 0)
-                {
-                    Some(a) => a,
-                    None => return Status::OUT_OF_RESOURCES,
-                };
-
-            let mut l = crate::pe::Loader::new(&mut file);
-            let (entry_addr, load_addr, load_size) = match l.load(load_addr) {
-                Ok(load_info) => load_info,
-                Err(_) => return Status::DEVICE_ERROR,
-            };
-            ALLOCATOR.borrow_mut().allocate_pages(
-                efi::ALLOCATE_ADDRESS,
-                efi::LOADER_CODE,
-                file_size,
-                load_addr,
-            );
-
-            let image = new_image_handle(
-                dp.generate(),
+            load_from_file(
+                &mut file,
+                dp,
                 parent_image_handle,
-                wrapped_fs_ref as *const _ as Handle,
-                load_addr,
-                load_size,
-                entry_addr,
-            );
-
-            unsafe { *image_handle = image as *mut _ as *mut c_void };
-
-            Status::SUCCESS
+                device_handle,
+                image_handle,
+            )
         }
         dp @ DevicePath::Memory(_memory_type, start, end) => {
             let mut file = MemoryFile::new(*start, (*end - *start) as u32);
-            let file_size = (file.get_size() as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
-            // Get free pages address
-            let load_addr =
-                match ALLOCATOR
-                    .borrow_mut()
-                    .find_free_pages(efi::ALLOCATE_ANY_PAGES, file_size, 0)
-                {
-                    Some(a) => a,
-                    None => return Status::OUT_OF_RESOURCES,
-                };
-
-            let mut l = crate::pe::Loader::new(&mut file);
-            let (entry_addr, load_addr, load_size) = match l.load(load_addr) {
-                Ok(load_info) => load_info,
-                Err(_) => return Status::DEVICE_ERROR,
-            };
-            ALLOCATOR.borrow_mut().allocate_pages(
-                efi::ALLOCATE_ADDRESS,
-                efi::LOADER_CODE,
-                file_size,
-                load_addr,
-            );
-
-            let image = new_image_handle(
-                dp.generate(),
-                parent_image_handle,
-                null_mut(),
-                load_addr,
-                load_size,
-                entry_addr,
-            );
-
-            unsafe { *image_handle = image as *mut _ as *mut c_void };
-
-            Status::SUCCESS
+            load_from_file(&mut file, dp, parent_image_handle, null_mut(), image_handle)
         }
         _ => Status::UNSUPPORTED,
     }
+}
+
+fn load_from_file(
+    file: &mut dyn fat::Read,
+    dp: &DevicePath,
+    parent_image_handle: *mut c_void,
+    device_handle: *mut c_void,
+    image_handle: *mut *mut c_void,
+) -> Status {
+    let file_size = (file.get_size() as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+    // Get free pages address
+    let load_addr =
+        match ALLOCATOR
+            .borrow_mut()
+            .find_free_pages(efi::ALLOCATE_ANY_PAGES, file_size, 0)
+        {
+            Some(a) => a,
+            None => return Status::OUT_OF_RESOURCES,
+        };
+
+    let mut l = crate::pe::Loader::new(file);
+    let (entry_addr, load_addr, load_size) = match l.load(load_addr) {
+        Ok(load_info) => load_info,
+        Err(_) => return Status::DEVICE_ERROR,
+    };
+    ALLOCATOR.borrow_mut().allocate_pages(
+        efi::ALLOCATE_ADDRESS,
+        efi::LOADER_CODE,
+        file_size,
+        load_addr,
+    );
+
+    let image = new_image_handle(
+        dp.generate(),
+        parent_image_handle,
+        device_handle,
+        load_addr,
+        load_size,
+        entry_addr,
+    );
+
+    unsafe { *image_handle = image as *mut c_void };
+
+    Status::SUCCESS
 }
 
 pub extern "efiapi" fn start_image(
