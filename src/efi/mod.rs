@@ -8,6 +8,7 @@ use core::{
     ffi::c_void,
     mem::{size_of, transmute},
     ptr::null_mut,
+    slice::from_raw_parts,
 };
 
 use atomic_refcell::AtomicRefCell;
@@ -28,9 +29,9 @@ use r_efi::{
 #[cfg(target_arch = "riscv64")]
 use r_efi::{eficall, eficall_abi};
 
-use crate::bootinfo;
-use crate::layout;
 use crate::rtc;
+use crate::{block::SectorBuf, layout};
+use crate::{bootinfo, fat};
 
 mod alloc;
 mod block;
@@ -643,6 +644,71 @@ pub extern "efiapi" fn install_configuration_table(guid: *mut Guid, table: *mut 
     Status::OUT_OF_RESOURCES
 }
 
+struct MemoryFile {
+    address: u64,
+    size: u32,
+    position: u32,
+}
+
+impl MemoryFile {
+    fn new(address: u64, size: u32) -> Self {
+        MemoryFile {
+            address,
+            size,
+            position: 0,
+        }
+    }
+}
+
+impl fat::Read for MemoryFile {
+    fn get_size(&self) -> u32 {
+        self.size
+    }
+
+    fn read(&mut self, data: &mut [u8]) -> Result<u32, fat::Error> {
+        let sector_size = SectorBuf::len() as u32;
+        assert_eq!(data.len(), SectorBuf::len());
+
+        if (self.position + sector_size) > self.size {
+            let bytes_read = self.size - self.position;
+            let memory = unsafe {
+                from_raw_parts(
+                    (self.address + self.position as u64) as *const u8,
+                    bytes_read as usize,
+                )
+            };
+            data[0..bytes_read as usize].copy_from_slice(memory);
+            self.position = self.size;
+            Ok(bytes_read)
+        } else {
+            let memory = unsafe {
+                from_raw_parts(
+                    (self.address + self.position as u64) as *const u8,
+                    sector_size as usize,
+                )
+            };
+            data[0..sector_size as usize].copy_from_slice(memory);
+            self.position += sector_size;
+            Ok(sector_size)
+        }
+    }
+
+    fn seek(&mut self, position: u32) -> Result<(), fat::Error> {
+        let sector_size = SectorBuf::len() as u32;
+        if position % sector_size != 0 {
+            return Err(fat::Error::InvalidOffset);
+        }
+
+        if position >= self.size {
+            return Err(fat::Error::EndOfFile);
+        }
+
+        self.position = position;
+
+        Ok(())
+    }
+}
+
 pub extern "efiapi" fn load_image(
     _boot_policy: Boolean,
     parent_image_handle: Handle,
@@ -693,6 +759,44 @@ pub extern "efiapi" fn load_image(
                 dp.generate(),
                 parent_image_handle,
                 wrapped_fs_ref as *const _ as Handle,
+                load_addr,
+                load_size,
+                entry_addr,
+            );
+
+            unsafe { *image_handle = image as *mut _ as *mut c_void };
+
+            Status::SUCCESS
+        }
+        dp @ DevicePath::Memory(_memory_type, start, end) => {
+            let mut file = MemoryFile::new(*start, (*end - *start) as u32);
+            let file_size = (file.get_size() as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+            // Get free pages address
+            let load_addr =
+                match ALLOCATOR
+                    .borrow_mut()
+                    .find_free_pages(efi::ALLOCATE_ANY_PAGES, file_size, 0)
+                {
+                    Some(a) => a,
+                    None => return Status::OUT_OF_RESOURCES,
+                };
+
+            let mut l = crate::pe::Loader::new(&mut file);
+            let (entry_addr, load_addr, load_size) = match l.load(load_addr) {
+                Ok(load_info) => load_info,
+                Err(_) => return Status::DEVICE_ERROR,
+            };
+            ALLOCATOR.borrow_mut().allocate_pages(
+                efi::ALLOCATE_ADDRESS,
+                efi::LOADER_CODE,
+                file_size,
+                load_addr,
+            );
+
+            let image = new_image_handle(
+                dp.generate(),
+                parent_image_handle,
+                null_mut(),
                 load_addr,
                 load_size,
                 entry_addr,
