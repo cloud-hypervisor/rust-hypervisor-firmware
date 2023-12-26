@@ -564,17 +564,20 @@ impl VirtioTransport for VirtioPciTransport {
 
     fn set_descriptors_address(&self, addr: u64) {
         // queue_desc: 0x20
-        self.region.io_write_u64(0x20, addr);
+        self.region.io_write_u32(0x20, (addr & 0xffff_ffff) as u32);
+        self.region.io_write_u32(0x20 + 4, (addr >> 32) as u32);
     }
 
     fn set_avail_ring(&self, addr: u64) {
         // queue_avail: 0x28
-        self.region.io_write_u64(0x28, addr);
+        self.region.io_write_u32(0x28, (addr & 0xffff_ffff) as u32);
+        self.region.io_write_u32(0x28 + 4, (addr >> 32) as u32);
     }
 
     fn set_used_ring(&self, addr: u64) {
-        // queue_used: 0x28
-        self.region.io_write_u64(0x30, addr);
+        // queue_used: 0x30
+        self.region.io_write_u32(0x30, (addr & 0xffff_ffff) as u32);
+        self.region.io_write_u32(0x30 + 4, (addr >> 32) as u32);
     }
 
     fn set_queue_enable(&self) {
