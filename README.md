@@ -10,7 +10,7 @@ firmware such as TianoCore/edk2 and without requiring the VMM to reuse
 functionality used for booting the Linux kernel.
 
 Currently it will directly load a kernel from a disk image that follows the
-[Boot Loader Specification](https://systemd.io/BOOT_LOADER_SPECIFICATION)
+[Boot Loader Specification](https://uapi-group.org/specifications/specs/boot_loader_specification)
 
 There is also minimal EFI compatibility support allowing the boot of some
 images that use EFI (shim + GRUB2 as used by Ubuntu).
