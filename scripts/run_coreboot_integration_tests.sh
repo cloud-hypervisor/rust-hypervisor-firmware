@@ -26,4 +26,4 @@ make -C $COREBOOT_DIR olddefconfig
 make -C $COREBOOT_DIR -j"$(nproc)"
 
 export RUST_BACKTRACE=1
-cargo test --features "coreboot integration_tests" "integration::tests::linux::$arch"
+cargo test --features "coreboot integration_tests" "integration::tests::linux::$arch" -- --test-threads=1
