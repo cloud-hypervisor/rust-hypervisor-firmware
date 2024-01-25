@@ -1,0 +1,20 @@
+name: Rust Hypervisor Firmware Tests
+on: [pull_request, create]
+
+jobs:
+  build:
+    name: Tests
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Run unit tests
+        run: scripts/dev_cli.sh tests --unit
+      - name: Run integration tests
+        run: scripts/dev_cli.sh tests --integration
+      - name: Run integration tests
+        run: scripts/dev_cli.sh tests --integration-coreboot
