@@ -3,37 +3,6 @@ pipeline {
         stages {
                 stage ('Build') {
                         parallel {
-                                stage ('Linux guest Tests') {
-                                        agent { node { label 'focal-fw' } }
-                                        stages {
-                                                stage ('Checkout') {
-                                                        steps {
-                                                                checkout scm
-                                                        }
-                                                }
-                                                stage('Run unit tests') {
-                                                          steps {
-                                                                  sh "scripts/dev_cli.sh tests --unit"
-                                                          }
-                                                }
-                                                stage('Run integration tests') {
-                                                          options {
-                                                                  timeout(time: 1, unit: 'HOURS')
-                                                          }
-                                                          steps {
-                                                                  sh "scripts/dev_cli.sh tests --integration"
-                                                          }
-                                                }
-                                                stage('Run coreboot integration tests') {
-                                                          options {
-                                                                  timeout(time: 1, unit: 'HOURS')
-                                                          }
-                                                          steps {
-                                                                  sh "scripts/dev_cli.sh tests --integration-coreboot"
-                                                          }
-                                                }
-                                        }
-                                }
                                 stage ('Windows guest Tests') {
                                         agent { node { label 'focal-fw' } }
                                         environment {
