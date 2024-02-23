@@ -4,9 +4,15 @@ on: [pull_request, create]
 jobs:
   build:
     name: Tests
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            coreboot-tests: true
+          - runner: focal-arm64
+            coreboot-tests: false
     steps:
       - name: Code checkout
         uses: actions/checkout@v2
@@ -16,5 +22,6 @@ jobs:
         run: scripts/dev_cli.sh tests --unit
       - name: Run integration tests
         run: scripts/dev_cli.sh tests --integration
-      - name: Run integration tests
+      - if: ${{ matrix.coreboot-tests }}
+        name: Run coreboot integration tests
         run: scripts/dev_cli.sh tests --integration-coreboot
