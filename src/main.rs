@@ -14,6 +14,7 @@
 )]
 #![cfg_attr(test, allow(unused_imports, dead_code))]
 #![cfg_attr(not(feature = "log-serial"), allow(unused_variables, unused_imports))]
+#![cfg_attr(target_arch = "riscv64", feature(riscv_ext_intrinsics))]
 
 #[cfg(all(not(test), not(feature = "integration_tests")))]
 use core::panic::PanicInfo;
