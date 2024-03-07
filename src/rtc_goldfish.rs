@@ -3,7 +3,7 @@
 
 use crate::mem::MemoryRegion;
 use atomic_refcell::AtomicRefCell;
-use chrono::{Datelike, NaiveDateTime, Timelike};
+use chrono::{DateTime, Datelike, Timelike};
 
 // TODO: Fill from FDT
 const RTC_GOLDFISH_ADDRESS: u64 = 0x101000;
@@ -35,22 +35,18 @@ impl RtcGoldfish {
 pub fn read_date() -> Result<(u8, u8, u8), ()> {
     let ts = RTC_GOLDFISH.borrow_mut().read_ts();
 
-    let naive = NaiveDateTime::from_timestamp_opt(ts as i64, 0).ok_or(())?;
-    let datetime = naive.and_utc();
+    let datetime = DateTime::from_timestamp(ts as i64, 0).ok_or(())?;
+    let date = datetime.date_naive();
     Ok((
-        (datetime.year() - 2000) as u8,
-        datetime.month() as u8,
-        datetime.day() as u8,
+        (date.year() - 2000) as u8,
+        date.month() as u8,
+        date.day() as u8,
     ))
 }
 
 pub fn read_time() -> Result<(u8, u8, u8), ()> {
     let ts = RTC_GOLDFISH.borrow_mut().read_ts();
-    let naive = NaiveDateTime::from_timestamp_opt(ts as i64, 0).ok_or(())?;
-    let datetime = naive.and_utc();
-    Ok((
-        datetime.hour() as u8,
-        datetime.minute() as u8,
-        datetime.second() as u8,
-    ))
+    let datetime = DateTime::from_timestamp(ts as i64, 0).ok_or(())?;
+    let time = datetime.time();
+    Ok((time.hour() as u8, time.minute() as u8, time.second() as u8))
 }
