@@ -1,12 +1,11 @@
 name: Rust Hypervisor Firmware Build
-on: [pull_request, create]
+on: [pull_request, merge_group]
 
 env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
   build:
-    if: github.event_name == 'pull_request'
     name: Build
     runs-on: ubuntu-22.04
     strategy:
