@@ -672,7 +672,7 @@ mod tests {
     mod windows {
         use crate::integration::tests::*;
 
-        const WINDOWS_IMAGE_NAME: &str = "windows-server-2019.raw";
+        const WINDOWS_IMAGE_NAME: &str = "windows-server-2022-amd64-2.raw";
 
         fn windows_auth() -> PasswordAuth {
             PasswordAuth {

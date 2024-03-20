@@ -9,7 +9,7 @@ arch="$(uname -m)"
 WORKLOADS_DIR="$HOME/workloads"
 mkdir -p "$WORKLOADS_DIR"
 
-WIN_IMAGE_FILE="$WORKLOADS_DIR/windows-server-2019.raw"
+WIN_IMAGE_FILE="$WORKLOADS_DIR/windows-server-2022-amd64-2.raw"
 
 # Check if the image is present
 if [ ! -f "$WIN_IMAGE_FILE" ]; then
