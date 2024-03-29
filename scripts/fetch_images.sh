@@ -59,16 +59,22 @@ fetch_raw_ubuntu_image() {
     convert_image "$OS_IMAGE_NAME" "$OS_RAW_IMAGE_NAME"
 }
 
+fetch_clear_image() {
+    OS_VERSION="$1"
+    OS_IMAGE_NAME="clear-$OS_VERSION-cloudguest.img"
+    OS_IMAGE_BASE="https://cdn.download.clearlinux.org/releases/$OS_VERSION/clear"
+    OS_IMAGE_URL="$OS_IMAGE_BASE/$OS_IMAGE_NAME.xz"
+    fetch_image "$OS_IMAGE_NAME" "$OS_IMAGE_URL"
+    xz -d "$OS_IMAGE_NAME.xz"
+}
+
 aarch64_fetch_disk_images() {
     fetch_raw_ubuntu_image "focal" "arm64" "current"
     fetch_raw_ubuntu_image "jammy" "arm64" "current"
 }
 
 x86_64_fetch_disk_images() {
-    CLEAR_OS_IMAGE_NAME="clear-31311-cloudguest.img"
-    CLEAR_OS_URL_BASE="https://cloud-hypervisor.azureedge.net/"
-    CLEAR_OS_IMAGE_URL="$CLEAR_OS_URL_BASE/$CLEAR_OS_IMAGE_NAME"
-    fetch_image "$CLEAR_OS_IMAGE_NAME" "$CLEAR_OS_IMAGE_URL"
+    fetch_clear_image "31310"
 
     fetch_raw_ubuntu_image "focal" "amd64" "current"
     fetch_raw_ubuntu_image "jammy" "amd64" "current"
