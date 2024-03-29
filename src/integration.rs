@@ -632,7 +632,7 @@ mod tests {
 
             const FOCAL_IMAGE_NAME: &str = "focal-server-cloudimg-amd64-raw.img";
             const JAMMY_IMAGE_NAME: &str = "jammy-server-cloudimg-amd64-raw.img";
-            const CLEAR_IMAGE_NAME: &str = "clear-31311-cloudguest.img";
+            const CLEAR_IMAGE_NAME: &str = "clear-31310-cloudguest.img";
 
             #[test]
             fn test_boot_qemu_focal() {
