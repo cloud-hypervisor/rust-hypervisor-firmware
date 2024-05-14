@@ -41,7 +41,7 @@ all the way into the OS.
 To compile:
 
 ```
-cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
 ```
 
 The result will be in:
@@ -101,7 +101,7 @@ $ qemu-system-x86_64 -machine q35,accel=kvm -cpu host,-vmx -m 1G\
 To compile:
 
 ```
-cargo build --release --target aarch64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+cargo build --release --target aarch64-unknown-none.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
 ```
 
 The result will be in:
@@ -121,7 +121,7 @@ will become available in the future.
 To compile:
 
 ```
-cargo build --release --target riscv64gcv-unknown-none-elf.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+cargo build --release --target riscv64gcv-unknown-none-elf.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
 ```
 
 The result will be in:

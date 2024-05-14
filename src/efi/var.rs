@@ -1,20 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (C) 2021 Akira Moroo
 
-#[cfg(not(test))]
-extern crate alloc;
-
-#[cfg(not(test))]
-use alloc::vec::Vec;
-
+use heapless::Vec;
 use r_efi::efi;
+
+const MAX_VAR_NAME: usize = 64;
+const MAX_VAR_DATA: usize = 1024;
+const MAX_VAR_NUM: usize = 128;
 
 #[derive(Debug)]
 struct Descriptor {
-    name: Vec<u16>,
+    name: Vec<u16, MAX_VAR_NAME>,
     guid: efi::Guid,
     attr: u32,
-    data: Vec<u8>,
+    data: Vec<u8, MAX_VAR_DATA>,
 }
 
 impl Descriptor {
@@ -29,7 +28,7 @@ impl Descriptor {
 }
 
 pub struct VariableAllocator {
-    allocations: Vec<Descriptor>,
+    allocations: Vec<Descriptor, MAX_VAR_NUM>,
 }
 
 impl VariableAllocator {
@@ -49,8 +48,10 @@ impl VariableAllocator {
         }
 
         let s = unsafe { core::slice::from_raw_parts(name, len + 1) };
-        let mut name: Vec<u16> = Vec::new();
-        name.extend_from_slice(s);
+        let mut name: Vec<u16, MAX_VAR_NAME> = Vec::new();
+        if name.extend_from_slice(s).is_err() {
+            return None;
+        }
         let guid = unsafe { &*guid };
         (0..self.allocations.len())
             .find(|&i| name == self.allocations[i].name && guid == &self.allocations[i].guid)
@@ -119,13 +120,19 @@ impl VariableAllocator {
             }
             let mut a = Descriptor::new();
             let name = unsafe { core::slice::from_raw_parts(name, len + 1) };
-            a.name.extend_from_slice(name);
+            if a.name.extend_from_slice(name).is_err() {
+                return efi::Status::OUT_OF_RESOURCES;
+            }
             a.guid = unsafe { *guid };
             a.attr = attr & !efi::VARIABLE_APPEND_WRITE;
             let src = unsafe { core::slice::from_raw_parts(data as *const u8, size) };
-            a.data.extend_from_slice(src);
+            if a.data.extend_from_slice(src).is_err() {
+                return efi::Status::OUT_OF_RESOURCES;
+            }
 
-            self.allocations.push(a);
+            if self.allocations.push(a).is_err() {
+                return efi::Status::OUT_OF_RESOURCES;
+            }
 
             return efi::Status::SUCCESS;
         }
@@ -144,7 +151,9 @@ impl VariableAllocator {
                 return efi::Status::INVALID_PARAMETER;
             }
             let src = unsafe { core::slice::from_raw_parts(data as *const u8, size) };
-            a.data.extend_from_slice(src);
+            if a.data.extend_from_slice(src).is_err() {
+                return efi::Status::OUT_OF_RESOURCES;
+            }
             return efi::Status::SUCCESS;
         }
 
@@ -159,7 +168,9 @@ impl VariableAllocator {
         }
         a.data.clear();
         let src = unsafe { core::slice::from_raw_parts(data as *const u8, size) };
-        a.data.extend_from_slice(src);
+        if a.data.extend_from_slice(src).is_err() {
+            return efi::Status::OUT_OF_RESOURCES;
+        }
 
         efi::Status::SUCCESS
     }
