@@ -19,9 +19,9 @@ jobs:
       - name: Install rust-src
         run: rustup component add rust-src
       - name: Build (release) for x86_64
-        run: cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+        run: cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
       - name: Build (release) for aarch64
-        run: cargo build --release --target aarch64-unknown-none.json -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+        run: cargo build --release --target aarch64-unknown-none.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
       - name: Create release
         id: create_release
         uses: actions/create-release@v1

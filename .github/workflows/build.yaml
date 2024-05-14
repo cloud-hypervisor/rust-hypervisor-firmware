@@ -28,11 +28,11 @@ jobs:
       - name: Install Rust components
         run: rustup component add rust-src clippy rustfmt
       - name: Build (debug)
-        run: cargo build --target ${{ matrix.target }} -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+        run: cargo build --target ${{ matrix.target }} -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
       - name: Build (release)
-        run: cargo build --release --target ${{ matrix.target }} -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem
+        run: cargo build --release --target ${{ matrix.target }} -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
       - name: Clippy (default)
-        run: cargo clippy --target ${{ matrix.target }} -Zbuild-std=core,alloc
+        run: cargo clippy --target ${{ matrix.target }} -Zbuild-std=core
       - name: Clippy (all targets, all features)
         run: cargo clippy --all-targets --all-features
       - name: Formatting

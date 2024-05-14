@@ -9,7 +9,7 @@ export RUSTFLAGS="-D warnings"
 arch="$(uname -m)"
 
 do_cargo_tests() {
-    local cargo_args=("-Zbuild-std=core,alloc" "-Zbuild-std-features=compiler-builtins-mem")
+    local cargo_args=("-Zbuild-std=core" "-Zbuild-std-features=compiler-builtins-mem")
     local cmd="$1"
     local target="$2"
     local features="$3"

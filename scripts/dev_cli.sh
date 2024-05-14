@@ -274,7 +274,7 @@ cmd_build() {
 	   --env RUSTFLAGS="$rustflags" \
 	   "$CTR_IMAGE" \
 	   cargo build --target "$target" \
-	         -Zbuild-std=core,alloc \
+	         -Zbuild-std=core \
 	         -Zbuild-std-features=compiler-builtins-mem \
 	         --target-dir "$CTR_RHF_CARGO_TARGET" \
 	         "${cargo_args[@]}" && say "Binary placed under $RHF_CARGO_TARGET/target/$build"

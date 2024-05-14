@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright © 2019 Intel Corporation
 
-#[cfg(all(not(test), not(feature = "integration_tests")))]
-use core::alloc as heap_alloc;
-
 use core::{
     ffi::c_void,
     mem::{size_of, transmute},
@@ -12,7 +9,6 @@ use core::{
 };
 
 use atomic_refcell::AtomicRefCell;
-use linked_list_allocator::LockedHeap;
 use r_efi::{
     efi::{
         self, AllocateType, Boolean, CapsuleHeader, Char16, Event, EventNotify, Guid, Handle,
@@ -63,16 +59,6 @@ struct HandleWrapper {
 }
 
 pub static ALLOCATOR: AtomicRefCell<Allocator> = AtomicRefCell::new(Allocator::new());
-
-#[cfg(not(test))]
-#[global_allocator]
-pub static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
-
-#[cfg(all(not(test), not(feature = "integration_tests")))]
-#[alloc_error_handler]
-fn heap_alloc_error_handler(layout: heap_alloc::Layout) -> ! {
-    panic!("heap allocation error: {:?}", layout);
-}
 
 pub static VARIABLES: AtomicRefCell<VariableAllocator> =
     AtomicRefCell::new(VariableAllocator::new());
@@ -1078,7 +1064,6 @@ impl DevicePath {
 }
 
 const PAGE_SIZE: u64 = 4096;
-const HEAP_SIZE: usize = 2 << 20; /* 2MiB */
 
 // Populate allocator from E820, fixed ranges for the firmware and the loaded binary.
 fn populate_allocator(info: &dyn bootinfo::Info, image_address: u64, image_size: u64) {
@@ -1128,27 +1113,7 @@ fn populate_allocator(info: &dyn bootinfo::Info, image_address: u64, image_size:
         image_size / PAGE_SIZE,
         image_address,
     );
-
-    // Initialize heap allocator
-    init_heap_allocator(HEAP_SIZE);
 }
-
-#[cfg(not(test))]
-fn init_heap_allocator(size: usize) {
-    let (status, heap_start) = ALLOCATOR.borrow_mut().allocate_pages(
-        efi::ALLOCATE_ANY_PAGES,
-        efi::BOOT_SERVICES_CODE,
-        size as u64 / PAGE_SIZE,
-        0,
-    );
-    assert!(status == Status::SUCCESS);
-    unsafe {
-        HEAP_ALLOCATOR.lock().init(heap_start as *mut _, size);
-    }
-}
-
-#[cfg(test)]
-fn init_heap_allocator(_: usize) {}
 
 #[repr(C)]
 struct LoadedImageWrapper {

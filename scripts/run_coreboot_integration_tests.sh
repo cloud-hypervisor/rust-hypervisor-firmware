@@ -16,7 +16,7 @@ fetch_disk_images "$WORKLOADS_DIR" "$arch"
 [ "$arch" = "x86_64" ] && target="x86_64-unknown-none"
 
 rustup component add rust-src
-cargo build --release --target "$target.json" -Zbuild-std=core,alloc -Zbuild-std-features=compiler-builtins-mem --features "coreboot"
+cargo build --release --target "$target.json" -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem --features "coreboot"
 
 RHF_BIN="$RHF_ROOT_DIR/target/$target/release/hypervisor-fw"
 COREBOOT_CONFIG_IN="$RHF_ROOT_DIR/resources/coreboot/qemu-q35-config.in"
