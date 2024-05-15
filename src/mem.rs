@@ -40,7 +40,7 @@ impl MemoryRegion {
         T: Copy + Sized,
     {
         assert!((offset + (core::mem::size_of::<T>() - 1) as u64) < self.length);
-        let ptr: *const T = core::ptr::from_exposed_addr((self.base + offset) as usize);
+        let ptr: *const T = core::ptr::with_exposed_provenance((self.base + offset) as usize);
         unsafe { ptr.read_unaligned() }
     }
 
@@ -70,7 +70,7 @@ impl MemoryRegion {
         T: Sized,
     {
         assert!((offset + (core::mem::size_of::<T>() - 1) as u64) < self.length);
-        let ptr: *mut T = core::ptr::from_exposed_addr_mut((self.base + offset) as usize);
+        let ptr: *mut T = core::ptr::with_exposed_provenance_mut((self.base + offset) as usize);
         unsafe { core::ptr::write_unaligned(ptr, value) }
     }
 
@@ -100,7 +100,7 @@ impl MemoryRegion {
         T: Copy + Sized,
     {
         assert!((offset + (core::mem::size_of::<T>() - 1) as u64) < self.length);
-        let ptr: *const T = core::ptr::from_exposed_addr((self.base + offset) as usize);
+        let ptr: *const T = core::ptr::with_exposed_provenance((self.base + offset) as usize);
         unsafe { ptr.read_volatile() }
     }
 
@@ -130,7 +130,7 @@ impl MemoryRegion {
         T: Sized,
     {
         assert!((offset + (core::mem::size_of::<T>() - 1) as u64) < self.length);
-        let ptr: *mut T = core::ptr::from_exposed_addr_mut((self.base + offset) as usize);
+        let ptr: *mut T = core::ptr::with_exposed_provenance_mut((self.base + offset) as usize);
         unsafe { core::ptr::write_volatile(ptr, value) }
     }
 

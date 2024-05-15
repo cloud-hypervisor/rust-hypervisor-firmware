@@ -5,7 +5,6 @@ use crate::{
     block::{Error as BlockError, SectorBuf, SectorRead},
     mem::MemoryRegion,
 };
-use core::convert::TryFrom;
 
 #[repr(packed)]
 struct Header {
