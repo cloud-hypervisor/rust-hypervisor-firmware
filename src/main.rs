@@ -2,8 +2,8 @@
 // Copyright © 2019 Intel Corporation
 
 #![feature(asm_const)]
+#![feature(exposed_provenance)]
 #![feature(slice_take)]
-#![feature(stdsimd)]
 #![feature(stmt_expr_attributes)]
 #![feature(strict_provenance)]
 #![feature(sync_unsafe_cell)]
