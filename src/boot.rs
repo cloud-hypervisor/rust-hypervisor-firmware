@@ -204,7 +204,7 @@ impl Header {
             after: [u8; 1024 - HEADER_END],
         }
         // SAFETY: Struct consists entirely of primitive integral types.
-        Ok(unsafe { mem::transmute::<_, HeaderData>(data) }.hdr)
+        Ok(unsafe { mem::transmute::<[u8; 1024], HeaderData>(data) }.hdr)
     }
 }
 
