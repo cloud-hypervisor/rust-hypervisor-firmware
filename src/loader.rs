@@ -17,6 +17,7 @@ pub struct LoaderConfig {
     pub cmdline: [u8; 4096],
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum Error {
     File(fat::Error),

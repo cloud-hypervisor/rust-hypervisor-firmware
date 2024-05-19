@@ -20,6 +20,7 @@ pub const PROTOCOL_GUID: Guid = Guid::from_fields(
     &[0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b],
 );
 
+#[allow(dead_code)]
 #[repr(packed)]
 pub struct HardDiskDevicePathProtocol {
     pub device_path: DevicePathProtocol,
@@ -31,6 +32,7 @@ pub struct HardDiskDevicePathProtocol {
     pub signature_type: u8,
 }
 
+#[allow(dead_code)]
 #[repr(packed)]
 pub struct ControllerDevicePathProtocol {
     pub device_path: DevicePathProtocol,

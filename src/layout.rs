@@ -14,6 +14,7 @@ pub enum MemoryAttribute {
 
 #[derive(Clone, Copy)]
 pub struct MemoryDescriptor {
+    #[allow(dead_code)]
     pub name: &'static str,
     pub range: fn() -> Range<usize>,
     pub attribute: MemoryAttribute,

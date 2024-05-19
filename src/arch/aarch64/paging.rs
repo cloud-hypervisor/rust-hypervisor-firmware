@@ -19,6 +19,7 @@ use crate::arch::aarch64::layout::code_range;
 #[derive(Debug)]
 pub enum MmuEnableError {
     AlreadyEnabled,
+    #[allow(dead_code)]
     Other(&'static str),
 }
 
@@ -82,6 +83,7 @@ impl Default for AttributeFields {
 
 /// Architecture agnostic descriptor for a memory range.
 pub struct TranslationDescriptor {
+    #[allow(dead_code)]
     pub name: &'static str,
     pub virtual_range: RangeInclusive<usize>,
     pub physical_range_translation: Translation,

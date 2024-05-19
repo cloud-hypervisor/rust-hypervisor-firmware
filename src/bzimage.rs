@@ -13,6 +13,7 @@ use crate::{
 
 #[derive(Debug)]
 pub enum Error {
+    #[allow(dead_code)]
     File(fat::Error),
     NoInitrdMemory,
     MagicMissing,
