@@ -2,6 +2,7 @@
 // Copyright © 2019 Intel Corporation
 
 use core::{
+    cell::SyncUnsafeCell,
     ffi::c_void,
     mem::{size_of, transmute},
     ptr::null_mut,
@@ -63,7 +64,7 @@ pub static ALLOCATOR: AtomicRefCell<Allocator> = AtomicRefCell::new(Allocator::n
 pub static VARIABLES: AtomicRefCell<VariableAllocator> =
     AtomicRefCell::new(VariableAllocator::new());
 
-static mut RS: efi::RuntimeServices = efi::RuntimeServices {
+static mut RS: SyncUnsafeCell<efi::RuntimeServices> = SyncUnsafeCell::new(efi::RuntimeServices {
     hdr: efi::TableHeader {
         signature: efi::RUNTIME_SERVICES_SIGNATURE,
         revision: efi::RUNTIME_SERVICES_REVISION,
@@ -85,9 +86,9 @@ static mut RS: efi::RuntimeServices = efi::RuntimeServices {
     update_capsule,
     query_capsule_capabilities,
     query_variable_info,
-};
+});
 
-static mut BS: efi::BootServices = efi::BootServices {
+static mut BS: SyncUnsafeCell<efi::BootServices> = SyncUnsafeCell::new(efi::BootServices {
     hdr: efi::TableHeader {
         signature: efi::BOOT_SERVICES_SIGNATURE,
         revision: efi::BOOT_SERVICES_REVISION,
@@ -139,19 +140,21 @@ static mut BS: efi::BootServices = efi::BootServices {
     set_mem,
     create_event_ex,
     reserved: null_mut(),
-};
+});
 
 const INVALID_GUID: Guid = Guid::from_fields(0, 0, 0, 0, 0, &[0_u8; 6]);
 const MAX_CT_ENTRIES: usize = 8;
-static mut CT: [efi::ConfigurationTable; MAX_CT_ENTRIES] = [efi::ConfigurationTable {
-    vendor_guid: INVALID_GUID,
-    vendor_table: null_mut(),
-}; MAX_CT_ENTRIES];
+static mut CT: SyncUnsafeCell<[efi::ConfigurationTable; MAX_CT_ENTRIES]> = SyncUnsafeCell::new(
+    [efi::ConfigurationTable {
+        vendor_guid: INVALID_GUID,
+        vendor_table: null_mut(),
+    }; MAX_CT_ENTRIES],
+);
 
 // RHF string in UCS-2
 const FIRMWARE_STRING: [u16; 4] = [0x0052, 0x0048, 0x0046, 0x0000];
 
-static mut ST: efi::SystemTable = efi::SystemTable {
+static mut ST: SyncUnsafeCell<efi::SystemTable> = SyncUnsafeCell::new(efi::SystemTable {
     hdr: efi::TableHeader {
         signature: efi::SYSTEM_TABLE_SIGNATURE,
         revision: (2 << 16) | (80),
@@ -171,12 +174,13 @@ static mut ST: efi::SystemTable = efi::SystemTable {
     boot_services: null_mut(),
     number_of_table_entries: 0,
     configuration_table: null_mut(),
-};
+});
 
-static mut BLOCK_WRAPPERS: block::BlockWrappers = block::BlockWrappers {
-    wrappers: [null_mut(); 16],
-    count: 0,
-};
+static mut BLOCK_WRAPPERS: SyncUnsafeCell<block::BlockWrappers> =
+    SyncUnsafeCell::new(block::BlockWrappers {
+        wrappers: [null_mut(); 16],
+        count: 0,
+    });
 
 fn convert_internal_pointer(descriptors: &[alloc::MemoryDescriptor], ptr: u64) -> Option<u64> {
     for descriptor in descriptors.iter() {
@@ -190,8 +194,8 @@ fn convert_internal_pointer(descriptors: &[alloc::MemoryDescriptor], ptr: u64) -
 }
 
 unsafe fn fixup_at_virtual(descriptors: &[alloc::MemoryDescriptor]) {
-    let st = &mut ST;
-    let rs = &mut RS;
+    let st = ST.get_mut();
+    let rs = RS.get_mut();
 
     let ptr = convert_internal_pointer(descriptors, (not_available as *const ()) as u64).unwrap();
     rs.get_time = transmute(ptr);
@@ -562,7 +566,7 @@ pub extern "efiapi" fn locate_handle(
     handles: *mut Handle,
 ) -> Status {
     if unsafe { *guid } == block::PROTOCOL_GUID {
-        let count = unsafe { BLOCK_WRAPPERS.count };
+        let count = unsafe { BLOCK_WRAPPERS.get_mut().count };
         if unsafe { *size } < size_of::<Handle>() * count {
             unsafe { *size = size_of::<Handle>() * count };
             return Status::BUFFER_TOO_SMALL;
@@ -573,7 +577,7 @@ pub extern "efiapi" fn locate_handle(
 
         let wrappers_as_handles: &[Handle] = unsafe {
             core::slice::from_raw_parts_mut(
-                BLOCK_WRAPPERS.wrappers.as_mut_ptr() as *mut Handle,
+                BLOCK_WRAPPERS.get_mut().wrappers.as_mut_ptr() as *mut Handle,
                 count,
             )
         };
@@ -597,8 +601,8 @@ pub extern "efiapi" fn locate_device_path(
 }
 
 pub extern "efiapi" fn install_configuration_table(guid: *mut Guid, table: *mut c_void) -> Status {
-    let st = unsafe { &mut ST };
-    let ct = unsafe { &mut CT };
+    let st = unsafe { ST.get_mut() };
+    let ct = unsafe { CT.get_mut() };
 
     for entry in ct.iter_mut() {
         if entry.vendor_guid == unsafe { *guid } {
@@ -788,7 +792,7 @@ pub extern "efiapi" fn start_image(
     let ptr = address as *const ();
     let code: extern "efiapi" fn(Handle, *mut efi::SystemTable) -> Status =
         unsafe { core::mem::transmute(ptr) };
-    (code)(image_handle, unsafe { &mut ST })
+    (code)(image_handle, unsafe { ST.get() })
 }
 
 pub extern "efiapi" fn exit(_: Handle, _: Status, _: usize, _: *mut Char16) -> Status {
@@ -873,8 +877,8 @@ pub extern "efiapi" fn open_protocol(
     {
         unsafe {
             if let Some(block_part_id) = (*(handle as *mut file::FileSystemWrapper)).block_part_id {
-                *out = (&mut (*(BLOCK_WRAPPERS.wrappers[block_part_id as usize])).controller_path)
-                    as *mut _ as *mut c_void;
+                *out = (&mut (*(BLOCK_WRAPPERS.get_mut().wrappers[block_part_id as usize]))
+                    .controller_path) as *mut _ as *mut c_void;
 
                 return Status::SUCCESS;
             }
@@ -1235,7 +1239,7 @@ fn new_image_handle(
         proto: LoadedImageProtocol {
             revision: r_efi::protocols::loaded_image::REVISION,
             parent_handle,
-            system_table: unsafe { &mut ST },
+            system_table: unsafe { ST.get_mut() },
             device_handle,
             file_path,
             load_options_size: 0,
@@ -1258,11 +1262,11 @@ pub fn efi_exec(
     loaded_size: u64,
     info: &dyn bootinfo::Info,
     fs: &crate::fat::Filesystem,
-    block: *const crate::block::VirtioBlockDevice,
+    block: &crate::block::VirtioBlockDevice,
 ) {
     let vendor_data = 0u32;
 
-    let ct = unsafe { &mut CT };
+    let ct = unsafe { CT.get_mut() };
     let mut ct_index = 0;
 
     // Populate with FDT table if present
@@ -1317,18 +1321,18 @@ pub fn efi_exec(
 
     let mut stdin = console::STDIN;
     let mut stdout = console::STDOUT;
-    let st = unsafe { &mut ST };
+    let st = unsafe { ST.get_mut() };
     st.con_in = &mut stdin;
     st.con_out = &mut stdout;
     st.std_err = &mut stdout;
-    st.runtime_services = unsafe { &mut RS };
-    st.boot_services = unsafe { &mut BS };
+    st.runtime_services = unsafe { RS.get_mut() };
+    st.boot_services = unsafe { BS.get_mut() };
     st.number_of_table_entries = 1;
     st.configuration_table = &mut ct[0];
 
     populate_allocator(info, loaded_address, loaded_size);
 
-    let efi_part_id = unsafe { block::populate_block_wrappers(&mut BLOCK_WRAPPERS, block) };
+    let efi_part_id = unsafe { block::populate_block_wrappers(BLOCK_WRAPPERS.get_mut(), block) };
 
     let wrapped_fs = file::FileSystemWrapper::new(fs, efi_part_id);
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2020 Google LLC
 
+use core::cell::SyncUnsafeCell;
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{PageSize, PageTable, PageTableFlags, PhysFrame, Size2MiB},
@@ -13,16 +14,17 @@ const TABLE: PageTable = PageTable::new();
 
 // Put the Page Tables in static muts to make linking easier
 #[no_mangle]
-static mut L4_TABLE: PageTable = PageTable::new();
+static mut L4_TABLE: SyncUnsafeCell<PageTable> = SyncUnsafeCell::new(PageTable::new());
 #[no_mangle]
-static mut L3_TABLE: PageTable = PageTable::new();
+static mut L3_TABLE: SyncUnsafeCell<PageTable> = SyncUnsafeCell::new(PageTable::new());
 #[no_mangle]
-static mut L2_TABLES: [PageTable; ADDRESS_SPACE_GIB] = [TABLE; ADDRESS_SPACE_GIB];
+static mut L2_TABLES: SyncUnsafeCell<[PageTable; ADDRESS_SPACE_GIB]> =
+    SyncUnsafeCell::new([TABLE; ADDRESS_SPACE_GIB]);
 
 pub fn setup() {
     // SAFETY: This function is idempontent and only writes to static memory and
     // CR3. Thus, it is safe to run multiple times or on multiple threads.
-    let (l4, l3, l2s) = unsafe { (&mut L4_TABLE, &mut L3_TABLE, &mut L2_TABLES) };
+    let (l4, l3, l2s) = unsafe { (L4_TABLE.get_mut(), L3_TABLE.get_mut(), L2_TABLES.get_mut()) };
     log!("Setting up {} GiB identity mapping", ADDRESS_SPACE_GIB);
     let pt_flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 

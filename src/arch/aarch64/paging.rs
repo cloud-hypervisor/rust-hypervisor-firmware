@@ -2,7 +2,7 @@
 // Copyright (C) 2022 Akira Moroo
 // Copyright (c) 2021-2022 Andre Richter <andre.o.richter@gmail.com>
 
-use core::ops::RangeInclusive;
+use core::{cell::SyncUnsafeCell, ops::RangeInclusive};
 
 use aarch64_cpu::{
     asm::barrier,
@@ -204,7 +204,8 @@ pub mod mair {
 /// # Safety
 ///
 /// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
-static mut KERNEL_TABLES: TranslationTable = TranslationTable::new();
+static mut KERNEL_TABLES: SyncUnsafeCell<TranslationTable> =
+    SyncUnsafeCell::new(TranslationTable::new());
 
 static MMU: MemoryManagementUnit = MemoryManagementUnit;
 
@@ -275,11 +276,12 @@ impl interface::Mmu for MemoryManagementUnit {
 
         // Populate translation tables.
         KERNEL_TABLES
+            .get_mut()
             .populate_tt_entries()
             .map_err(MmuEnableError::Other)?;
 
         // Set the "Translation Table Base Register".
-        TTBR0_EL1.set_baddr(KERNEL_TABLES.phys_base_address());
+        TTBR0_EL1.set_baddr(KERNEL_TABLES.get_mut().phys_base_address());
 
         self.configure_translation_control();
 
