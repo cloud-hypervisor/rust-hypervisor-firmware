@@ -413,7 +413,7 @@ mod tests {
 
         let mut counter = 0;
         loop {
-            match (|| -> Result<(), SSHCommandError> {
+            if let Err(e) = (|| -> Result<(), SSHCommandError> {
                 let tcp =
                     TcpStream::connect(format!("{ip}:22")).map_err(SSHCommandError::Connection)?;
                 let mut sess = ssh2::Session::new().unwrap();
@@ -436,13 +436,12 @@ mod tests {
                 let _ = channel.wait_close();
                 Ok(())
             })() {
-                Ok(_) => break,
-                Err(e) => {
-                    counter += 1;
-                    if counter >= retries {
-                        return Err(e);
-                    }
+                counter += 1;
+                if counter >= retries {
+                    return Err(e);
                 }
+            } else {
+                break;
             };
             thread::sleep(std::time::Duration::new((timeout * counter).into(), 0));
         }
