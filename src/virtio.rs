@@ -16,6 +16,7 @@ pub trait VirtioTransport {
     fn get_status(&self) -> u32;
     fn set_status(&self, status: u32);
     fn add_status(&self, status: u32);
+    #[allow(dead_code)]
     fn reset(&self);
     fn get_features(&self) -> u64;
     fn set_features(&self, features: u64);

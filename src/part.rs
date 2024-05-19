@@ -50,6 +50,7 @@ impl PartitionEntry {
 
 #[derive(Debug)]
 pub enum Error {
+    #[allow(dead_code)]
     Block(BlockError),
     HeaderNotFound,
     ViolatesSpecification,
