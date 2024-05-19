@@ -6,6 +6,7 @@
 #![feature(stdsimd)]
 #![feature(stmt_expr_attributes)]
 #![feature(strict_provenance)]
+#![feature(sync_unsafe_cell)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(
