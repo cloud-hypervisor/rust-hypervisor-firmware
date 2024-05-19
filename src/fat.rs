@@ -744,21 +744,20 @@ impl<'a> Filesystem<'a> {
                 }
             }
             FatType::FAT16 => {
-                let fat = [0_u16; SectorBuf::len() / 2];
+                let mut data = SectorBuf::new();
 
                 let fat_offset = cluster * 2;
                 let fat_sector = self.first_fat_sector + (fat_offset / self.bytes_per_sector);
                 let offset = fat_offset % self.bytes_per_sector;
 
-                let data = unsafe {
-                    core::slice::from_raw_parts_mut(fat.as_ptr() as *mut u8, SectorBuf::len())
-                };
-                match self.read(u64::from(fat_sector), data) {
+                match self.read(u64::from(fat_sector), data.as_mut_bytes()) {
                     Ok(_) => {}
                     Err(e) => return Err(Error::Block(e)),
                 };
 
-                let next_cluster = fat[(offset / 2) as usize];
+                let bytes = data.as_bytes();
+                let next_cluster_raw = [bytes[offset as usize], bytes[(offset + 1) as usize]];
+                let next_cluster = u16::from_le_bytes(next_cluster_raw);
 
                 if next_cluster >= 0xfff8 {
                     Err(Error::EndOfFile)
@@ -767,22 +766,25 @@ impl<'a> Filesystem<'a> {
                 }
             }
             FatType::FAT32 => {
-                let fat = [0_u32; SectorBuf::len() / 4];
+                let mut data = SectorBuf::new();
 
                 let fat_offset = cluster * 4;
                 let fat_sector = self.first_fat_sector + (fat_offset / self.bytes_per_sector);
                 let offset = fat_offset % self.bytes_per_sector;
 
-                let data = unsafe {
-                    core::slice::from_raw_parts_mut(fat.as_ptr() as *mut u8, SectorBuf::len())
-                };
-
-                match self.read(u64::from(fat_sector), data) {
+                match self.read(u64::from(fat_sector), data.as_mut_bytes()) {
                     Ok(_) => {}
                     Err(e) => return Err(Error::Block(e)),
                 };
 
-                let next_cluster_raw = fat[(offset / 4) as usize];
+                let bytes = data.as_bytes();
+                let next_cluster_raw = [
+                    bytes[offset as usize],
+                    bytes[(offset + 1) as usize],
+                    bytes[(offset + 2) as usize],
+                    bytes[(offset + 3) as usize],
+                ];
+                let next_cluster_raw = u32::from_le_bytes(next_cluster_raw);
                 let next_cluster = next_cluster_raw & 0x0fff_ffff;
                 if next_cluster >= 0x0fff_fff8 {
                     Err(Error::EndOfFile)
