@@ -95,10 +95,24 @@ fn panic(_: &PanicInfo) -> ! {
 const VIRTIO_PCI_VENDOR_ID: u16 = 0x1af4;
 const VIRTIO_PCI_BLOCK_DEVICE_ID: u16 = 0x1042;
 
-fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::Info) -> bool {
+#[allow(dead_code)]
+#[derive(Debug)]
+enum Error {
+    Virtio(virtio::Error),
+    Partition(part::Error),
+    Fat(fat::Error),
+    Loader(loader::Error),
+    Pe(pe::Error),
+    ImageTooLarge,
+}
+
+fn boot_from_device(
+    device: &mut block::VirtioBlockDevice,
+    info: &dyn bootinfo::Info,
+) -> Result<(), Error> {
     if let Err(err) = device.init() {
         log!("Error configuring block device: {:?}", err);
-        return false;
+        return Err(Error::Virtio(err));
     }
     log!(
         "Virtio block device configured. Capacity: {} sectors",
@@ -109,7 +123,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::
         Ok(p) => p,
         Err(err) => {
             log!("Failed to find EFI partition: {:?}", err);
-            return false;
+            return Err(Error::Partition(err));
         }
     };
     log!("Found EFI partition");
@@ -117,7 +131,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::
     let mut f = fat::Filesystem::new(device, start, end);
     if let Err(err) = f.init() {
         log!("Failed to create filesystem: {:?}", err);
-        return false;
+        return Err(Error::Fat(err));
     }
     log!("Filesystem ready");
 
@@ -125,9 +139,12 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::
         Ok(mut kernel) => {
             log!("Jumping to kernel");
             kernel.boot();
-            return true;
+            return Ok(());
         }
-        Err(err) => log!("Error loading default entry: {:?}", err),
+        Err(err) => {
+            log!("Error loading default entry: {:?}", err);
+            // Fall through to EFI boot
+        }
     }
 
     log!("Using EFI boot.");
@@ -136,7 +153,7 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::
         Ok(file) => file,
         Err(err) => {
             log!("Failed to load default EFI binary: {:?}", err);
-            return false;
+            return Err(Error::Fat(err));
         }
     };
     log!("Found bootloader: {}", efi::EFI_BOOT_PATH);
@@ -147,19 +164,19 @@ fn boot_from_device(device: &mut block::VirtioBlockDevice, info: &dyn bootinfo::
         Ok(load_info) => load_info,
         Err(err) => {
             log!("Error loading executable: {:?}", err);
-            return false;
+            return Err(Error::Pe(err));
         }
     };
 
     #[cfg(target_arch = "aarch64")]
     if code_range().start < (info.kernel_load_addr() + size) as usize {
         log!("Error Boot Image is too large");
-        return false;
+        return Err(Error::ImageTooLarge);
     }
 
     log!("Executable loaded");
     efi::efi_exec(entry_addr, load_addr, size, info, &f, device);
-    true
+    Ok(())
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -261,7 +278,7 @@ fn main(info: &dyn bootinfo::Info) -> ! {
 
             let mut pci_transport = pci::VirtioPciTransport::new(pci_device);
             let mut device = block::VirtioBlockDevice::new(&mut pci_transport);
-            boot_from_device(&mut device, info)
+            boot_from_device(&mut device, info).is_ok()
         },
     );
 
