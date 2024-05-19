@@ -247,6 +247,6 @@ mod tests {
         assert_eq!(mem::size_of::<E820Entry>(), 20);
         assert_eq!(mem::size_of::<Params>(), 4096);
 
-        assert_eq!(offset_of!(Params, hdr), HEADER_START);
+        assert_eq!(core::mem::offset_of!(Params, hdr), HEADER_START);
     }
 }

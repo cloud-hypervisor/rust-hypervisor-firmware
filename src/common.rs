@@ -2,26 +2,16 @@
 // Copyright © 2019 Intel Corporation
 
 #[macro_export]
-macro_rules! offset_of {
-    ($container:ty, $field:ident) => {
-        #[allow(deref_nullptr)]
-        unsafe {
-            &(*(core::ptr::null() as *const $container)).$field as *const _ as usize
-        }
-    };
-}
-
-#[macro_export]
 macro_rules! container_of {
     ($ptr:ident, $container:ty, $field:ident) => {{
-        (($ptr as usize) - offset_of!($container, $field)) as *const $container
+        (($ptr as usize) - core::mem::offset_of!($container, $field)) as *const $container
     }};
 }
 
 #[macro_export]
 macro_rules! container_of_mut {
     ($ptr:ident, $container:ty, $field:ident) => {{
-        (($ptr as usize) - offset_of!($container, $field)) as *mut $container
+        (($ptr as usize) - core::mem::offset_of!($container, $field)) as *mut $container
     }};
 }
 

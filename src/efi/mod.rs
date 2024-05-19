@@ -4,7 +4,7 @@
 use core::{
     cell::SyncUnsafeCell,
     ffi::c_void,
-    mem::{size_of, transmute},
+    mem::{offset_of, size_of, transmute},
     ptr::null_mut,
     slice::from_raw_parts,
 };
