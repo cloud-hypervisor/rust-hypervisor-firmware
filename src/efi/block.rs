@@ -82,7 +82,7 @@ pub struct BlockIoProtocol {
 #[repr(C)]
 pub struct BlockWrapper<'a> {
     hw: super::HandleWrapper,
-    block: *const crate::block::VirtioBlockDevice<'a>,
+    block: &'a crate::block::VirtioBlockDevice<'a>,
     media: BlockIoMedia,
     pub proto: BlockIoProtocol,
     // The ordering of these paths are very important, along with the C
@@ -118,7 +118,7 @@ pub extern "efiapi" fn read_blocks(
     for i in 0..blocks {
         use crate::block::SectorRead;
         let data = region.as_mut_slice((i * block_size) as u64, block_size as u64);
-        let block = unsafe { &*wrapper.block };
+        let block = wrapper.block;
         match block.read(wrapper.start_lba + start + i as u64, data) {
             Ok(()) => continue,
             Err(_) => {
@@ -147,7 +147,7 @@ pub extern "efiapi" fn write_blocks(
     for i in 0..blocks {
         use crate::block::SectorWrite;
         let data = region.as_mut_slice((i * block_size) as u64, block_size as u64);
-        let block = unsafe { &*wrapper.block };
+        let block = wrapper.block;
         match block.write(wrapper.start_lba + start + i as u64, data) {
             Ok(()) => continue,
             Err(_) => {
@@ -163,7 +163,7 @@ pub extern "efiapi" fn flush_blocks(proto: *mut BlockIoProtocol) -> Status {
     let wrapper = container_of!(proto, BlockWrapper, proto);
     let wrapper = unsafe { &*wrapper };
     use crate::block::SectorWrite;
-    let block = unsafe { &*wrapper.block };
+    let block = wrapper.block;
     match block.flush() {
         Ok(()) => Status::SUCCESS,
         Err(_) => Status::DEVICE_ERROR,
@@ -172,13 +172,13 @@ pub extern "efiapi" fn flush_blocks(proto: *mut BlockIoProtocol) -> Status {
 
 impl<'a> BlockWrapper<'a> {
     pub fn new(
-        block: *const crate::block::VirtioBlockDevice,
+        block: &'a crate::block::VirtioBlockDevice<'a>,
         partition_number: u32,
         start_lba: u64,
         last_lba: u64,
         uuid: [u8; 16],
     ) -> *mut BlockWrapper {
-        let last_block = unsafe { (*block).get_capacity() } - 1;
+        let last_block = (*block).get_capacity() - 1;
 
         let size = core::mem::size_of::<BlockWrapper>();
         let (_status, new_address) = super::ALLOCATOR.borrow_mut().allocate_pages(
@@ -292,22 +292,26 @@ impl<'a> BlockWrapper<'a> {
     }
 }
 
-#[allow(clippy::transmute_ptr_to_ptr)]
 pub fn populate_block_wrappers(
     wrappers: &mut BlockWrappers,
     block: *const crate::block::VirtioBlockDevice,
 ) -> Option<u32> {
     let mut parts: [crate::part::PartitionEntry; 16] = unsafe { core::mem::zeroed() };
 
-    wrappers.wrappers[0] =
-        BlockWrapper::new(unsafe { core::mem::transmute(block) }, 0, 0, 0, [0; 16]);
+    wrappers.wrappers[0] = BlockWrapper::new(
+        unsafe { &*block.cast::<crate::block::VirtioBlockDevice<'_>>() },
+        0,
+        0,
+        0,
+        [0; 16],
+    );
 
     let mut efi_part_id = None;
     let part_count = crate::part::get_partitions(unsafe { &*block }, &mut parts).unwrap();
     for i in 0..part_count {
         let p = parts[i as usize];
         wrappers.wrappers[i as usize + 1] = BlockWrapper::new(
-            unsafe { core::mem::transmute(block) },
+            unsafe { &*block.cast::<crate::block::VirtioBlockDevice<'_>>() },
             i + 1,
             p.first_lba,
             p.last_lba,
