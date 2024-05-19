@@ -74,6 +74,18 @@ pub struct DirectoryEntry {
     cluster: u32,
 }
 
+impl Default for DirectoryEntry {
+    fn default() -> Self {
+        DirectoryEntry {
+            name: [0; 11],
+            long_name: [0; 255],
+            file_type: FileType::File,
+            size: 0,
+            cluster: 0,
+        }
+    }
+}
+
 impl DirectoryEntry {
     pub fn long_name(&self) -> [u8; 255] {
         self.long_name
@@ -1172,7 +1184,7 @@ mod tests {
 
     #[test]
     fn test_compare_short_name() {
-        let mut de: super::DirectoryEntry = unsafe { std::mem::zeroed() };
+        let mut de = super::DirectoryEntry::default();
         de.name.copy_from_slice(b"X       ABC");
         assert!(super::compare_short_name("X.abc", &de));
         de.name.copy_from_slice(b"ABCDEFGHIJK");

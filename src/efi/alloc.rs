@@ -7,7 +7,7 @@ const PAGE_SIZE: u64 = 4096;
 
 // Copied from r_efi so we can do Default on it
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct MemoryDescriptor {
     pub r#type: u32,
     pub physical_start: PhysicalAddress,
@@ -678,8 +678,7 @@ mod tests {
 
         add_initial_allocations(&mut allocator);
 
-        let mut descriptors: [super::MemoryDescriptor; super::MAX_ALLOCATIONS] =
-            unsafe { std::mem::zeroed() };
+        let mut descriptors = [super::MemoryDescriptor::default(); super::MAX_ALLOCATIONS];
 
         let count = allocator.get_descriptors(&mut descriptors);
 
@@ -767,8 +766,7 @@ mod tests {
 
         add_initial_allocations(&mut allocator);
 
-        let mut descriptors: [super::MemoryDescriptor; super::MAX_ALLOCATIONS] =
-            unsafe { std::mem::zeroed() };
+        let mut descriptors = [super::MemoryDescriptor::default(); super::MAX_ALLOCATIONS];
 
         let count = allocator.get_descriptors(&mut descriptors);
 

@@ -23,7 +23,7 @@ struct Header {
 }
 
 #[repr(packed)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct PartitionEntry {
     pub type_guid: [u8; 16],
     pub guid: [u8; 16],
@@ -116,7 +116,7 @@ pub fn get_partitions(r: &dyn SectorRead, parts_out: &mut [PartitionEntry]) -> R
 /// Find EFI partition
 pub fn find_efi_partition(r: &dyn SectorRead) -> Result<(u64, u64), Error> {
     // Assume no more than 16 partitions on the disk
-    let mut parts: [PartitionEntry; 16] = unsafe { core::mem::zeroed() };
+    let mut parts = [PartitionEntry::default(); 16];
 
     let part_count = get_partitions(r, &mut parts)? as usize;
 
