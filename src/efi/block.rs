@@ -9,7 +9,10 @@ use r_efi::{
     protocols::device_path::Protocol as DevicePathProtocol,
 };
 
-use crate::block::SectorBuf;
+use crate::{
+    block::{SectorBuf, VirtioBlockDevice},
+    part::{get_partitions, PartitionEntry},
+};
 
 pub const PROTOCOL_GUID: Guid = Guid::from_fields(
     0x964e_5b21,
@@ -82,7 +85,7 @@ pub struct BlockIoProtocol {
 #[repr(C)]
 pub struct BlockWrapper<'a> {
     hw: super::HandleWrapper,
-    block: &'a crate::block::VirtioBlockDevice<'a>,
+    block: &'a VirtioBlockDevice<'a>,
     media: BlockIoMedia,
     pub proto: BlockIoProtocol,
     // The ordering of these paths are very important, along with the C
@@ -172,7 +175,7 @@ pub extern "efiapi" fn flush_blocks(proto: *mut BlockIoProtocol) -> Status {
 
 impl<'a> BlockWrapper<'a> {
     pub fn new(
-        block: &'a crate::block::VirtioBlockDevice<'a>,
+        block: &'a VirtioBlockDevice<'a>,
         partition_number: u32,
         start_lba: u64,
         last_lba: u64,
@@ -294,9 +297,9 @@ impl<'a> BlockWrapper<'a> {
 
 pub fn populate_block_wrappers(
     wrappers: &mut BlockWrappers,
-    block: *const crate::block::VirtioBlockDevice,
+    block: *const VirtioBlockDevice,
 ) -> Option<u32> {
-    let mut parts: [crate::part::PartitionEntry; 16] = unsafe { core::mem::zeroed() };
+    let mut parts = [PartitionEntry::default(); 16];
 
     wrappers.wrappers[0] = BlockWrapper::new(
         unsafe { &*block.cast::<crate::block::VirtioBlockDevice<'_>>() },
@@ -307,7 +310,7 @@ pub fn populate_block_wrappers(
     );
 
     let mut efi_part_id = None;
-    let part_count = crate::part::get_partitions(unsafe { &*block }, &mut parts).unwrap();
+    let part_count = get_partitions(unsafe { &*block }, &mut parts).unwrap();
     for i in 0..part_count {
         let p = parts[i as usize];
         wrappers.wrappers[i as usize + 1] = BlockWrapper::new(

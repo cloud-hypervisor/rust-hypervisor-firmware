@@ -17,6 +17,16 @@ pub struct LoaderConfig {
     pub cmdline: [u8; 4096],
 }
 
+impl Default for LoaderConfig {
+    fn default() -> Self {
+        Self {
+            bzimage_path: [0; 260],
+            initrd_path: [0; 260],
+            cmdline: [0; 4096],
+        }
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Debug)]
 pub enum Error {
@@ -157,7 +167,7 @@ fn parse_entry(f: &mut fat::File) -> Result<LoaderConfig, fat::Error> {
     assert!(f.get_size() as usize <= data.len());
     assert!(data.len() >= SectorBuf::len());
 
-    let mut loader_config: LoaderConfig = unsafe { core::mem::zeroed() };
+    let mut loader_config = LoaderConfig::default();
 
     let mut offset = 0;
     loop {
