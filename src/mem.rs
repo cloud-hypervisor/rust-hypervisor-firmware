@@ -91,10 +91,7 @@ impl MemoryRegion {
 
     /// Write a single qword at given offset
     pub fn write_u64(&self, offset: u64, value: u64) {
-        assert!(offset + 7 < self.length);
-        unsafe {
-            *((self.base + offset) as *mut u64) = value;
-        }
+        self.write(offset, value)
     }
 
     /// Read a value at given offset with a mechanism suitable for MMIO
