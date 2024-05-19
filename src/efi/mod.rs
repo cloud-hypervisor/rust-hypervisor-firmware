@@ -193,6 +193,7 @@ fn convert_internal_pointer(descriptors: &[alloc::MemoryDescriptor], ptr: u64) -
     None
 }
 
+#[allow(clippy::missing_transmute_annotations)]
 unsafe fn fixup_at_virtual(descriptors: &[alloc::MemoryDescriptor]) {
     let st = ST.get_mut();
     let rs = RS.get_mut();
