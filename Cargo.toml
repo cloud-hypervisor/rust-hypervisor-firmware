@@ -28,7 +28,7 @@ efi-var = []
 [dependencies]
 bitflags = "2.5.0"
 atomic_refcell = "0.1.13"
-r-efi = { version = "4.4.0", features = ["efiapi"] }
+r-efi = { version = "4.5.0", features = ["efiapi"] }
 heapless = "0.8.0"
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]

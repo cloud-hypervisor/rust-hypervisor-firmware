@@ -980,7 +980,7 @@ pub extern "efiapi" fn install_multiple_protocol_interfaces(
 }
 
 pub extern "efiapi" fn uninstall_multiple_protocol_interfaces(
-    _: *mut Handle,
+    _: Handle,
     _: *mut c_void,
     _: *mut c_void,
 ) -> Status {
