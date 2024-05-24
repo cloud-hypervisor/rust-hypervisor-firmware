@@ -33,6 +33,25 @@ pub struct Allocator {
 }
 
 impl Allocator {
+    pub const fn new() -> Allocator {
+        let allocation = Allocation {
+            in_use: false,
+            next_allocation: None,
+            descriptor: MemoryDescriptor {
+                r#type: 0,
+                physical_start: 0,
+                virtual_start: 0,
+                number_of_pages: 0,
+                attribute: 0,
+            },
+        };
+        Allocator {
+            allocations: [allocation; MAX_ALLOCATIONS],
+            key: 0,
+            first_allocation: None,
+        }
+    }
+
     // Assume called in order with non-overlapping sections.
     pub fn add_initial_allocation(
         &mut self,
@@ -325,6 +344,18 @@ impl Allocator {
         Status::NOT_FOUND
     }
 
+    pub fn allocate_pool(&mut self, memory_type: MemoryType, size: usize) -> (Status, u64) {
+        let page_count = (size as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+        let (status, address) =
+            self.allocate_pages(efi::ALLOCATE_ANY_PAGES, memory_type, page_count, 0);
+
+        (status, address)
+    }
+
+    pub fn free_pool(&mut self, address: u64) -> Status {
+        self.free_pages(address)
+    }
+
     pub fn get_descriptor_count(&self) -> usize {
         let mut count = 0;
         let mut cur = self.first_allocation;
@@ -378,25 +409,6 @@ impl Allocator {
 
     pub fn get_map_key(&self) -> usize {
         self.key
-    }
-
-    pub const fn new() -> Allocator {
-        let allocation = Allocation {
-            in_use: false,
-            next_allocation: None,
-            descriptor: MemoryDescriptor {
-                r#type: 0,
-                physical_start: 0,
-                virtual_start: 0,
-                number_of_pages: 0,
-                attribute: 0,
-            },
-        };
-        Allocator {
-            allocations: [allocation; MAX_ALLOCATIONS],
-            key: 0,
-            first_allocation: None,
-        }
     }
 }
 

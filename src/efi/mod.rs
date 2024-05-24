@@ -454,12 +454,7 @@ pub extern "efiapi" fn allocate_pool(
     size: usize,
     address: *mut *mut c_void,
 ) -> Status {
-    let (status, new_address) = ALLOCATOR.borrow_mut().allocate_pages(
-        efi::ALLOCATE_ANY_PAGES,
-        memory_type,
-        ((size + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize) as u64,
-        address as u64,
-    );
+    let (status, new_address) = ALLOCATOR.borrow_mut().allocate_pool(memory_type, size);
 
     if status == Status::SUCCESS {
         unsafe {
@@ -471,7 +466,7 @@ pub extern "efiapi" fn allocate_pool(
 }
 
 pub extern "efiapi" fn free_pool(ptr: *mut c_void) -> Status {
-    ALLOCATOR.borrow_mut().free_pages(ptr as u64)
+    ALLOCATOR.borrow_mut().free_pool(ptr as u64)
 }
 
 pub extern "efiapi" fn create_event(
