@@ -4,36 +4,17 @@
 use core::ffi::c_void;
 
 use r_efi::{
-    efi::{self, Guid, Status},
-    eficall, eficall_abi,
-    protocols::device_path::Protocol as DevicePathProtocol,
+    efi::{self, Status},
+    protocols::{
+        block_io::{Media, Protocol as BlockIoProtocol},
+        device_path::{HardDriveMedia, Protocol as DevicePathProtocol},
+    },
 };
 
 use crate::{
     block::{SectorBuf, VirtioBlockDevice},
     part::{get_partitions, PartitionEntry},
 };
-
-pub const PROTOCOL_GUID: Guid = Guid::from_fields(
-    0x964e_5b21,
-    0x6459,
-    0x11d2,
-    0x8e,
-    0x39,
-    &[0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b],
-);
-
-#[allow(dead_code)]
-#[repr(packed)]
-pub struct HardDiskDevicePathProtocol {
-    pub device_path: DevicePathProtocol,
-    pub partition_number: u32,
-    pub partition_start: u64,
-    pub partition_size: u64,
-    pub partition_signature: [u8; 16],
-    pub partition_format: u8,
-    pub signature_type: u8,
-}
 
 #[allow(dead_code)]
 #[repr(packed)]
@@ -43,55 +24,15 @@ pub struct ControllerDevicePathProtocol {
 }
 
 #[repr(C)]
-struct BlockIoMedia {
-    media_id: u32,
-    removable_media: bool,
-    media_present: bool,
-    logical_partition: bool,
-    read_only: bool,
-    write_caching: bool,
-    block_size: u32,
-    io_align: u32,
-    last_block: u64,
-}
-
-#[repr(C)]
-pub struct BlockIoProtocol {
-    revision: u64,
-    media: *const BlockIoMedia,
-    reset: eficall! {fn(
-        *mut BlockIoProtocol,
-        bool
-    ) -> Status},
-    read_blocks: eficall! {fn(
-        *mut BlockIoProtocol,
-        u32,
-        u64,
-        usize,
-        *mut c_void
-    ) -> Status},
-    write_blocks: eficall! {fn(
-        *mut BlockIoProtocol,
-        u32,
-        u64,
-        usize,
-        *mut c_void
-    ) -> Status},
-    flush_blocks: eficall! {fn(
-        *mut BlockIoProtocol,
-    ) -> Status},
-}
-
-#[repr(C)]
 pub struct BlockWrapper<'a> {
     hw: super::HandleWrapper,
     block: &'a VirtioBlockDevice<'a>,
-    media: BlockIoMedia,
+    media: Media,
     pub proto: BlockIoProtocol,
     // The ordering of these paths are very important, along with the C
     // representation as the device path "flows" from the first.
     pub controller_path: ControllerDevicePathProtocol,
-    pub disk_paths: [HardDiskDevicePathProtocol; 2],
+    pub disk_paths: [HardDriveMedia; 2],
     start_lba: u64,
 }
 
@@ -100,7 +41,7 @@ pub struct BlockWrappers<'a> {
     pub count: usize,
 }
 
-pub extern "efiapi" fn reset(_: *mut BlockIoProtocol, _: bool) -> Status {
+pub extern "efiapi" fn reset(_: *mut BlockIoProtocol, _: efi::Boolean) -> Status {
     Status::UNSUPPORTED
 }
 
@@ -199,7 +140,7 @@ impl<'a> BlockWrapper<'a> {
                     handle_type: super::HandleType::Block,
                 },
                 block,
-                media: BlockIoMedia {
+                media: Media {
                     media_id: 0,
                     removable_media: false,
                     media_present: true,
@@ -209,6 +150,9 @@ impl<'a> BlockWrapper<'a> {
                     block_size: SectorBuf::len() as u32,
                     io_align: 0,
                     last_block,
+                    lowest_aligned_lba: 0,
+                    logical_blocks_per_physical_block: 1,
+                    optimal_transfer_length_granularity: 1,
                 },
                 proto: BlockIoProtocol {
                     revision: 0x0001_0000, // EFI_BLOCK_IO_PROTOCOL_REVISION
@@ -230,8 +174,8 @@ impl<'a> BlockWrapper<'a> {
                 // full disk vs partition
                 disk_paths: if partition_number == 0 {
                     [
-                        HardDiskDevicePathProtocol {
-                            device_path: DevicePathProtocol {
+                        HardDriveMedia {
+                            header: DevicePathProtocol {
                                 r#type: r_efi::protocols::device_path::TYPE_END,
                                 sub_type: 0xff, // End of full path
                                 length: [4, 0],
@@ -243,8 +187,8 @@ impl<'a> BlockWrapper<'a> {
                             partition_signature: [0; 16],
                             signature_type: 0,
                         },
-                        HardDiskDevicePathProtocol {
-                            device_path: DevicePathProtocol {
+                        HardDriveMedia {
+                            header: DevicePathProtocol {
                                 r#type: r_efi::protocols::device_path::TYPE_END,
                                 sub_type: 0xff, // End of full path
                                 length: [4, 0],
@@ -259,8 +203,8 @@ impl<'a> BlockWrapper<'a> {
                     ]
                 } else {
                     [
-                        HardDiskDevicePathProtocol {
-                            device_path: DevicePathProtocol {
+                        HardDriveMedia {
+                            header: DevicePathProtocol {
                                 r#type: r_efi::protocols::device_path::TYPE_MEDIA,
                                 sub_type: 1,
                                 length: [42, 0],
@@ -272,8 +216,8 @@ impl<'a> BlockWrapper<'a> {
                             partition_signature: uuid,
                             signature_type: 0x02,
                         },
-                        HardDiskDevicePathProtocol {
-                            device_path: DevicePathProtocol {
+                        HardDriveMedia {
+                            header: DevicePathProtocol {
                                 r#type: r_efi::protocols::device_path::TYPE_END,
                                 sub_type: 0xff, // End of full path
                                 length: [4, 0],
