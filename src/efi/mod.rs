@@ -558,7 +558,7 @@ pub extern "efiapi" fn locate_handle(
     size: *mut usize,
     handles: *mut Handle,
 ) -> Status {
-    if unsafe { *guid } == block::PROTOCOL_GUID {
+    if unsafe { *guid } == r_efi::protocols::block_io::PROTOCOL_GUID {
         let count = unsafe { BLOCK_WRAPPERS.get_mut().count };
         if unsafe { *size } < size_of::<Handle>() * count {
             unsafe { *size = size_of::<Handle>() * count };
@@ -878,7 +878,9 @@ pub extern "efiapi" fn open_protocol(
         }
     }
 
-    if unsafe { *guid } == block::PROTOCOL_GUID && handle_type == HandleType::Block {
+    if unsafe { *guid } == r_efi::protocols::block_io::PROTOCOL_GUID
+        && handle_type == HandleType::Block
+    {
         unsafe {
             *out = &mut (*(handle as *mut block::BlockWrapper)).proto as *mut _ as *mut c_void;
         }
