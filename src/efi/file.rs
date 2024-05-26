@@ -257,13 +257,10 @@ pub struct FileSystemWrapper<'a> {
 
 impl<'a> FileSystemWrapper<'a> {
     fn create_file(&self, node: crate::fat::Node<'a>) -> Option<*mut FileWrapper> {
-        let size = core::mem::size_of::<FileWrapper>();
-        let (status, new_address) = super::ALLOCATOR.borrow_mut().allocate_pages(
-            efi::ALLOCATE_ANY_PAGES,
-            efi::LOADER_DATA,
-            ((size + super::PAGE_SIZE as usize - 1) / super::PAGE_SIZE as usize) as u64,
-            0_u64,
-        );
+        let (status, new_address) = super::ALLOCATOR
+            .borrow_mut()
+            .allocate_pool(efi::LOADER_DATA, core::mem::size_of::<FileWrapper>());
+        assert!(status == Status::SUCCESS);
 
         if status == Status::SUCCESS {
             let fw = new_address as *mut FileWrapper;

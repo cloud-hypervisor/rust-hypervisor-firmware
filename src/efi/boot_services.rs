@@ -19,7 +19,7 @@ use crate::fat;
 
 use super::{
     block, device_path::DevicePath, file, mem_file, new_image_handle, HandleType, HandleWrapper,
-    LoadedImageWrapper, ALLOCATOR, BLOCK_WRAPPERS, PAGE_SIZE, ST,
+    LoadedImageWrapper, ALLOCATOR, BLOCK_WRAPPERS, ST,
 };
 
 pub static mut BS: SyncUnsafeCell<efi::BootServices> = SyncUnsafeCell::new(efi::BootServices {
@@ -389,7 +389,7 @@ fn load_from_file(
     device_handle: *mut c_void,
     image_handle: *mut *mut c_void,
 ) -> Status {
-    let file_size = (file.get_size() as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+    let file_size = ALLOCATOR.borrow_mut().page_count(file.get_size() as usize);
     // Get free pages address
     let load_addr =
         match ALLOCATOR

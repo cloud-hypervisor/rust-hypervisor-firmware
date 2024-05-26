@@ -48,7 +48,8 @@ struct HandleWrapper {
     handle_type: HandleType,
 }
 
-pub static ALLOCATOR: AtomicRefCell<Allocator> = AtomicRefCell::new(Allocator::new());
+pub static ALLOCATOR: AtomicRefCell<Allocator> =
+    AtomicRefCell::new(Allocator::new(layout::MemoryDescriptor::PAGE_SIZE as u64));
 
 pub static VARIABLES: AtomicRefCell<VariableAllocator> =
     AtomicRefCell::new(VariableAllocator::new());
@@ -84,17 +85,16 @@ static mut BLOCK_WRAPPERS: SyncUnsafeCell<block::BlockWrappers> =
         count: 0,
     });
 
-const PAGE_SIZE: u64 = 4096;
-
 // Populate allocator from E820, fixed ranges for the firmware and the loaded binary.
 fn populate_allocator(info: &dyn bootinfo::Info, image_address: u64, image_size: u64) {
     for i in 0..info.num_entries() {
         let entry = info.entry(i);
         match entry.entry_type {
             bootinfo::EntryType::Ram => {
+                let page_count = ALLOCATOR.borrow().page_count(entry.size as usize);
                 ALLOCATOR.borrow_mut().add_initial_allocation(
                     efi::CONVENTIONAL_MEMORY,
-                    entry.size / PAGE_SIZE,
+                    page_count,
                     entry.addr,
                     efi::MEMORY_WB,
                 );
@@ -119,19 +119,21 @@ fn populate_allocator(info: &dyn bootinfo::Info, image_address: u64, image_size:
     }
 
     if let Some(fdt_entry) = info.fdt_reservation() {
+        let page_count = ALLOCATOR.borrow().page_count(fdt_entry.size as usize);
         ALLOCATOR.borrow_mut().allocate_pages(
             efi::ALLOCATE_ADDRESS,
             efi::UNUSABLE_MEMORY,
-            (fdt_entry.size + 4095) / 4096,
+            page_count,
             fdt_entry.addr,
         );
     }
 
     // Add the loaded binary
+    let page_count = ALLOCATOR.borrow().page_count(image_size as usize);
     ALLOCATOR.borrow_mut().allocate_pages(
         efi::ALLOCATE_ADDRESS,
         efi::LOADER_CODE,
-        image_size / PAGE_SIZE,
+        page_count,
         image_address,
     );
 }
