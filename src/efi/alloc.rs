@@ -1,20 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright © 2019 Intel Corporation
 
-use r_efi::efi::{self, AllocateType, MemoryType, PhysicalAddress, Status, VirtualAddress};
+use r_efi::efi::{self, AllocateType, MemoryDescriptor, MemoryType, Status};
 
 const PAGE_SIZE: u64 = 4096;
-
-// Copied from r_efi so we can do Default on it
-#[repr(C)]
-#[derive(Debug, Copy, Clone, Default)]
-pub struct MemoryDescriptor {
-    pub r#type: u32,
-    pub physical_start: PhysicalAddress,
-    pub virtual_start: VirtualAddress,
-    pub number_of_pages: u64,
-    pub attribute: u64,
-}
 
 #[derive(Copy, Clone)]
 struct Allocation {
@@ -417,6 +406,16 @@ mod tests {
     use super::Allocator;
     use r_efi::efi::{self, AllocateType, MemoryType, Status};
 
+    const fn default_descriptor() -> efi::MemoryDescriptor {
+        efi::MemoryDescriptor {
+            r#type: 0,
+            physical_start: 0,
+            virtual_start: 0,
+            number_of_pages: 0,
+            attribute: 0,
+        }
+    }
+
     fn add_initial_allocations(allocator: &mut Allocator) {
         // Add range 0 - 0x9fc00
         assert_eq!(
@@ -690,7 +689,7 @@ mod tests {
 
         add_initial_allocations(&mut allocator);
 
-        let mut descriptors = [super::MemoryDescriptor::default(); super::MAX_ALLOCATIONS];
+        let mut descriptors = [default_descriptor(); super::MAX_ALLOCATIONS];
 
         let count = allocator.get_descriptors(&mut descriptors);
 
@@ -778,7 +777,7 @@ mod tests {
 
         add_initial_allocations(&mut allocator);
 
-        let mut descriptors = [super::MemoryDescriptor::default(); super::MAX_ALLOCATIONS];
+        let mut descriptors = [default_descriptor(); super::MAX_ALLOCATIONS];
 
         let count = allocator.get_descriptors(&mut descriptors);
 

@@ -182,7 +182,7 @@ static mut BLOCK_WRAPPERS: SyncUnsafeCell<block::BlockWrappers> =
         count: 0,
     });
 
-fn convert_internal_pointer(descriptors: &[alloc::MemoryDescriptor], ptr: u64) -> Option<u64> {
+fn convert_internal_pointer(descriptors: &[MemoryDescriptor], ptr: u64) -> Option<u64> {
     for descriptor in descriptors.iter() {
         let start = descriptor.physical_start;
         let end = descriptor.physical_start + descriptor.number_of_pages * PAGE_SIZE;
@@ -194,7 +194,7 @@ fn convert_internal_pointer(descriptors: &[alloc::MemoryDescriptor], ptr: u64) -
 }
 
 #[allow(clippy::missing_transmute_annotations)]
-unsafe fn fixup_at_virtual(descriptors: &[alloc::MemoryDescriptor]) {
+unsafe fn fixup_at_virtual(descriptors: &[MemoryDescriptor]) {
     let st = ST.get_mut();
     let rs = RS.get_mut();
 
@@ -277,9 +277,7 @@ pub extern "efiapi" fn set_virtual_address_map(
         return Status::INVALID_PARAMETER;
     }
 
-    let descriptors = unsafe {
-        core::slice::from_raw_parts_mut(descriptors as *mut alloc::MemoryDescriptor, count)
-    };
+    let descriptors = unsafe { core::slice::from_raw_parts_mut(descriptors, count) };
 
     unsafe {
         fixup_at_virtual(descriptors);
@@ -437,8 +435,7 @@ pub extern "efiapi" fn get_memory_map(
         return Status::INVALID_PARAMETER;
     }
 
-    let out =
-        unsafe { core::slice::from_raw_parts_mut(out as *mut alloc::MemoryDescriptor, count) };
+    let out = unsafe { core::slice::from_raw_parts_mut(out, count) };
     let count = ALLOCATOR.borrow().get_descriptors(out);
     let map_size = size_of::<MemoryDescriptor>() * count;
     unsafe {
