@@ -124,13 +124,10 @@ impl<'a> BlockWrapper<'a> {
     ) -> *mut BlockWrapper {
         let last_block = (*block).get_capacity() - 1;
 
-        let size = core::mem::size_of::<BlockWrapper>();
-        let (_status, new_address) = super::ALLOCATOR.borrow_mut().allocate_pages(
-            efi::ALLOCATE_ANY_PAGES,
-            efi::LOADER_DATA,
-            ((size + super::PAGE_SIZE as usize - 1) / super::PAGE_SIZE as usize) as u64,
-            0_u64,
-        );
+        let (status, new_address) = super::ALLOCATOR
+            .borrow_mut()
+            .allocate_pool(efi::LOADER_DATA, core::mem::size_of::<BlockWrapper>());
+        assert!(status == Status::SUCCESS);
 
         let bw = new_address as *mut BlockWrapper;
 

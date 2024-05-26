@@ -17,7 +17,7 @@ use r_efi::{
 
 use crate::rtc;
 
-use super::{ALLOCATOR, PAGE_SIZE, ST, VARIABLES};
+use super::{ALLOCATOR, ST, VARIABLES};
 
 pub static mut RS: SyncUnsafeCell<efi::RuntimeServices> =
     SyncUnsafeCell::new(efi::RuntimeServices {
@@ -44,23 +44,15 @@ pub static mut RS: SyncUnsafeCell<efi::RuntimeServices> =
         query_variable_info,
     });
 
-fn convert_internal_pointer(descriptors: &[MemoryDescriptor], ptr: u64) -> Option<u64> {
-    for descriptor in descriptors.iter() {
-        let start = descriptor.physical_start;
-        let end = descriptor.physical_start + descriptor.number_of_pages * PAGE_SIZE;
-        if start <= ptr && ptr < end {
-            return Some(ptr - descriptor.physical_start + descriptor.virtual_start);
-        }
-    }
-    None
-}
-
 #[allow(clippy::missing_transmute_annotations)]
 unsafe fn fixup_at_virtual(descriptors: &[MemoryDescriptor]) {
     let st = ST.get_mut();
     let rs = RS.get_mut();
 
-    let ptr = convert_internal_pointer(descriptors, (not_available as *const ()) as u64).unwrap();
+    let ptr = ALLOCATOR
+        .borrow()
+        .convert_internal_pointer(descriptors, (not_available as *const ()) as u64)
+        .unwrap();
     rs.get_time = transmute(ptr);
     rs.set_time = transmute(ptr);
     rs.get_wakeup_time = transmute(ptr);
@@ -74,11 +66,17 @@ unsafe fn fixup_at_virtual(descriptors: &[MemoryDescriptor]) {
     rs.query_variable_info = transmute(ptr);
 
     let ct = st.configuration_table;
-    let ptr = convert_internal_pointer(descriptors, (ct as *const _) as u64).unwrap();
+    let ptr = ALLOCATOR
+        .borrow()
+        .convert_internal_pointer(descriptors, (ct as *const _) as u64)
+        .unwrap();
     st.configuration_table = ptr as *mut ConfigurationTable;
 
     let rs = st.runtime_services;
-    let ptr = convert_internal_pointer(descriptors, (rs as *const _) as u64).unwrap();
+    let ptr = ALLOCATOR
+        .borrow()
+        .convert_internal_pointer(descriptors, (rs as *const _) as u64)
+        .unwrap();
     st.runtime_services = ptr as *mut RuntimeServices;
 }
 

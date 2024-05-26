@@ -3,8 +3,6 @@
 
 use r_efi::efi::{self, AllocateType, MemoryDescriptor, MemoryType, Status};
 
-const PAGE_SIZE: u64 = 4096;
-
 #[derive(Copy, Clone)]
 struct Allocation {
     in_use: bool,
@@ -19,10 +17,11 @@ pub struct Allocator {
     allocations: [Allocation; MAX_ALLOCATIONS],
     key: usize,
     first_allocation: Option<usize>,
+    page_size: u64,
 }
 
 impl Allocator {
-    pub const fn new() -> Allocator {
+    pub const fn new(page_size: u64) -> Allocator {
         let allocation = Allocation {
             in_use: false,
             next_allocation: None,
@@ -38,7 +37,12 @@ impl Allocator {
             allocations: [allocation; MAX_ALLOCATIONS],
             key: 0,
             first_allocation: None,
+            page_size,
         }
+    }
+
+    pub fn page_count(&self, size: usize) -> u64 {
+        ((size + self.page_size as usize - 1) / self.page_size as usize) as u64
     }
 
     // Assume called in order with non-overlapping sections.
@@ -123,12 +127,12 @@ impl Allocator {
             }
 
             let alloc_bottom = a.descriptor.physical_start;
-            let alloc_top = alloc_bottom + PAGE_SIZE * a.descriptor.number_of_pages;
+            let alloc_top = alloc_bottom + self.page_size * a.descriptor.number_of_pages;
 
             match allocation_type {
                 efi::ALLOCATE_ADDRESS => {
                     let req_bottom = address;
-                    let req_top = req_bottom + PAGE_SIZE * page_count;
+                    let req_top = req_bottom + self.page_size * page_count;
 
                     if req_bottom >= alloc_bottom && req_top <= alloc_top {
                         return cur;
@@ -144,7 +148,7 @@ impl Allocator {
                 }
                 efi::ALLOCATE_MAX_ADDRESS => {
                     let req_bottom = a.descriptor.physical_start;
-                    let req_top = req_bottom + PAGE_SIZE * page_count;
+                    let req_top = req_bottom + self.page_size * page_count;
 
                     if a.descriptor.number_of_pages >= page_count && req_top <= address {
                         return cur;
@@ -182,7 +186,7 @@ impl Allocator {
 
         // Update address on new
         self.allocations[new].descriptor.physical_start =
-            self.allocations[orig].descriptor.physical_start + PAGE_SIZE * pages;
+            self.allocations[orig].descriptor.physical_start + self.page_size * pages;
 
         Some(new)
     }
@@ -237,8 +241,8 @@ impl Allocator {
                     assigned = dest
                 } else {
                     // Work out how pages in the desired address and split at that
-                    let pages =
-                        (address - self.allocations[dest].descriptor.physical_start) / PAGE_SIZE;
+                    let pages = (address - self.allocations[dest].descriptor.physical_start)
+                        / self.page_size;
                     let split = self.split_allocation(dest, pages);
                     if split.is_none() {
                         return (Status::OUT_OF_RESOURCES, 0);
@@ -300,7 +304,7 @@ impl Allocator {
                 && self.allocations[next].descriptor.r#type == efi::CONVENTIONAL_MEMORY
                 && self.allocations[next].descriptor.physical_start
                     == self.allocations[current].descriptor.physical_start
-                        + self.allocations[current].descriptor.number_of_pages * PAGE_SIZE
+                        + self.allocations[current].descriptor.number_of_pages * self.page_size
             {
                 // Add pages into the current one.
                 self.allocations[cur.unwrap()].descriptor.number_of_pages +=
@@ -334,7 +338,7 @@ impl Allocator {
     }
 
     pub fn allocate_pool(&mut self, memory_type: MemoryType, size: usize) -> (Status, u64) {
-        let page_count = (size as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+        let page_count = (size as u64 + self.page_size - 1) / self.page_size;
         let (status, address) =
             self.allocate_pages(efi::ALLOCATE_ANY_PAGES, memory_type, page_count, 0);
 
@@ -399,12 +403,29 @@ impl Allocator {
     pub fn get_map_key(&self) -> usize {
         self.key
     }
+
+    pub fn convert_internal_pointer(
+        &self,
+        descriptors: &[MemoryDescriptor],
+        ptr: u64,
+    ) -> Option<u64> {
+        for descriptor in descriptors.iter() {
+            let start = descriptor.physical_start;
+            let end = descriptor.physical_start + descriptor.number_of_pages * self.page_size;
+            if start <= ptr && ptr < end {
+                return Some(ptr - descriptor.physical_start + descriptor.virtual_start);
+            }
+        }
+        None
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Allocator;
     use r_efi::efi::{self, AllocateType, MemoryType, Status};
+
+    const PAGE_SIZE: u64 = crate::layout::MemoryDescriptor::PAGE_SIZE as u64;
 
     const fn default_descriptor() -> efi::MemoryDescriptor {
         efi::MemoryDescriptor {
@@ -421,7 +442,7 @@ mod tests {
         assert_eq!(
             allocator.add_initial_allocation(
                 efi::CONVENTIONAL_MEMORY,
-                0x9fc00 / super::PAGE_SIZE,
+                allocator.page_count(0x9fc00),
                 0,
                 0
             ),
@@ -434,14 +455,14 @@ mod tests {
         assert_eq!(allocator.allocations[0].descriptor.physical_start, 0);
         assert_eq!(
             allocator.allocations[0].descriptor.number_of_pages,
-            0x9fc00 / super::PAGE_SIZE
+            allocator.page_count(0x9fc00)
         );
 
         // Add range 1 - 128MiB
         assert_eq!(
             allocator.add_initial_allocation(
                 efi::CONVENTIONAL_MEMORY,
-                127 * 1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(127 * 1024 * 1024),
                 1024 * 1024,
                 0
             ),
@@ -453,7 +474,7 @@ mod tests {
         assert_eq!(allocator.allocations[0].descriptor.physical_start, 0);
         assert_eq!(
             allocator.allocations[0].descriptor.number_of_pages,
-            0x9fc00 / super::PAGE_SIZE
+            allocator.page_count(0x9fc00),
         );
 
         assert!(allocator.allocations[1].in_use);
@@ -464,7 +485,7 @@ mod tests {
         );
         assert_eq!(
             allocator.allocations[1].descriptor.number_of_pages,
-            127 * 1024 * 1024 / super::PAGE_SIZE
+            allocator.page_count(127 * 1024 * 1024)
         );
         assert_eq!(
             allocator.allocations[0].descriptor.r#type,
@@ -475,7 +496,7 @@ mod tests {
         assert_eq!(
             allocator.add_initial_allocation(
                 efi::MEMORY_MAPPED_IO,
-                512 * 1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(512 * 1024 * 1024),
                 3584 * 1024 * 1024,
                 0
             ),
@@ -490,7 +511,7 @@ mod tests {
         );
         assert_eq!(
             allocator.allocations[2].descriptor.number_of_pages,
-            512 * 1024 * 1024 / super::PAGE_SIZE
+            allocator.page_count(512 * 1024 * 1024)
         );
         assert_eq!(
             allocator.allocations[2].descriptor.r#type,
@@ -501,7 +522,7 @@ mod tests {
         assert_eq!(
             allocator.add_initial_allocation(
                 efi::CONVENTIONAL_MEMORY,
-                4096 * 1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(4096 * 1024 * 1024),
                 4096 * 1024 * 1024,
                 0
             ),
@@ -510,7 +531,7 @@ mod tests {
     }
     #[test]
     fn test_initial_allocations() {
-        let mut allocator = Allocator::new();
+        let mut allocator = Allocator::new(PAGE_SIZE);
 
         assert_eq!(allocator.first_allocation, None);
 
@@ -519,7 +540,7 @@ mod tests {
 
     #[test]
     fn test_split_allocation() {
-        let mut allocator = Allocator::new();
+        let mut allocator = Allocator::new(PAGE_SIZE);
 
         add_initial_allocations(&mut allocator);
 
@@ -535,7 +556,7 @@ mod tests {
         );
         assert_eq!(
             allocator.allocations[1].descriptor.number_of_pages,
-            1024 * 1024 / super::PAGE_SIZE
+            allocator.page_count(1024 * 1024)
         );
         assert_eq!(
             allocator.allocations[0].descriptor.r#type,
@@ -550,7 +571,7 @@ mod tests {
         );
         assert_eq!(
             allocator.allocations[4].descriptor.number_of_pages,
-            126 * 1024 * 1024 / super::PAGE_SIZE
+            allocator.page_count(126 * 1024 * 1024)
         );
         assert_eq!(
             allocator.allocations[4].descriptor.r#type,
@@ -560,7 +581,7 @@ mod tests {
 
     #[test]
     fn test_find_free_allocation() {
-        let mut allocator = Allocator::new();
+        let mut allocator = Allocator::new(PAGE_SIZE);
 
         assert_eq!(allocator.find_free_allocation(), 0);
 
@@ -571,12 +592,12 @@ mod tests {
 
     #[test]
     fn test_find_free_memory() {
-        let mut allocator = Allocator::new();
+        let mut allocator = Allocator::new(PAGE_SIZE);
 
         assert_eq!(
             allocator.find_free_memory(
                 efi::ALLOCATE_ADDRESS,
-                1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(1024 * 1024),
                 1024 * 1024
             ),
             None
@@ -594,7 +615,7 @@ mod tests {
         assert_eq!(
             allocator.find_free_memory(
                 efi::ALLOCATE_ADDRESS,
-                1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(1024 * 1024),
                 1024 * 1024 * 1024
             ),
             None
@@ -604,7 +625,7 @@ mod tests {
         assert_eq!(
             allocator.find_free_memory(
                 efi::ALLOCATE_ADDRESS,
-                1024 * 1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(1024 * 1024 * 1024),
                 0
             ),
             None
@@ -614,7 +635,7 @@ mod tests {
         assert_eq!(
             allocator.find_free_memory(
                 efi::ALLOCATE_ADDRESS,
-                2 * 1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(2 * 1024 * 1024),
                 127 * 1024 * 1024
             ),
             None
@@ -624,7 +645,7 @@ mod tests {
         assert_eq!(
             allocator.add_initial_allocation(
                 efi::CONVENTIONAL_MEMORY,
-                4096 * 1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(4096 * 1024 * 1024),
                 4096 * 1024 * 1024,
                 0
             ),
@@ -635,7 +656,7 @@ mod tests {
         assert_eq!(
             allocator.find_free_memory(
                 efi::ALLOCATE_MAX_ADDRESS,
-                64 * 1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(64 * 1024 * 1024),
                 4096 * 1024 * 1024
             ),
             Some(1)
@@ -645,7 +666,7 @@ mod tests {
         assert_eq!(
             allocator.find_free_memory(
                 efi::ALLOCATE_MAX_ADDRESS,
-                256 * 1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(256 * 1024 * 1024),
                 4096 * 1024 * 1024
             ),
             None,
@@ -655,7 +676,7 @@ mod tests {
         assert_eq!(
             allocator.find_free_memory(
                 efi::ALLOCATE_MAX_ADDRESS,
-                256 * 1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(256 * 1024 * 1024),
                 8192 * 1024 * 1024
             ),
             Some(3)
@@ -665,7 +686,7 @@ mod tests {
         assert_eq!(
             allocator.find_free_memory(
                 efi::ALLOCATE_ANY_PAGES,
-                128 * 1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(128 * 1024 * 1024),
                 0,
             ),
             Some(3)
@@ -675,7 +696,7 @@ mod tests {
         assert_eq!(
             allocator.find_free_memory(
                 efi::ALLOCATE_ANY_PAGES,
-                256 * 1024 * 1024 / super::PAGE_SIZE,
+                allocator.page_count(256 * 1024 * 1024),
                 0,
             ),
             Some(3)
@@ -685,7 +706,7 @@ mod tests {
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn test_allocate_pages() {
-        let mut allocator = Allocator::new();
+        let mut allocator = Allocator::new(PAGE_SIZE);
 
         add_initial_allocations(&mut allocator);
 
@@ -716,7 +737,7 @@ mod tests {
         assert_eq!(descriptors[2].physical_start, 0x2000);
         assert_eq!(
             descriptors[2].number_of_pages,
-            (0x9fc00 / super::PAGE_SIZE) - 2
+            allocator.page_count(0x9fc00) - 2
         );
         assert_eq!(descriptors[2].r#type, efi::CONVENTIONAL_MEMORY);
 
@@ -741,7 +762,7 @@ mod tests {
         assert_eq!(descriptors[2].physical_start, 0x2000);
         assert_eq!(
             descriptors[2].number_of_pages,
-            (0x9fc00 / super::PAGE_SIZE) - 2
+            allocator.page_count(0x9fc00) - 2
         );
         assert_eq!(descriptors[2].r#type, efi::CONVENTIONAL_MEMORY);
 
@@ -766,14 +787,14 @@ mod tests {
         assert_eq!(descriptors[2].physical_start, 0x2000);
         assert_eq!(
             descriptors[2].number_of_pages,
-            (0x9fc00 / super::PAGE_SIZE) - 2
+            allocator.page_count(0x9fc00) - 2
         );
         assert_eq!(descriptors[2].r#type, efi::CONVENTIONAL_MEMORY);
     }
 
     #[test]
     fn test_free_pages() {
-        let mut allocator = Allocator::new();
+        let mut allocator = Allocator::new(PAGE_SIZE);
 
         add_initial_allocations(&mut allocator);
 
@@ -804,7 +825,7 @@ mod tests {
         assert_eq!(descriptors[2].physical_start, 0x2000);
         assert_eq!(
             descriptors[2].number_of_pages,
-            (0x9fc00 / super::PAGE_SIZE) - 2
+            allocator.page_count(0x9fc00) - 2
         );
         assert_eq!(descriptors[2].r#type, efi::CONVENTIONAL_MEMORY);
 
