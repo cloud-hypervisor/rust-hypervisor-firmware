@@ -3,6 +3,7 @@
 
 use core::ffi::c_void;
 
+use log::error;
 use r_efi::{
     efi::{self, Char16, Guid, Status},
     protocols::{
@@ -51,7 +52,7 @@ pub extern "efiapi" fn open(
         match &wrapper.node {
             crate::fat::Node::Directory(d) => d,
             _ => {
-                log!("Attempt to open from non-directory is unsupported");
+                error!("Attempt to open from non-directory is unsupported");
                 return Status::UNSUPPORTED;
             }
         }

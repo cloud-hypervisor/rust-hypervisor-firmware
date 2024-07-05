@@ -3,6 +3,7 @@
 
 use atomic_refcell::AtomicRefCell;
 
+use log::{info, warn};
 #[cfg(target_arch = "x86_64")]
 use x86_64::instructions::port::{Port, PortWriteOnly};
 
@@ -152,11 +153,9 @@ pub fn print_bus() {
         if vendor_id == INVALID_VENDOR_ID {
             continue;
         }
-        log!(
+        info!(
             "Found PCI device vendor={:x} device={:x} in slot={}",
-            vendor_id,
-            device_id,
-            device
+            vendor_id, device_id, device
         );
     }
 }
@@ -251,13 +250,9 @@ impl PciDevice {
         self.vendor_id = vendor_id;
         self.device_id = device_id;
 
-        log!(
+        info!(
             "PCI Device: {}:{}.{} {:x}:{:x}",
-            self.bus,
-            self.device,
-            self.func,
-            self.vendor_id,
-            self.device_id
+            self.bus, self.device, self.func, self.vendor_id, self.device_id
         );
 
         // Enable responses in memory space
@@ -328,11 +323,9 @@ impl PciDevice {
 
         #[allow(clippy::disallowed_names)]
         for bar in &self.bars {
-            log!(
+            info!(
                 "Bar: type={:?} address=0x{:x} size=0x{:x}",
-                bar.bar_type,
-                bar.address,
-                bar.size
+                bar.bar_type, bar.address, bar.size
             );
         }
     }
@@ -379,11 +372,9 @@ impl PciDevice {
 
         #[allow(clippy::disallowed_names)]
         for bar in &self.bars {
-            log!(
+            info!(
                 "Updated BARs: type={:?} address={:x} size={:x}",
-                bar.bar_type,
-                bar.address,
-                bar.size
+                bar.bar_type, bar.address, bar.size
             );
         }
 
@@ -445,7 +436,7 @@ impl VirtioTransport for VirtioPciTransport {
 
         // bit 4 of status is capability bit
         if status & 1 << 4 == 0 {
-            log!("No capabilities detected");
+            warn!("No capabilities detected");
             return Err(VirtioError::UnsupportedDevice);
         }
 
