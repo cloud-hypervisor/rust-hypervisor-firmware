@@ -20,6 +20,7 @@
 #[cfg(all(not(test), not(feature = "integration_tests")))]
 use core::panic::PanicInfo;
 
+use log::{error, info, warn};
 #[cfg(all(
     not(test),
     not(feature = "integration_tests"),
@@ -112,10 +113,10 @@ fn boot_from_device(
     info: &dyn bootinfo::Info,
 ) -> Result<(), Error> {
     if let Err(err) = device.init() {
-        log!("Error configuring block device: {:?}", err);
+        error!("Error configuring block device: {:?}", err);
         return Err(Error::Virtio(err));
     }
-    log!(
+    info!(
         "Virtio block device configured. Capacity: {} sectors",
         device.get_capacity()
     );
@@ -123,59 +124,59 @@ fn boot_from_device(
     let (start, end) = match part::find_efi_partition(device) {
         Ok(p) => p,
         Err(err) => {
-            log!("Failed to find EFI partition: {:?}", err);
+            error!("Failed to find EFI partition: {:?}", err);
             return Err(Error::Partition(err));
         }
     };
-    log!("Found EFI partition");
+    info!("Found EFI partition");
 
     let mut f = fat::Filesystem::new(device, start, end);
     if let Err(err) = f.init() {
-        log!("Failed to create filesystem: {:?}", err);
+        error!("Failed to create filesystem: {:?}", err);
         return Err(Error::Fat(err));
     }
-    log!("Filesystem ready");
+    info!("Filesystem ready");
 
     match loader::load_default_entry(&f, info) {
         Ok(mut kernel) => {
-            log!("Jumping to kernel");
+            info!("Jumping to kernel");
             kernel.boot();
             return Ok(());
         }
         Err(err) => {
-            log!("Error loading default entry: {:?}", err);
+            warn!("Error loading default entry: {:?}", err);
             // Fall through to EFI boot
         }
     }
 
-    log!("Using EFI boot.");
+    info!("Using EFI boot.");
 
     let mut file = match f.open(efi::EFI_BOOT_PATH) {
         Ok(file) => file,
         Err(err) => {
-            log!("Failed to load default EFI binary: {:?}", err);
+            error!("Failed to load default EFI binary: {:?}", err);
             return Err(Error::Fat(err));
         }
     };
-    log!("Found bootloader: {}", efi::EFI_BOOT_PATH);
+    info!("Found bootloader: {}", efi::EFI_BOOT_PATH);
 
     let mut l = pe::Loader::new(&mut file);
 
     let (entry_addr, load_addr, size) = match l.load(info.kernel_load_addr()) {
         Ok(load_info) => load_info,
         Err(err) => {
-            log!("Error loading executable: {:?}", err);
+            error!("Error loading executable: {:?}", err);
             return Err(Error::Pe(err));
         }
     };
 
     #[cfg(target_arch = "aarch64")]
     if code_range().start < (info.kernel_load_addr() + size) as usize {
-        log!("Error Boot Image is too large");
+        error!("Error Boot Image is too large");
         return Err(Error::ImageTooLarge);
     }
 
-    log!("Executable loaded");
+    info!("Executable loaded");
     efi::efi_exec(entry_addr, load_addr, size, info, &f, device);
     Ok(())
 }
@@ -231,7 +232,7 @@ pub extern "C" fn rust64_start(a0: u64, a1: *const u8) -> ! {
     serial::PORT.borrow_mut().init();
     logger::init();
 
-    log!("Starting on RV64 0x{:x} 0x{:x}", a0, a1 as u64,);
+    info!("Starting on RV64 0x{:x} 0x{:x}", a0, a1 as u64,);
 
     let info = fdt::StartInfo::new(
         a1,
@@ -247,7 +248,7 @@ pub extern "C" fn rust64_start(a0: u64, a1: *const u8) -> ! {
 
     for i in 0..info.num_entries() {
         let region = info.entry(i);
-        log!(
+        info!(
             "Memory region {}MiB@0x{:x}",
             region.size / 1024 / 1024,
             region.addr
@@ -262,7 +263,7 @@ pub extern "C" fn rust64_start(a0: u64, a1: *const u8) -> ! {
 }
 
 fn main(info: &dyn bootinfo::Info) -> ! {
-    log!("\nBooting with {}", info.name());
+    info!("Booting with {}", info.name());
 
     pci::print_bus();
 

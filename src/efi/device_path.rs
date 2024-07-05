@@ -7,6 +7,7 @@ use core::{
     ptr::null_mut,
 };
 
+use log::error;
 use r_efi::{
     efi::{self, MemoryType, Status},
     protocols::device_path::Protocol as DevicePathProtocol,
@@ -49,7 +50,7 @@ impl DevicePath {
             }
 
             if dpp.r#type == r_efi::protocols::device_path::TYPE_END && dpp.sub_type == 0xff {
-                log!("Unexpected end of device path");
+                error!("Unexpected end of device path");
                 return DevicePath::Unsupported;
             }
             let len = unsafe { core::mem::transmute::<[u8; 2], u16>(dpp.length) };
