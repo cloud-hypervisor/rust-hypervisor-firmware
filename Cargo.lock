@@ -301,9 +301,9 @@ checksum = "ac74c624d6b2d21f425f752262f42188365d7b8ff1aff74c82e45136510a4857"
 
 [[package]]
 name = "r-efi"
-version = "4.5.0"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9e935efc5854715dfc0a4c9ef18dc69dee0ec3bf9cc3ab740db831c0fdd86a3"
+checksum = "37bc43dd39c4165ded8ffe15f0e0653ce7b73e86fd032eff18121589cbc648a5"
 
 [[package]]
 name = "rand"
