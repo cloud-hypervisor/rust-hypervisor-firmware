@@ -177,7 +177,7 @@ fn new_image_handle(
             image_size: load_size,
             image_code_type: efi::LOADER_CODE,
             image_data_type: efi::LOADER_DATA,
-            unload: boot_services::unload_image,
+            unload: Some(boot_services::unload_image),
             reserved: null_mut(),
         },
         entry_point: entry_addr,
