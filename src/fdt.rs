@@ -78,11 +78,15 @@ impl Info for StartInfo<'_> {
     }
 
     fn num_entries(&self) -> usize {
-        self.fdt.memory().regions().count()
+        let nodes = self.fdt.find_all_nodes("/memory");
+        let regions = nodes.flat_map(|n| n.reg().expect("should contain valid memory regions"));
+        regions.count()
     }
 
     fn entry(&self, idx: usize) -> MemoryEntry {
-        for (i, region) in self.fdt.memory().regions().enumerate() {
+        let nodes = self.fdt.find_all_nodes("/memory");
+        let regions = nodes.flat_map(|n| n.reg().expect("should contain valid memory regions"));
+        for (i, region) in regions.enumerate() {
             if i == idx {
                 return MemoryEntry {
                     addr: region.starting_address as u64,
