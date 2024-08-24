@@ -11,8 +11,6 @@ jobs:
         include:
           - runner: ubuntu-22.04
             coreboot-tests: true
-          - runner: focal-arm64
-            coreboot-tests: false
     steps:
       - name: Code checkout
         uses: actions/checkout@v4
