@@ -21,8 +21,8 @@ extern "Rust" {
 }
 
 pub mod map {
-    // Create page table for 128G is enough
-    pub const END: usize = 0x20_0000_0000;
+    // Create page table for 2T
+    pub const END: usize = 0x20_000_000_000;
 
     // Firmware region won't be used by this firmware, so merge it into mmio region
     // is harmless and better for management.
