@@ -1,6 +1,6 @@
 [package]
 name = "hypervisor-fw"
-version = "0.4.2"
+version = "0.5.0"
 authors = ["The Rust Hypervisor Firmware Authors"]
 edition = "2021"
 
