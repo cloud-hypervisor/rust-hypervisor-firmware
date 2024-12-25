@@ -28,7 +28,7 @@ efi-var = []
 [dependencies]
 bitflags = "2.6.0"
 atomic_refcell = "0.1.13"
-r-efi = { version = "5.1.0", features = ["efiapi"] }
+r-efi = { version = "5.2.0", features = ["efiapi"] }
 heapless = "0.8.0"
 log = "0.4.22"
 
