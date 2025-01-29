@@ -29,7 +29,7 @@ mod tests {
     impl GuestNetworkConfig {
         fn new(counter: u8) -> Self {
             // Generate a fully random MAC
-            let mut m = rand::thread_rng().gen::<[u8; 6]>();
+            let mut m = rand::rng().random::<[u8; 6]>();
 
             // Set the first byte to make the OUI a locally administered OUI
             m[0] = 0x2e;
