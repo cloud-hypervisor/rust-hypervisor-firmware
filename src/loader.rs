@@ -159,7 +159,7 @@ fn compare_entry(file_name: &[u8], pattern: &[u8]) -> Result<bool, Error> {
                 }
                 // TODO
                 b'[' => todo!("patterns containing `[...]` sets are not supported"),
-                _ if p != f => return Ok(false),
+                _ if *p != *f => return Ok(false),
                 _ => (),
             }
             name_iter.next().ok_or(Error::UnterminatedString)?;
