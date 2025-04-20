@@ -665,8 +665,7 @@ impl<'a> Filesystem<'a> {
         self.bytes_per_sector = u32::from(h.bytes_per_sector);
         self.fat_count = u32::from(h.fat_count);
         self.sectors_per_cluster = u32::from(h.sectors_per_cluster);
-        self.root_dir_sectors = ((u32::from(h.root_dir_count * 32)) + self.bytes_per_sector - 1)
-            / self.bytes_per_sector;
+        self.root_dir_sectors = (u32::from(h.root_dir_count * 32)).div_ceil(self.bytes_per_sector);
 
         self.sectors_per_fat = if h.legacy_sectors_per_fat == 0 {
             let h32 = unsafe { &*(data.as_bytes().as_ptr() as *const Fat32Header) };
