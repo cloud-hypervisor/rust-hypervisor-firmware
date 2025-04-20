@@ -33,6 +33,7 @@ pub enum Error {
     File(fat::Error),
     BzImage(bzimage::Error),
     UnterminatedString,
+    InvalidPattern,
 }
 
 impl From<fat::Error> for Error {
@@ -110,7 +111,7 @@ fn find_entry(fs: &fat::Filesystem, pattern: &[u8]) -> Result<[u8; 255], Error> 
 fn compare_entry(file_name: &[u8], pattern: &[u8]) -> Result<bool, Error> {
     fn compare_entry_inner<I>(
         mut name_iter: core::iter::Peekable<I>,
-        mut pattern: &[u8],
+        pattern: &[u8],
         max_depth: usize,
     ) -> Result<bool, Error>
     where
@@ -119,14 +120,16 @@ fn compare_entry(file_name: &[u8], pattern: &[u8]) -> Result<bool, Error> {
         if max_depth == 0 {
             return Ok(false);
         }
-        while let Some(p) = pattern.take_first() {
+        let mut idx = 0;
+        while let Some(p) = pattern.get(idx) {
+            idx += 1;
             let f = name_iter.peek().ok_or(Error::UnterminatedString)?;
             #[cfg(test)]
             println!("{} ~ {}", *p as char, *f as char);
             match p {
                 b'\0' => return Ok(*f == b'\0'),
                 b'\\' => {
-                    match pattern.take_first() {
+                    match pattern.get(idx) {
                         // trailing escape
                         Some(b'\0') | None => return Ok(false),
                         // no match
@@ -134,6 +137,7 @@ fn compare_entry(file_name: &[u8], pattern: &[u8]) -> Result<bool, Error> {
                         // continue
                         _ => (),
                     }
+                    idx += 1;
                 }
                 b'?' => {
                     if *f == b'\0' {
@@ -142,12 +146,16 @@ fn compare_entry(file_name: &[u8], pattern: &[u8]) -> Result<bool, Error> {
                 }
                 b'*' => {
                     while name_iter.peek().is_some() {
-                        if compare_entry_inner(name_iter.clone(), pattern, max_depth - 1)? {
+                        if compare_entry_inner(
+                            name_iter.clone(),
+                            pattern.get(idx..).ok_or(Error::InvalidPattern)?,
+                            max_depth - 1,
+                        )? {
                             return Ok(true);
                         }
                         name_iter.next().ok_or(Error::UnterminatedString)?;
                     }
-                    return Ok(*pattern.first().ok_or(Error::UnterminatedString)? == b'\0');
+                    return Ok(*pattern.get(idx).ok_or(Error::UnterminatedString)? == b'\0');
                 }
                 // TODO
                 b'[' => todo!("patterns containing `[...]` sets are not supported"),
