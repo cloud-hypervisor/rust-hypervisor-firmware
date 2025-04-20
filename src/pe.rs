@@ -16,7 +16,7 @@ pub enum Error {
     InvalidExecutable,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 struct Section {
     _name: [u8; 8],
     virt_size: u32,
