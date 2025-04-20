@@ -42,7 +42,7 @@ impl Allocator {
     }
 
     pub fn page_count(&self, size: usize) -> u64 {
-        ((size + self.page_size as usize - 1) / self.page_size as usize) as u64
+        size.div_ceil(self.page_size as usize) as u64
     }
 
     // Assume called in order with non-overlapping sections.
@@ -338,7 +338,7 @@ impl Allocator {
     }
 
     pub fn allocate_pool(&mut self, memory_type: MemoryType, size: usize) -> (Status, u64) {
-        let page_count = (size as u64 + self.page_size - 1) / self.page_size;
+        let page_count = (size as u64).div_ceil(self.page_size);
         let (status, address) =
             self.allocate_pages(efi::ALLOCATE_ANY_PAGES, memory_type, page_count, 0);
 

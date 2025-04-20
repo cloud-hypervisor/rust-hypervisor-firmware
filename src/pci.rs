@@ -176,7 +176,7 @@ where
 }
 
 fn naturally_align(address: u64, size: u64) -> u64 {
-    ((address + size - 1) / size) * size
+    address.div_ceil(size) * size
 }
 
 #[derive(Default)]
