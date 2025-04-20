@@ -3,7 +3,7 @@
 
 use crate::block::{Error as BlockError, SectorBuf, SectorRead};
 
-#[repr(packed)]
+#[repr(C, packed)]
 /// GPT header
 struct Header {
     signature: u64,
@@ -22,7 +22,7 @@ struct Header {
     _part_crc: u32,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 #[derive(Clone, Copy, Default)]
 pub struct PartitionEntry {
     pub type_guid: [u8; 16],

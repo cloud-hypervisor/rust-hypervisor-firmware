@@ -6,7 +6,7 @@ use crate::{
     mem::MemoryRegion,
 };
 
-#[repr(packed)]
+#[repr(C, packed)]
 struct Header {
     _magic: [u8; 3],
     _identifier: [u8; 8],
@@ -24,7 +24,7 @@ struct Header {
     sectors: u32,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 struct Fat32Header {
     _header: Header,
     sectors_per_fat: u32,
@@ -42,7 +42,7 @@ struct Fat32Header {
     _id: [u8; 8],
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 struct FatDirectory {
     name: [u8; 11],
     flags: u8,
@@ -53,7 +53,7 @@ struct FatDirectory {
     size: u32,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 struct FatLongNameEntry {
     seq: u8,
     name: [u16; 5],

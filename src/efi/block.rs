@@ -17,7 +17,7 @@ use crate::{
 };
 
 #[allow(dead_code)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct ControllerDevicePathProtocol {
     pub device_path: DevicePathProtocol,
     pub controller: u32,
