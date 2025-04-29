@@ -121,7 +121,7 @@ impl<'a> BlockWrapper<'a> {
         start_lba: u64,
         last_lba: u64,
         uuid: [u8; 16],
-    ) -> *mut BlockWrapper {
+    ) -> *mut BlockWrapper<'a> {
         let last_block = (*block).get_capacity() - 1;
 
         let (status, new_address) = super::ALLOCATOR

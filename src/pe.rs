@@ -42,7 +42,7 @@ impl<'a> Loader<'a> {
     ))]
     const OPTIONAL_HEADER_MAGIC: u16 = 0x20b; // PE32+
 
-    pub fn new(file: &'a mut dyn crate::fat::Read) -> Loader {
+    pub fn new(file: &'a mut dyn crate::fat::Read) -> Loader<'a> {
         Loader {
             file,
             num_sections: 0,

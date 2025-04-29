@@ -629,7 +629,7 @@ fn compare_name(name: &str, de: &DirectoryEntry) -> bool {
 }
 
 impl<'a> Filesystem<'a> {
-    pub fn new(device: &'a dyn SectorRead, start: u64, last: u64) -> Filesystem {
+    pub fn new(device: &'a dyn SectorRead, start: u64, last: u64) -> Filesystem<'a> {
         Filesystem {
             device,
             start,
