@@ -46,7 +46,9 @@ pub static mut RS: SyncUnsafeCell<efi::RuntimeServices> =
 
 #[allow(clippy::missing_transmute_annotations)]
 unsafe fn fixup_at_virtual(descriptors: &[MemoryDescriptor]) {
+    #[allow(static_mut_refs)]
     let st = ST.get_mut();
+    #[allow(static_mut_refs)]
     let rs = RS.get_mut();
 
     let ptr = ALLOCATOR

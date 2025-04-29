@@ -168,6 +168,7 @@ fn new_image_handle(
         proto: LoadedImageProtocol {
             revision: r_efi::protocols::loaded_image::REVISION,
             parent_handle,
+            #[allow(static_mut_refs)]
             system_table: unsafe { ST.get_mut() },
             device_handle,
             file_path,
@@ -195,6 +196,7 @@ pub fn efi_exec(
 ) {
     let vendor_data = 0u32;
 
+    #[allow(static_mut_refs)]
     let ct = unsafe { CT.get_mut() };
     let mut ct_index = 0;
 
@@ -250,24 +252,31 @@ pub fn efi_exec(
 
     let mut stdin = console::STDIN;
     let mut stdout = console::STDOUT;
+    #[allow(static_mut_refs)]
     let st = unsafe { ST.get_mut() };
     st.con_in = &mut stdin;
     st.con_out = &mut stdout;
     st.std_err = &mut stdout;
-    st.runtime_services = unsafe { RS.get_mut() };
-    st.boot_services = unsafe { BS.get_mut() };
+    st.runtime_services = unsafe {
+        #[allow(static_mut_refs)]
+        RS.get_mut()
+    };
+    st.boot_services = unsafe {
+        #[allow(static_mut_refs)]
+        BS.get_mut()
+    };
     st.number_of_table_entries = 1;
     st.configuration_table = &mut ct[0];
 
     populate_allocator(info, loaded_address, loaded_size);
 
+    #[allow(static_mut_refs)]
     let efi_part_id = unsafe { block::populate_block_wrappers(BLOCK_WRAPPERS.get_mut(), block) };
 
     let wrapped_fs = file::FileSystemWrapper::new(fs, efi_part_id);
 
     let mut path = [0u8; 256];
-    path[0..crate::efi::EFI_BOOT_PATH.len()]
-        .copy_from_slice(crate::efi::EFI_BOOT_PATH.as_bytes());
+    path[0..crate::efi::EFI_BOOT_PATH.len()].copy_from_slice(crate::efi::EFI_BOOT_PATH.as_bytes());
     let device_path = DevicePath::File(path);
     let image = new_image_handle(
         device_path.generate(),

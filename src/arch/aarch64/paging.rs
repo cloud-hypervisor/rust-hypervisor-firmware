@@ -277,13 +277,17 @@ impl interface::Mmu for MemoryManagementUnit {
         self.setup_mair();
 
         // Populate translation tables.
+        #[allow(static_mut_refs)]
         KERNEL_TABLES
             .get_mut()
             .populate_tt_entries()
             .map_err(MmuEnableError::Other)?;
 
         // Set the "Translation Table Base Register".
-        TTBR0_EL1.set_baddr(KERNEL_TABLES.get_mut().phys_base_address());
+        TTBR0_EL1.set_baddr(
+            #[allow(static_mut_refs)]
+            KERNEL_TABLES.get_mut().phys_base_address(),
+        );
 
         self.configure_translation_control();
 

@@ -275,6 +275,7 @@ pub extern "efiapi" fn locate_handle(
     handles: *mut Handle,
 ) -> Status {
     if unsafe { *guid } == r_efi::protocols::block_io::PROTOCOL_GUID {
+        #[allow(static_mut_refs)]
         let count = unsafe { BLOCK_WRAPPERS.get_mut().count };
         if unsafe { *size } < size_of::<Handle>() * count {
             unsafe { *size = size_of::<Handle>() * count };
@@ -286,7 +287,8 @@ pub extern "efiapi" fn locate_handle(
 
         let wrappers_as_handles: &[Handle] = unsafe {
             core::slice::from_raw_parts_mut(
-                BLOCK_WRAPPERS.get_mut().wrappers.as_mut_ptr() as *mut Handle,
+                (#[allow(static_mut_refs)]
+                BLOCK_WRAPPERS.get_mut().wrappers.as_mut_ptr()) as *mut Handle,
                 count,
             )
         };
@@ -310,7 +312,9 @@ pub extern "efiapi" fn locate_device_path(
 }
 
 pub extern "efiapi" fn install_configuration_table(guid: *mut Guid, table: *mut c_void) -> Status {
+    #[allow(static_mut_refs)]
     let st = unsafe { ST.get_mut() };
+    #[allow(static_mut_refs)]
     let ct = unsafe { CT.get_mut() };
 
     for entry in ct.iter_mut() {
@@ -436,6 +440,7 @@ pub extern "efiapi" fn start_image(
     let ptr = address as *const ();
     let code: extern "efiapi" fn(Handle, *mut efi::SystemTable) -> Status =
         unsafe { core::mem::transmute(ptr) };
+    #[allow(static_mut_refs)]
     (code)(image_handle, unsafe { ST.get() })
 }
 
@@ -521,7 +526,8 @@ pub extern "efiapi" fn open_protocol(
     {
         unsafe {
             if let Some(block_part_id) = (*(handle as *mut file::FileSystemWrapper)).block_part_id {
-                *out = (&mut (*(BLOCK_WRAPPERS.get_mut().wrappers[block_part_id as usize]))
+                *out = (&mut (*(#[allow(static_mut_refs)]
+                BLOCK_WRAPPERS.get_mut().wrappers[block_part_id as usize]))
                     .controller_path) as *mut _ as *mut c_void;
 
                 return Status::SUCCESS;
