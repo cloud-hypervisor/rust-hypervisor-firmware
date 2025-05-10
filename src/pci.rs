@@ -428,7 +428,6 @@ impl VirtioPciTransport {
 /// le64 queue_desc;                // 0x20 // read-write
 /// le64 queue_avail;               // 0x28 // read-write
 /// le64 queue_used;                // 0x30 // read-write
-
 impl VirtioTransport for VirtioPciTransport {
     fn init(&mut self, _device_type: u32) -> Result<(), VirtioError> {
         // Read status register
