@@ -412,37 +412,33 @@ mod tests {
         let mut s = String::new();
 
         let mut counter = 0;
-        loop {
-            if let Err(e) = (|| -> Result<(), SSHCommandError> {
-                let tcp =
-                    TcpStream::connect(format!("{ip}:22")).map_err(SSHCommandError::Connection)?;
-                let mut sess = ssh2::Session::new().unwrap();
-                sess.set_tcp_stream(tcp);
-                sess.handshake().map_err(SSHCommandError::Handshake)?;
+        while let Err(e) = (|| -> Result<(), SSHCommandError> {
+            let tcp =
+                TcpStream::connect(format!("{ip}:22")).map_err(SSHCommandError::Connection)?;
+            let mut sess = ssh2::Session::new().unwrap();
+            sess.set_tcp_stream(tcp);
+            sess.handshake().map_err(SSHCommandError::Handshake)?;
 
-                sess.userauth_password(&auth.username, &auth.password)
-                    .map_err(SSHCommandError::Authentication)?;
-                assert!(sess.authenticated());
+            sess.userauth_password(&auth.username, &auth.password)
+                .map_err(SSHCommandError::Authentication)?;
+            assert!(sess.authenticated());
 
-                let mut channel = sess
-                    .channel_session()
-                    .map_err(SSHCommandError::ChannelSession)?;
-                channel.exec(command).map_err(SSHCommandError::Command)?;
+            let mut channel = sess
+                .channel_session()
+                .map_err(SSHCommandError::ChannelSession)?;
+            channel.exec(command).map_err(SSHCommandError::Command)?;
 
-                // Intentionally ignore these results here as their failure
-                // does not precipitate a repeat
-                let _ = channel.read_to_string(&mut s);
-                let _ = channel.close();
-                let _ = channel.wait_close();
-                Ok(())
-            })() {
-                counter += 1;
-                if counter >= retries {
-                    return Err(e);
-                }
-            } else {
-                break;
-            };
+            // Intentionally ignore these results here as their failure
+            // does not precipitate a repeat
+            let _ = channel.read_to_string(&mut s);
+            let _ = channel.close();
+            let _ = channel.wait_close();
+            Ok(())
+        })() {
+            counter += 1;
+            if counter >= retries {
+                return Err(e);
+            }
             thread::sleep(std::time::Duration::new((timeout * counter).into(), 0));
         }
         Ok(s)
