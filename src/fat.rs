@@ -855,7 +855,7 @@ impl<'a> Filesystem<'a> {
         let mut p = [0_u8; 256];
         let mut residual = if !is_absolute_path(path) {
             p[0] = b'/';
-            p[1..1 + len].clone_from_slice(path[..len].as_bytes());
+            p[1..1 + len].clone_from_slice(&path.as_bytes()[..len]);
             core::str::from_utf8(&p).unwrap()
         } else {
             path
