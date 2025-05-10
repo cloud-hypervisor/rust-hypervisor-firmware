@@ -53,7 +53,7 @@ impl DevicePath {
                 error!("Unexpected end of device path");
                 return DevicePath::Unsupported;
             }
-            let len = unsafe { core::mem::transmute::<[u8; 2], u16>(dpp.length) };
+            let len = u16::from_ne_bytes(dpp.length);
             dpp = unsafe { &*((dpp as *const _ as u64 + len as u64) as *const _) };
         }
     }
