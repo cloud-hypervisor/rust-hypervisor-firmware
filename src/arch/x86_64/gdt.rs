@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2020 Google LLC
 
-use core::mem::size_of;
-
 bitflags::bitflags! {
     // An extension of x86_64::structures::gdt::DescriptorFlags
     struct Descriptor: u64 {
@@ -43,7 +41,7 @@ struct Pointer {
 
 impl Pointer {
     const fn new(gdt: &'static [Descriptor]) -> Self {
-        let size = gdt.len() * size_of::<Descriptor>();
+        let size = core::mem::size_of_val(gdt);
         Self {
             limit: size as u16 - 1,
             base: &gdt[0],
