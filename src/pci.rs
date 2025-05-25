@@ -153,10 +153,7 @@ pub fn print_bus() {
         if vendor_id == INVALID_VENDOR_ID {
             continue;
         }
-        info!(
-            "Found PCI device vendor={:x} device={:x} in slot={}",
-            vendor_id, device_id, device
-        );
+        info!("Found PCI device vendor={vendor_id:x} device={device_id:x} in slot={device}");
     }
 }
 

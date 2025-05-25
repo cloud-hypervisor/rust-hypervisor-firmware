@@ -113,7 +113,7 @@ fn boot_from_device(
     info: &dyn bootinfo::Info,
 ) -> Result<(), Error> {
     if let Err(err) = device.init() {
-        error!("Error configuring block device: {:?}", err);
+        error!("Error configuring block device: {err:?}");
         return Err(Error::Virtio(err));
     }
     info!(
@@ -124,7 +124,7 @@ fn boot_from_device(
     let (start, end) = match part::find_efi_partition(device) {
         Ok(p) => p,
         Err(err) => {
-            error!("Failed to find EFI partition: {:?}", err);
+            error!("Failed to find EFI partition: {err:?}");
             return Err(Error::Partition(err));
         }
     };
@@ -132,7 +132,7 @@ fn boot_from_device(
 
     let mut f = fat::Filesystem::new(device, start, end);
     if let Err(err) = f.init() {
-        error!("Failed to create filesystem: {:?}", err);
+        error!("Failed to create filesystem: {err:?}");
         return Err(Error::Fat(err));
     }
     info!("Filesystem ready");
@@ -144,7 +144,7 @@ fn boot_from_device(
             return Ok(());
         }
         Err(err) => {
-            warn!("Error loading default entry: {:?}", err);
+            warn!("Error loading default entry: {err:?}");
             // Fall through to EFI boot
         }
     }
@@ -154,7 +154,7 @@ fn boot_from_device(
     let mut file = match f.open(efi::EFI_BOOT_PATH) {
         Ok(file) => file,
         Err(err) => {
-            error!("Failed to load default EFI binary: {:?}", err);
+            error!("Failed to load default EFI binary: {err:?}");
             return Err(Error::Fat(err));
         }
     };
@@ -165,7 +165,7 @@ fn boot_from_device(
     let (entry_addr, load_addr, size) = match l.load(info.kernel_load_addr()) {
         Ok(load_info) => load_info,
         Err(err) => {
-            error!("Error loading executable: {:?}", err);
+            error!("Error loading executable: {err:?}");
             return Err(Error::Pe(err));
         }
     };
