@@ -27,7 +27,7 @@ pub fn setup() {
     // CR3. Thus, it is safe to run multiple times or on multiple threads.
     #[allow(static_mut_refs)]
     let (l4, l3, l2s) = unsafe { (L4_TABLE.get_mut(), L3_TABLE.get_mut(), L2_TABLES.get_mut()) };
-    info!("Setting up {} GiB identity mapping", ADDRESS_SPACE_GIB);
+    info!("Setting up {ADDRESS_SPACE_GIB} GiB identity mapping");
     let pt_flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
     // Setup Identity map using L2 huge pages
