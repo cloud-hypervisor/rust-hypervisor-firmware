@@ -6,16 +6,17 @@
   "eh-frame-header": false,
   "emit-debug-gdb-scripts": false,
   "features": "+m,+a,-f,+d,+c,-v",
-  "is-builtin": false,
   "linker": "rust-lld",
-  "linker-flavor": "ld.lld",
+  "linker-flavor": "gnu-lld",
   "llvm-abiname": "lp64d",
   "llvm-target": "riscv64",
   "max-atomic-width": 64,
   "panic-strategy": "abort",
   "relocation-model": "static",
   "target-pointer-width": "64",
-    "pre-link-args": {
-    "ld.lld": ["--script=riscv64gcv-unknown-none-elf.ld"]
+  "pre-link-args": {
+    "gnu-lld": [
+      "--script=riscv64gcv-unknown-none-elf.ld"
+    ]
   }
 }

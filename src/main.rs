@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright © 2019 Intel Corporation
 
-#![feature(asm_const)]
-#![feature(exposed_provenance)]
-#![feature(slice_take)]
 #![feature(stmt_expr_attributes)]
-#![feature(strict_provenance)]
 #![feature(sync_unsafe_cell)]
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
