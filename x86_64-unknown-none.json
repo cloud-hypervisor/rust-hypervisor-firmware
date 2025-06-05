@@ -8,13 +8,16 @@
   "os": "none",
   "executables": true,
   "linker": "rust-lld",
-  "linker-flavor": "ld.lld",
+  "linker-flavor": "gnu-lld",
   "panic-strategy": "abort",
   "disable-redzone": true,
   "features": "-mmx,-sse,+soft-float",
   "code-model": "small",
   "relocation-model": "pic",
+  "rustc-abi": "x86-softfloat",
   "pre-link-args": {
-    "ld.lld": ["--script=x86_64-unknown-none.ld"]
+    "gnu-lld": [
+      "--script=x86_64-unknown-none.ld"
+    ]
   }
 }
