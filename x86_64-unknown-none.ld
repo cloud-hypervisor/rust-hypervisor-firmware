@@ -28,6 +28,7 @@ SECTIONS
 
   data_start = .;
   .data   : { *(.data .data.*)     }
+  .got    : { *(.got .got.*)       }
 
   /* The BSS section isn't mapped from file data. It is just zeroed in RAM. */
   .bss : {

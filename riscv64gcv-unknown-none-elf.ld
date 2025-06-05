@@ -26,6 +26,7 @@ SECTIONS
   }
 
   .rodata     : { *(.rodata .rodata.*) }
+  .got        : { *(.got .got.*)       }
 
   /* The BSS section isn't mapped from file data. It is just zeroed in RAM. */
   .bss : {
