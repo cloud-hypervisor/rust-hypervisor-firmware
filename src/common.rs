@@ -17,7 +17,7 @@ macro_rules! container_of_mut {
 
 // SAFETY: Requires that addr point to a static, null-terminated C-string.
 // The returned slice does not include the null-terminator.
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", not(feature = "coreboot")))]
 pub unsafe fn from_cstring(addr: u64) -> &'static [u8] {
     if addr == 0 {
         return &[];
