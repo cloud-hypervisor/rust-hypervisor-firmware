@@ -61,7 +61,7 @@ mod mem;
 mod part;
 mod pci;
 mod pe;
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", not(feature = "coreboot")))]
 mod pvh;
 mod rtc;
 #[cfg(target_arch = "riscv64")]
