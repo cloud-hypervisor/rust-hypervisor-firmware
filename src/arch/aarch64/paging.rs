@@ -206,7 +206,7 @@ pub mod mair {
 /// # Safety
 ///
 /// - Supposed to land in `.bss`. Therefore, ensure that all initial member values boil down to "0".
-static mut KERNEL_TABLES: SyncUnsafeCell<TranslationTable> =
+static KERNEL_TABLES: SyncUnsafeCell<TranslationTable> =
     SyncUnsafeCell::new(TranslationTable::new());
 
 static MMU: MemoryManagementUnit = MemoryManagementUnit;
@@ -276,18 +276,15 @@ impl interface::Mmu for MemoryManagementUnit {
         // Prepare the memory attribute indirection register.
         self.setup_mair();
 
+        let kernel_tables = &mut *KERNEL_TABLES.get();
+
         // Populate translation tables.
-        #[allow(static_mut_refs)]
-        KERNEL_TABLES
-            .get_mut()
+        kernel_tables
             .populate_tt_entries()
             .map_err(MmuEnableError::Other)?;
 
         // Set the "Translation Table Base Register".
-        TTBR0_EL1.set_baddr(
-            #[allow(static_mut_refs)]
-            KERNEL_TABLES.get_mut().phys_base_address(),
-        );
+        TTBR0_EL1.set_baddr(kernel_tables.phys_base_address());
 
         self.configure_translation_control();
 

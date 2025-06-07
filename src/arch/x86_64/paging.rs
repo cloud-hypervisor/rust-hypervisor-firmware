@@ -15,18 +15,23 @@ const TABLE: PageTable = PageTable::new();
 
 // Put the Page Tables in static muts to make linking easier
 #[no_mangle]
-static mut L4_TABLE: SyncUnsafeCell<PageTable> = SyncUnsafeCell::new(PageTable::new());
+static L4_TABLE: SyncUnsafeCell<PageTable> = SyncUnsafeCell::new(PageTable::new());
 #[no_mangle]
-static mut L3_TABLE: SyncUnsafeCell<PageTable> = SyncUnsafeCell::new(PageTable::new());
+static L3_TABLE: SyncUnsafeCell<PageTable> = SyncUnsafeCell::new(PageTable::new());
 #[no_mangle]
-static mut L2_TABLES: SyncUnsafeCell<[PageTable; ADDRESS_SPACE_GIB]> =
+static L2_TABLES: SyncUnsafeCell<[PageTable; ADDRESS_SPACE_GIB]> =
     SyncUnsafeCell::new([TABLE; ADDRESS_SPACE_GIB]);
 
 pub fn setup() {
     // SAFETY: This function is idempontent and only writes to static memory and
     // CR3. Thus, it is safe to run multiple times or on multiple threads.
-    #[allow(static_mut_refs)]
-    let (l4, l3, l2s) = unsafe { (L4_TABLE.get_mut(), L3_TABLE.get_mut(), L2_TABLES.get_mut()) };
+    let (l4, l3, l2s) = unsafe {
+        (
+            &mut *L4_TABLE.get(),
+            &mut *L3_TABLE.get(),
+            &mut *L2_TABLES.get(),
+        )
+    };
     info!("Setting up {ADDRESS_SPACE_GIB} GiB identity mapping");
     let pt_flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
