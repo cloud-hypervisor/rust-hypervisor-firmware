@@ -10,7 +10,7 @@ make_test_disks "$WORKLOADS_DIR"
 
 CLEAR_OS_VERSION="28660"
 CLEAR_OS_IMAGE_XZ_NAME="clear-$CLEAR_OS_VERSION-kvm.img.xz"
-CLEAR_OS_IMAGE_XZ_URL="https://download.clearlinux.org/releases/$CLEAR_OS_VERSION/clear/$CLEAR_OS_IMAGE_XZ_NAME"
+CLEAR_OS_IMAGE_XZ_URL="https://ch-images.azureedge.net/$CLEAR_OS_IMAGE_XZ_NAME"
 CLEAR_OS_IMAGE_XZ="$WORKLOADS_DIR/$CLEAR_OS_IMAGE_XZ_NAME"
 if [ ! -f "$CLEAR_OS_IMAGE_XZ" ]; then
     pushd $WORKLOADS_DIR
