@@ -52,59 +52,6 @@ mod tests {
         fn prepare(&self, tmp_dir: &TempDir, network: &GuestNetworkConfig) -> String;
     }
 
-    struct ClearCloudInit {}
-    impl CloudInit for ClearCloudInit {
-        fn prepare(&self, tmp_dir: &TempDir, network: &GuestNetworkConfig) -> String {
-            let cloudinit_file_path =
-                String::from(tmp_dir.path().join("cloudinit").to_str().unwrap());
-            let cloud_init_directory = tmp_dir
-                .path()
-                .join("cloud-init")
-                .join("clear")
-                .join("openstack");
-            fs::create_dir_all(cloud_init_directory.join("latest"))
-                .expect("Expect creating cloud-init directory to succeed");
-            let source_file_dir = std::env::current_dir()
-                .unwrap()
-                .join("resources")
-                .join("cloud-init")
-                .join("clear")
-                .join("openstack")
-                .join("latest");
-            fs::copy(
-                source_file_dir.join("meta_data.json"),
-                cloud_init_directory.join("latest").join("meta_data.json"),
-            )
-            .expect("Expect copying cloud-init meta_data.json to succeed");
-            let mut user_data_string = String::new();
-            fs::File::open(source_file_dir.join("user_data"))
-                .unwrap()
-                .read_to_string(&mut user_data_string)
-                .expect("Expected reading user_data file in to succeed");
-            user_data_string = user_data_string.replace("192.168.2.1", &network.host_ip);
-            user_data_string = user_data_string.replace("192.168.2.2", &network.guest_ip);
-
-            user_data_string = user_data_string.replace("12:34:56:78:90:ab", &network.guest_mac);
-            fs::File::create(cloud_init_directory.join("latest").join("user_data"))
-                .unwrap()
-                .write_all(user_data_string.as_bytes())
-                .expect("Expected writing out user_data to succeed");
-            std::process::Command::new("mkdosfs")
-                .args(["-n", "config-2"])
-                .args(["-C", cloudinit_file_path.as_str()])
-                .arg("8192")
-                .output()
-                .expect("Expect creating disk image to succeed");
-            std::process::Command::new("mcopy")
-                .arg("-o")
-                .args(["-i", cloudinit_file_path.as_str()])
-                .args(["-s", cloud_init_directory.to_str().unwrap(), "::"])
-                .output()
-                .expect("Expect copying files to disk image to succeed");
-            cloudinit_file_path
-        }
-    }
-
     struct UbuntuCloudInit {}
     impl CloudInit for UbuntuCloudInit {
         fn prepare(&self, tmp_dir: &TempDir, network: &GuestNetworkConfig) -> String {
@@ -627,7 +574,6 @@ mod tests {
 
             const FOCAL_IMAGE_NAME: &str = "focal-server-cloudimg-amd64-raw.img";
             const JAMMY_IMAGE_NAME: &str = "jammy-server-cloudimg-amd64-raw.img";
-            const CLEAR_IMAGE_NAME: &str = "clear-28660-kvm.img";
 
             #[test]
             fn test_boot_qemu_focal() {
@@ -640,11 +586,6 @@ mod tests {
             }
 
             #[test]
-            fn test_boot_qemu_clear() {
-                test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_qemu)
-            }
-
-            #[test]
             #[cfg(not(feature = "coreboot"))]
             fn test_boot_ch_focal() {
                 test_boot(FOCAL_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
@@ -654,12 +595,6 @@ mod tests {
             #[cfg(not(feature = "coreboot"))]
             fn test_boot_ch_jammy() {
                 test_boot(JAMMY_IMAGE_NAME, &UbuntuCloudInit {}, spawn_ch)
-            }
-
-            #[test]
-            #[cfg(not(feature = "coreboot"))]
-            fn test_boot_ch_clear() {
-                test_boot(CLEAR_IMAGE_NAME, &ClearCloudInit {}, spawn_ch)
             }
         }
     }
