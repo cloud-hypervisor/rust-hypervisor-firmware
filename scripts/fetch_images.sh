@@ -59,23 +59,12 @@ fetch_raw_ubuntu_image() {
     convert_image "$OS_IMAGE_NAME" "$OS_RAW_IMAGE_NAME"
 }
 
-fetch_clear_image() {
-    OS_VERSION="$1"
-    OS_IMAGE_NAME="clear-$OS_VERSION-kvm.img"
-    OS_IMAGE_BASE="https://ch-images.azureedge.net"
-    OS_IMAGE_URL="$OS_IMAGE_BASE/$OS_IMAGE_NAME.xz"
-    fetch_image "$OS_IMAGE_NAME" "$OS_IMAGE_URL"
-    xz -d "$OS_IMAGE_NAME.xz"
-}
-
 aarch64_fetch_disk_images() {
     fetch_raw_ubuntu_image "focal" "arm64" "current"
     fetch_raw_ubuntu_image "jammy" "arm64" "current"
 }
 
 x86_64_fetch_disk_images() {
-    fetch_clear_image "28660"
-
     fetch_raw_ubuntu_image "focal" "amd64" "current"
     fetch_raw_ubuntu_image "jammy" "amd64" "current"
 }
