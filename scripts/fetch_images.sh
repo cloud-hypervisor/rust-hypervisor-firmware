@@ -61,8 +61,8 @@ fetch_raw_ubuntu_image() {
 
 fetch_clear_image() {
     OS_VERSION="$1"
-    OS_IMAGE_NAME="clear-$OS_VERSION-cloudguest.img"
-    OS_IMAGE_BASE="https://cdn.download.clearlinux.org/releases/$OS_VERSION/clear"
+    OS_IMAGE_NAME="clear-$OS_VERSION-kvm.img"
+    OS_IMAGE_BASE="https://ch-images.azureedge.net"
     OS_IMAGE_URL="$OS_IMAGE_BASE/$OS_IMAGE_NAME.xz"
     fetch_image "$OS_IMAGE_NAME" "$OS_IMAGE_URL"
     xz -d "$OS_IMAGE_NAME.xz"
@@ -74,7 +74,7 @@ aarch64_fetch_disk_images() {
 }
 
 x86_64_fetch_disk_images() {
-    fetch_clear_image "31310"
+    fetch_clear_image "28660"
 
     fetch_raw_ubuntu_image "focal" "amd64" "current"
     fetch_raw_ubuntu_image "jammy" "amd64" "current"
