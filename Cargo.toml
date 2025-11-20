@@ -40,7 +40,7 @@ chrono = { version = "0.4", default-features = false }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 uart_16550 = "0.4.0"
-x86_64 = { version = "0.15.2", default-features = false, features = [
+x86_64 = { version = "0.15.3", default-features = false, features = [
     "instructions",
 ] }
 
