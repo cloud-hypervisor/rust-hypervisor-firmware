@@ -4,9 +4,9 @@
 use core::cell::SyncUnsafeCell;
 use log::info;
 use x86_64::{
+    PhysAddr,
     registers::control::Cr3,
     structures::paging::{PageSize, PageTable, PageTableFlags, PhysFrame, Size2MiB},
-    PhysAddr,
 };
 
 // Amount of memory we identity map in setup(), max 512 GiB.

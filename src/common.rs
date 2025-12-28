@@ -3,16 +3,12 @@
 
 #[macro_export]
 macro_rules! container_of {
-    ($ptr:ident, $container:ty, $field:ident) => {{
-        (($ptr as usize) - core::mem::offset_of!($container, $field)) as *const $container
-    }};
+    ($ptr:ident, $container:ty, $field:ident) => {{ (($ptr as usize) - core::mem::offset_of!($container, $field)) as *const $container }};
 }
 
 #[macro_export]
 macro_rules! container_of_mut {
-    ($ptr:ident, $container:ty, $field:ident) => {{
-        (($ptr as usize) - core::mem::offset_of!($container, $field)) as *mut $container
-    }};
+    ($ptr:ident, $container:ty, $field:ident) => {{ (($ptr as usize) - core::mem::offset_of!($container, $field)) as *mut $container }};
 }
 
 // SAFETY: Requires that addr point to a static, null-terminated C-string.
