@@ -178,7 +178,7 @@ fn boot_from_device(
 }
 
 #[cfg(target_arch = "x86_64")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh::StartInfo) -> ! {
     serial::PORT.borrow_mut().init();
     logger::init();
@@ -196,7 +196,7 @@ pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh:
 }
 
 #[cfg(target_arch = "aarch64")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn rust64_start(x0: *const u8) -> ! {
     arch::aarch64::simd::setup_simd();
     arch::aarch64::paging::setup();
@@ -221,7 +221,7 @@ pub extern "C" fn rust64_start(x0: *const u8) -> ! {
 }
 
 #[cfg(target_arch = "riscv64")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn rust64_start(a0: u64, a1: *const u8) -> ! {
     use crate::bootinfo::{EntryType, Info, MemoryEntry};
 

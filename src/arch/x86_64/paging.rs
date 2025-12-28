@@ -14,11 +14,11 @@ const ADDRESS_SPACE_GIB: usize = 4;
 const TABLE: PageTable = PageTable::new();
 
 // Put the Page Tables in static muts to make linking easier
-#[no_mangle]
+#[unsafe(no_mangle)]
 static L4_TABLE: SyncUnsafeCell<PageTable> = SyncUnsafeCell::new(PageTable::new());
-#[no_mangle]
+#[unsafe(no_mangle)]
 static L3_TABLE: SyncUnsafeCell<PageTable> = SyncUnsafeCell::new(PageTable::new());
-#[no_mangle]
+#[unsafe(no_mangle)]
 static L2_TABLES: SyncUnsafeCell<[PageTable; ADDRESS_SPACE_GIB]> =
     SyncUnsafeCell::new([TABLE; ADDRESS_SPACE_GIB]);
 
