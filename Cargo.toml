@@ -2,7 +2,7 @@
 name = "hypervisor-fw"
 version = "0.5.0"
 authors = ["The Rust Hypervisor Firmware Authors"]
-edition = "2021"
+edition = "2024"
 
 # Despite "panic-strategy": "abort" being set in x86_64-unknown-none.json, panic = "abort" is
 # needed here to make "cargo check" and "cargo clippy" run without errors.
