@@ -7,7 +7,7 @@
 #[cfg(feature = "integration_tests")]
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
+    use rand::RngExt;
     use std::fs;
     use std::io::{Read, Write};
     use std::net::TcpStream;
