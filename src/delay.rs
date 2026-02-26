@@ -12,7 +12,7 @@ use core::arch::x86_64::_rdtsc;
 #[inline]
 unsafe fn rdtsc() -> u64 {
     let value: u64;
-    asm!("mrs {}, cntvct_el0", out(reg) value);
+    unsafe { asm!("mrs {}, cntvct_el0", out(reg) value) };
     value
 }
 
@@ -26,19 +26,19 @@ unsafe fn rdtsc() -> u64 {
 #[cfg(target_arch = "x86_64")]
 #[inline]
 unsafe fn rdtsc() -> u64 {
-    _rdtsc()
+    unsafe { _rdtsc() }
 }
 
 #[cfg(target_arch = "aarch64")]
 #[inline]
 unsafe fn pause() {
-    asm!("yield");
+    unsafe { asm!("yield") }
 }
 
 #[cfg(target_arch = "x86_64")]
 #[inline]
 unsafe fn pause() {
-    asm!("pause");
+    unsafe { asm!("pause") }
 }
 
 pub fn ndelay(ns: u64) {

@@ -76,8 +76,8 @@ impl Info for StartInfo {
 }
 
 // The PVH Boot Protocol starts at the 32-bit entrypoint to our firmware.
-extern "C" {
-    fn ram32_start();
+unsafe extern "C" {
+    unsafe fn ram32_start();
 }
 
 // The kind/name/desc of the PHV ELF Note are from xen/include/public/elfnote.h.
@@ -99,7 +99,7 @@ struct Note {
 
 // This is: ELFNOTE(Xen, XEN_ELFNOTE_PHYS32_ENTRY, .quad ram32_start)
 #[cfg(not(test))]
-#[link_section = ".note"]
+#[unsafe(link_section = ".note")]
 #[used]
 static PVH_NOTE: Note = Note {
     name_size: size_of::<Name>() as u32,

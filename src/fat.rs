@@ -903,7 +903,7 @@ impl<'a> Filesystem<'a> {
                                     break;
                                 }
                                 FileType::File => {
-                                    return Ok(self.get_file(de.cluster, de.size).unwrap().into())
+                                    return Ok(self.get_file(de.cluster, de.size).unwrap().into());
                                 }
                             }
                         }
