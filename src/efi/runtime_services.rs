@@ -196,8 +196,32 @@ pub extern "efiapi" fn get_next_high_mono_count(_: *mut u32) -> Status {
     Status::DEVICE_ERROR
 }
 
-pub extern "efiapi" fn reset_system(_: ResetType, _: Status, _: usize, _: *mut c_void) {
-    // Don't do anything to force the kernel to use ACPI for shutdown and triple-fault for reset
+pub extern "efiapi" fn reset_system(_reset_type: ResetType, _: Status, _: usize, _: *mut c_void) {
+    #[cfg(target_arch = "x86_64")]
+    {
+        // Cloud Hypervisor's AcpiShutdownDevice is at IO port 0x600.
+        const SHUTDOWN_PORT: u16 = 0x600;
+        const S5_SLEEP_VALUE: u8 = (5 << 2) | (1 << 5); // SLP_TYP=5, SLP_EN=1
+        const REBOOT_VALUE: u8 = 1;
+
+        let value = if _reset_type == efi::RESET_SHUTDOWN {
+            S5_SLEEP_VALUE
+        } else {
+            REBOOT_VALUE
+        };
+        unsafe {
+            core::arch::asm!("out dx, al", in("dx") SHUTDOWN_PORT, in("al") value);
+        }
+    }
+
+    loop {
+        #[cfg(target_arch = "x86_64")]
+        unsafe {
+            core::arch::asm!("hlt");
+        }
+        #[cfg(not(target_arch = "x86_64"))]
+        core::hint::spin_loop();
+    }
 }
 
 pub extern "efiapi" fn update_capsule(
