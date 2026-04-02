@@ -38,7 +38,7 @@ pub static mut RS: SyncUnsafeCell<efi::RuntimeServices> =
         get_next_variable_name,
         set_variable,
         get_next_high_mono_count,
-        reset_system,
+        reset_system: reset_system_boot,
         update_capsule,
         query_capsule_capabilities,
         query_variable_info,
@@ -62,7 +62,11 @@ unsafe fn fixup_at_virtual(descriptors: &[MemoryDescriptor]) {
     rs.get_variable = transmute(ptr);
     rs.set_variable = transmute(ptr);
     rs.get_next_variable_name = transmute(ptr);
-    rs.reset_system = transmute(ptr);
+    let reset_ptr = ALLOCATOR
+        .borrow()
+        .convert_internal_pointer(descriptors, (reset_system as *const ()) as u64)
+        .unwrap();
+    rs.reset_system = transmute(reset_ptr);
     rs.update_capsule = transmute(ptr);
     rs.query_capsule_capabilities = transmute(ptr);
     rs.query_variable_info = transmute(ptr);
@@ -196,10 +200,24 @@ pub extern "efiapi" fn get_next_high_mono_count(_: *mut u32) -> Status {
     Status::DEVICE_ERROR
 }
 
+// No-op used during boot services phase. EFI applications like shim may call
+// ResetSystem during early boot (e.g. on MOK import failure). Returning here
+// lets them continue, matching the original firmware behavior.
+pub extern "efiapi" fn reset_system_boot(
+    _: ResetType,
+    _: Status,
+    _: usize,
+    _: *mut c_void,
+) {
+}
+
+// Activated after ExitBootServices via swap_reset_system(). Writes to Cloud
+// Hypervisor's AcpiShutdownDevice at IO port 0x600 to perform the actual
+// VM shutdown or reset. On non-CH platforms the port write is a no-op and
+// the function falls through to a halt loop.
 pub extern "efiapi" fn reset_system(_reset_type: ResetType, _: Status, _: usize, _: *mut c_void) {
     #[cfg(target_arch = "x86_64")]
     {
-        // Cloud Hypervisor's AcpiShutdownDevice is at IO port 0x600.
         const SHUTDOWN_PORT: u16 = 0x600;
         const S5_SLEEP_VALUE: u8 = (5 << 2) | (1 << 5); // SLP_TYP=5, SLP_EN=1
         const REBOOT_VALUE: u8 = 1;
@@ -222,6 +240,14 @@ pub extern "efiapi" fn reset_system(_reset_type: ResetType, _: Status, _: usize,
         #[cfg(not(target_arch = "x86_64"))]
         core::hint::spin_loop();
     }
+}
+
+/// Switch the runtime services table from the boot-phase no-op to the real
+/// reset_system implementation. Called from exit_boot_services.
+pub unsafe fn swap_reset_system() {
+    #[allow(static_mut_refs)]
+    let rs = RS.get_mut();
+    rs.reset_system = reset_system;
 }
 
 pub extern "efiapi" fn update_capsule(
