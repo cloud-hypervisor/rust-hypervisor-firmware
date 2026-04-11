@@ -203,13 +203,7 @@ pub extern "efiapi" fn get_next_high_mono_count(_: *mut u32) -> Status {
 // No-op used during boot services phase. EFI applications like shim may call
 // ResetSystem during early boot (e.g. on MOK import failure). Returning here
 // lets them continue, matching the original firmware behavior.
-pub extern "efiapi" fn reset_system_boot(
-    _: ResetType,
-    _: Status,
-    _: usize,
-    _: *mut c_void,
-) {
-}
+pub extern "efiapi" fn reset_system_boot(_: ResetType, _: Status, _: usize, _: *mut c_void) {}
 
 // Activated after ExitBootServices via swap_reset_system(). Writes to Cloud
 // Hypervisor's AcpiShutdownDevice at IO port 0x600 to perform the actual
