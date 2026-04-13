@@ -179,9 +179,7 @@ fn boot_from_device(
 
 #[cfg(target_arch = "x86_64")]
 #[no_mangle]
-pub extern "C" fn rust64_start(
-    #[cfg(not(feature = "coreboot"))] pvh_info: &::pvh::start_info::StartInfo,
-) -> ! {
+pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] start_info_paddr: u32) -> ! {
     serial::PORT.borrow_mut().init();
     logger::init();
 
@@ -189,12 +187,14 @@ pub extern "C" fn rust64_start(
     arch::x86_64::paging::setup();
 
     #[cfg(feature = "coreboot")]
-    let info = &coreboot::StartInfo::default();
+    let info = coreboot::StartInfo::default();
 
     #[cfg(not(feature = "coreboot"))]
-    let info = pvh_info;
+    let info = unsafe {
+        ::pvh::start_info::reader::StartInfoReader::from_paddr_identity(start_info_paddr).unwrap()
+    };
 
-    main(info)
+    main(&info)
 }
 
 #[cfg(target_arch = "aarch64")]

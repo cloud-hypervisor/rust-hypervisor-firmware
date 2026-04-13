@@ -39,7 +39,7 @@ fdt = "0.1.5"
 chrono = { version = "0.4", default-features = false }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
-pvh = { version = "0.1", default-features = false, features = ["elfnote"] }
+pvh = "0.1"
 uart_16550 = "0.4.0"
 x86_64 = { version = "0.15.4", default-features = false, features = [
     "instructions",
