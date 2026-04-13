@@ -180,7 +180,7 @@ fn boot_from_device(
 #[cfg(target_arch = "x86_64")]
 #[no_mangle]
 pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh::StartInfo) -> ! {
-    serial::PORT.borrow_mut().init();
+    serial::init();
     logger::init();
 
     arch::x86_64::sse::enable_sse();
@@ -202,7 +202,7 @@ pub extern "C" fn rust64_start(x0: *const u8) -> ! {
     arch::aarch64::paging::setup();
 
     // Use atomic operation before MMU enabled may cause exception, see https://www.ipshop.xyz/5909.html
-    serial::PORT.borrow_mut().init();
+    serial::init();
     logger::init();
 
     let info = fdt::StartInfo::new(
@@ -225,7 +225,7 @@ pub extern "C" fn rust64_start(x0: *const u8) -> ! {
 pub extern "C" fn rust64_start(a0: u64, a1: *const u8) -> ! {
     use crate::bootinfo::{EntryType, Info, MemoryEntry};
 
-    serial::PORT.borrow_mut().init();
+    serial::init();
     logger::init();
 
     info!("Starting on RV64 0x{:x} 0x{:x}", a0, a1 as u64,);
