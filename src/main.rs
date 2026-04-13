@@ -179,7 +179,9 @@ fn boot_from_device(
 
 #[cfg(target_arch = "x86_64")]
 #[no_mangle]
-pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh::StartInfo) -> ! {
+pub extern "C" fn rust64_start(
+    #[cfg(not(feature = "coreboot"))] pvh_info: &::pvh::start_info::StartInfo,
+) -> ! {
     serial::PORT.borrow_mut().init();
     logger::init();
 
