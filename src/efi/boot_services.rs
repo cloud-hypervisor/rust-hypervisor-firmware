@@ -453,6 +453,9 @@ pub extern "efiapi" fn unload_image(_: Handle) -> Status {
 }
 
 pub extern "efiapi" fn exit_boot_services(_: Handle, _: usize) -> Status {
+    unsafe {
+        super::runtime_services::swap_reset_system();
+    }
     Status::SUCCESS
 }
 
