@@ -3,16 +3,12 @@
 
 #[macro_export]
 macro_rules! container_of {
-    ($ptr:ident, $container:ty, $field:ident) => {{
-        (($ptr as usize) - core::mem::offset_of!($container, $field)) as *const $container
-    }};
+    ($ptr:ident, $container:ty, $field:ident) => {{ (($ptr as usize) - core::mem::offset_of!($container, $field)) as *const $container }};
 }
 
 #[macro_export]
 macro_rules! container_of_mut {
-    ($ptr:ident, $container:ty, $field:ident) => {{
-        (($ptr as usize) - core::mem::offset_of!($container, $field)) as *mut $container
-    }};
+    ($ptr:ident, $container:ty, $field:ident) => {{ (($ptr as usize) - core::mem::offset_of!($container, $field)) as *mut $container }};
 }
 
 // SAFETY: Requires that addr point to a static, null-terminated C-string.
@@ -24,10 +20,10 @@ pub unsafe fn from_cstring(addr: u64) -> &'static [u8] {
     }
     let start = addr as *const u8;
     let mut size: usize = 0;
-    while start.add(size).read() != 0 {
+    while unsafe { start.add(size).read() } != 0 {
         size += 1;
     }
-    core::slice::from_raw_parts(start, size)
+    unsafe { core::slice::from_raw_parts(start, size) }
 }
 
 pub fn ascii_strip(s: &[u8]) -> &str {

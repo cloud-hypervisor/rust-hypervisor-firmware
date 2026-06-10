@@ -13,7 +13,7 @@ use r_efi::{
 
 use crate::{
     block::{SectorBuf, VirtioBlockDevice},
-    part::{get_partitions, PartitionEntry},
+    part::{PartitionEntry, get_partitions},
 };
 
 #[allow(dead_code)]
