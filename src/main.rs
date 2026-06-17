@@ -185,6 +185,7 @@ pub extern "C" fn rust64_start(#[cfg(not(feature = "coreboot"))] pvh_info: &pvh:
 
     arch::x86_64::sse::enable_sse();
     arch::x86_64::paging::setup();
+    arch::x86_64::vmx::enable_feature_control();
 
     #[cfg(feature = "coreboot")]
     let info = &coreboot::StartInfo::default();
