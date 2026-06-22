@@ -9,11 +9,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             coreboot-tests: true
           - runner: bookworm-arm64
             coreboot-tests: false
     steps:
+      - name: Remove stale build artifacts
+        run: |
+          sudo rm -rf build || true
       - name: Code checkout
         uses: actions/checkout@v4
         with:
