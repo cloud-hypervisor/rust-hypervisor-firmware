@@ -46,40 +46,42 @@ pub static mut RS: SyncUnsafeCell<efi::RuntimeServices> =
 
 #[allow(clippy::missing_transmute_annotations)]
 unsafe fn fixup_at_virtual(descriptors: &[MemoryDescriptor]) {
-    #[allow(static_mut_refs)]
-    let st = ST.get_mut();
-    #[allow(static_mut_refs)]
-    let rs = RS.get_mut();
+    unsafe {
+        #[allow(static_mut_refs)]
+        let st = ST.get_mut();
+        #[allow(static_mut_refs)]
+        let rs = RS.get_mut();
 
-    let ptr = ALLOCATOR
-        .borrow()
-        .convert_internal_pointer(descriptors, (not_available as *const ()) as u64)
-        .unwrap();
-    rs.get_time = transmute(ptr);
-    rs.set_time = transmute(ptr);
-    rs.get_wakeup_time = transmute(ptr);
-    rs.set_wakeup_time = transmute(ptr);
-    rs.get_variable = transmute(ptr);
-    rs.set_variable = transmute(ptr);
-    rs.get_next_variable_name = transmute(ptr);
-    rs.reset_system = transmute(ptr);
-    rs.update_capsule = transmute(ptr);
-    rs.query_capsule_capabilities = transmute(ptr);
-    rs.query_variable_info = transmute(ptr);
+        let ptr = ALLOCATOR
+            .borrow()
+            .convert_internal_pointer(descriptors, (not_available as *const ()) as u64)
+            .unwrap();
+        rs.get_time = transmute(ptr);
+        rs.set_time = transmute(ptr);
+        rs.get_wakeup_time = transmute(ptr);
+        rs.set_wakeup_time = transmute(ptr);
+        rs.get_variable = transmute(ptr);
+        rs.set_variable = transmute(ptr);
+        rs.get_next_variable_name = transmute(ptr);
+        rs.reset_system = transmute(ptr);
+        rs.update_capsule = transmute(ptr);
+        rs.query_capsule_capabilities = transmute(ptr);
+        rs.query_variable_info = transmute(ptr);
 
-    let ct = st.configuration_table;
-    let ptr = ALLOCATOR
-        .borrow()
-        .convert_internal_pointer(descriptors, (ct as *const _) as u64)
-        .unwrap();
-    st.configuration_table = ptr as *mut ConfigurationTable;
+        let ct = st.configuration_table;
+        let ptr = ALLOCATOR
+            .borrow()
+            .convert_internal_pointer(descriptors, (ct as *const _) as u64)
+            .unwrap();
+        st.configuration_table = ptr as *mut ConfigurationTable;
 
-    let rs = st.runtime_services;
-    let ptr = ALLOCATOR
-        .borrow()
-        .convert_internal_pointer(descriptors, (rs as *const _) as u64)
-        .unwrap();
-    st.runtime_services = ptr as *mut RuntimeServices;
+        let rs = st.runtime_services;
+        let ptr = ALLOCATOR
+            .borrow()
+            .convert_internal_pointer(descriptors, (rs as *const _) as u64)
+            .unwrap();
+        st.runtime_services = ptr as *mut RuntimeServices;
+    }
 }
 
 pub extern "efiapi" fn not_available() -> Status {

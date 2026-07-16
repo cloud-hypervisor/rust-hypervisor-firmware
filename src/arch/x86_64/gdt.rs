@@ -50,6 +50,6 @@ impl Pointer {
 }
 
 // Our 64-bit GDT lives in RAM, so it can be accessed like any other global.
-#[no_mangle]
+#[unsafe(no_mangle)]
 static GDT64_PTR: Pointer = Pointer::new(&GDT64);
 static GDT64: [Descriptor; 3] = [Descriptor::empty(), Descriptor::CODE64, Descriptor::DATA64];

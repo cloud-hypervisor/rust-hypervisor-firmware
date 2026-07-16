@@ -18,8 +18,8 @@ use r_efi::{eficall, eficall_abi};
 use crate::fat;
 
 use super::{
-    block, device_path::DevicePath, file, mem_file, new_image_handle, HandleType, HandleWrapper,
-    LoadedImageWrapper, ALLOCATOR, BLOCK_WRAPPERS, ST,
+    ALLOCATOR, BLOCK_WRAPPERS, HandleType, HandleWrapper, LoadedImageWrapper, ST, block,
+    device_path::DevicePath, file, mem_file, new_image_handle,
 };
 
 pub static mut BS: SyncUnsafeCell<efi::BootServices> = SyncUnsafeCell::new(efi::BootServices {

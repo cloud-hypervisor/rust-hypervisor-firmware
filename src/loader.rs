@@ -290,7 +290,10 @@ mod tests {
         assert_eq!(s, "/EFI/org.clearlinux/kernel-org.clearlinux.kvm.5.0.6-318");
         let s = super::ascii_strip(&entry.cmdline);
         let s = s.trim_matches(char::from(0));
-        assert_eq!(s, "root=PARTUUID=ae06d187-e9fc-4d3b-9e5b-8e6ff28e894f console=tty0 console=ttyS0,115200n8 console=hvc0 quiet init=/usr/lib/systemd/systemd-bootchart initcall_debug tsc=reliable no_timer_check noreplace-smp cryptomgr.notests rootfstype=ext4,btrfs,xfs kvm-intel.nested=1 rw");
+        assert_eq!(
+            s,
+            "root=PARTUUID=ae06d187-e9fc-4d3b-9e5b-8e6ff28e894f console=tty0 console=ttyS0,115200n8 console=hvc0 quiet init=/usr/lib/systemd/systemd-bootchart initcall_debug tsc=reliable no_timer_check noreplace-smp cryptomgr.notests rootfstype=ext4,btrfs,xfs kvm-intel.nested=1 rw"
+        );
     }
 
     macro_rules! entry_pattern_matches {
