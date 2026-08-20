@@ -12,14 +12,26 @@ use atomic_refcell::AtomicRefCell;
 use crate::{arch::aarch64::layout::map, uart_pl011::Pl011 as UartPl011};
 
 #[cfg(target_arch = "x86_64")]
-use uart_16550::SerialPort as Uart16550;
+use uart_16550::{backend::PioBackend, spec::registers::IER, BaudRate, Config, Uart16550Tty};
 
 #[cfg(target_arch = "riscv64")]
 use crate::uart_mmio::UartMmio;
 
-// We use COM1 as it is the standard first serial port.
 #[cfg(target_arch = "x86_64")]
-pub static PORT: AtomicRefCell<Uart16550> = AtomicRefCell::new(unsafe { Uart16550::new(0x3f8) });
+static PORT: AtomicRefCell<Option<Uart16550Tty<PioBackend>>> = AtomicRefCell::new(None);
+
+#[cfg(target_arch = "x86_64")]
+pub fn init() {
+    let config = Config {
+        baud_rate: BaudRate::Baud38400,
+        interrupts: IER::DATA_READY,
+        ..Config::default()
+    };
+    // SAFETY: COM1 is the standard first serial port, and PORT provides exclusive access.
+    let port = unsafe { Uart16550Tty::new_port(0x3f8, config) }
+        .expect("Failed to initialize the serial port");
+    *PORT.borrow_mut() = Some(port);
+}
 
 #[cfg(target_arch = "aarch64")]
 pub static PORT: AtomicRefCell<UartPl011> =
@@ -34,6 +46,15 @@ pub static PORT: AtomicRefCell<UartMmio> = AtomicRefCell::new(UartMmio::new(SERI
 pub struct Serial;
 impl fmt::Write for Serial {
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        #[cfg(target_arch = "x86_64")]
+        {
+            // Initialization can panic before the port is available for logging.
+            if let Some(port) = PORT.borrow_mut().as_mut() {
+                port.write_str(s)?;
+            }
+            Ok(())
+        }
+        #[cfg(not(target_arch = "x86_64"))]
         PORT.borrow_mut().write_str(s)
     }
 }
