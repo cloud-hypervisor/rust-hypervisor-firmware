@@ -268,6 +268,7 @@ cmd_build() {
 
     $DOCKER_RUNTIME run \
 	   --workdir "$CTR_RHF_ROOT_DIR" \
+	   --user "$(id -u):$(id -g)" \
 	   --rm \
 	   --volume $exported_device \
 	   --volume "$RHF_ROOT_DIR:$CTR_RHF_ROOT_DIR" $exported_volumes \
