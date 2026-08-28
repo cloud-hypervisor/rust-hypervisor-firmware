@@ -7,3 +7,4 @@ pub mod gdt;
 pub mod layout;
 pub mod paging;
 pub mod sse;
+pub mod vmx;
