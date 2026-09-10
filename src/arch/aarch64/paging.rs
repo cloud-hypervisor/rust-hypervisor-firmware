@@ -276,12 +276,14 @@ impl interface::Mmu for MemoryManagementUnit {
         // Prepare the memory attribute indirection register.
         self.setup_mair();
 
-        let kernel_tables = &mut *KERNEL_TABLES.get();
+        let kernel_tables = unsafe { &mut *KERNEL_TABLES.get() };
 
         // Populate translation tables.
-        kernel_tables
-            .populate_tt_entries()
-            .map_err(MmuEnableError::Other)?;
+        unsafe {
+            kernel_tables
+                .populate_tt_entries()
+                .map_err(MmuEnableError::Other)?;
+        }
 
         // Set the "Translation Table Base Register".
         TTBR0_EL1.set_baddr(kernel_tables.phys_base_address());

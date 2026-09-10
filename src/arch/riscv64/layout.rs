@@ -7,13 +7,13 @@ use core::{cell::UnsafeCell, ops::Range};
 
 use crate::layout::{MemoryAttribute, MemoryDescriptor, MemoryLayout};
 
-extern "Rust" {
-    static code_start: UnsafeCell<()>;
-    static code_end: UnsafeCell<()>;
-    static data_start: UnsafeCell<()>;
-    static data_end: UnsafeCell<()>;
-    static stack_start: UnsafeCell<()>;
-    static stack_end: UnsafeCell<()>;
+unsafe extern "Rust" {
+    unsafe static code_start: UnsafeCell<()>;
+    unsafe static code_end: UnsafeCell<()>;
+    unsafe static data_start: UnsafeCell<()>;
+    unsafe static data_end: UnsafeCell<()>;
+    unsafe static stack_start: UnsafeCell<()>;
+    unsafe static stack_end: UnsafeCell<()>;
 }
 
 pub fn code_range() -> Range<usize> {

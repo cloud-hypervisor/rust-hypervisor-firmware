@@ -257,40 +257,48 @@ mod tests {
     }
 
     fn prepare_tap(net: &GuestNetworkConfig) {
-        assert!(std::process::Command::new("bash")
-            .args([
-                "-c",
-                &format!("sudo ip tuntap add name {} mode tap", net.tap_name),
-            ])
-            .status()
-            .expect("Expected creating interface to work")
-            .success());
+        assert!(
+            std::process::Command::new("bash")
+                .args([
+                    "-c",
+                    &format!("sudo ip tuntap add name {} mode tap", net.tap_name),
+                ])
+                .status()
+                .expect("Expected creating interface to work")
+                .success()
+        );
 
-        assert!(std::process::Command::new("bash")
-            .args([
-                "-c",
-                &format!("sudo ip addr add {}/24 dev {}", net.host_ip, net.tap_name),
-            ])
-            .status()
-            .expect("Expected programming interface to work")
-            .success());
+        assert!(
+            std::process::Command::new("bash")
+                .args([
+                    "-c",
+                    &format!("sudo ip addr add {}/24 dev {}", net.host_ip, net.tap_name),
+                ])
+                .status()
+                .expect("Expected programming interface to work")
+                .success()
+        );
 
-        assert!(std::process::Command::new("bash")
-            .args(["-c", &format!("sudo ip link set dev {} up", net.tap_name)])
-            .status()
-            .expect("Expected upping interface to work")
-            .success());
+        assert!(
+            std::process::Command::new("bash")
+                .args(["-c", &format!("sudo ip link set dev {} up", net.tap_name)])
+                .status()
+                .expect("Expected upping interface to work")
+                .success()
+        );
     }
 
     fn cleanup_tap(net: &GuestNetworkConfig) {
-        assert!(std::process::Command::new("bash")
-            .args([
-                "-c",
-                &format!("sudo ip tuntap de name {} mode tap", net.tap_name),
-            ])
-            .status()
-            .expect("Expected deleting interface to work")
-            .success());
+        assert!(
+            std::process::Command::new("bash")
+                .args([
+                    "-c",
+                    &format!("sudo ip tuntap de name {} mode tap", net.tap_name),
+                ])
+                .status()
+                .expect("Expected deleting interface to work")
+                .success()
+        );
     }
 
     fn handle_child_output(
