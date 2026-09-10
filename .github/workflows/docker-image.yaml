@@ -32,7 +32,7 @@ jobs:
         run: echo "toolchain=`rustup show active-toolchain | cut -d ' ' -f1`" >> $GITHUB_ENV
 
       - name: Login to ghcr
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
