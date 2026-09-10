@@ -14,7 +14,7 @@ SECTIONS
   /* Mapping the program headers and note into RAM makes the file smaller. */
   . = ram_min;
   . += SIZEOF_HEADERS;
-  .note : { *(.note) } :note :ram
+  .note : { *(.note .note.*) } :note :ram
 
   /* These sections are mapped into RAM from the file. Omitting :ram from
      later sections avoids emitting empty sections in the final binary.       */
