@@ -628,9 +628,9 @@ checksum = "8d2d250f87fb3fb6f225c907cf54381509f47b40b74b1d1f12d2dccbc915bdfe"
 
 [[package]]
 name = "uart_16550"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9c24d1751f909d9e2d192475ca5527964e13dbc3126ce20c288dfa8f3a3e734"
+checksum = "e1da273f7d8d9a37950980a0b75e680169c4cc47de6ed7dccf3749cbaf5976e2"
 dependencies = [
  "bitflags",
 ]
