@@ -55,23 +55,10 @@ pub extern "efiapi" fn read_blocks(
     let wrapper = container_of!(proto, BlockWrapper, proto);
     let wrapper = unsafe { &*wrapper };
 
-    let block_size = wrapper.media.block_size as usize;
-    let blocks = size / block_size;
-    let mut region = crate::mem::MemoryRegion::new(buffer as u64, size as u64);
-
-    for i in 0..blocks {
-        use crate::block::SectorRead;
-        let data = region.as_mut_slice((i * block_size) as u64, block_size as u64);
-        let block = wrapper.block;
-        match block.read(wrapper.start_lba + start + i as u64, data) {
-            Ok(()) => continue,
-            Err(_) => {
-                return Status::DEVICE_ERROR;
-            }
-        };
-    }
-
-    Status::SUCCESS
+    use crate::block::SectorRead;
+    transfer(wrapper, start, size, buffer, |sector, data| {
+        wrapper.block.read(sector, data)
+    })
 }
 
 pub extern "efiapi" fn write_blocks(
@@ -84,20 +71,36 @@ pub extern "efiapi" fn write_blocks(
     let wrapper = container_of!(proto, BlockWrapper, proto);
     let wrapper = unsafe { &*wrapper };
 
+    use crate::block::SectorWrite;
+    transfer(wrapper, start, size, buffer, |sector, data| {
+        wrapper.block.write(sector, data)
+    })
+}
+
+const MAX_TRANSFER_BYTES: usize = 1 << 20;
+
+fn transfer(
+    wrapper: &BlockWrapper,
+    start: u64,
+    size: usize,
+    buffer: *mut c_void,
+    mut op: impl FnMut(u64, &mut [u8]) -> Result<(), crate::block::Error>,
+) -> Status {
+    if size == 0 {
+        return Status::SUCCESS;
+    }
     let block_size = wrapper.media.block_size as usize;
-    let blocks = size / block_size;
+    if size % block_size != 0 {
+        return Status::BAD_BUFFER_SIZE;
+    }
     let mut region = crate::mem::MemoryRegion::new(buffer as u64, size as u64);
 
-    for i in 0..blocks {
-        use crate::block::SectorWrite;
-        let data = region.as_mut_slice((i * block_size) as u64, block_size as u64);
-        let block = wrapper.block;
-        match block.write(wrapper.start_lba + start + i as u64, data) {
-            Ok(()) => continue,
-            Err(_) => {
-                return Status::DEVICE_ERROR;
-            }
-        };
+    let mut sector = wrapper.start_lba + start;
+    for data in region.as_bytes().chunks_mut(MAX_TRANSFER_BYTES) {
+        if op(sector, data).is_err() {
+            return Status::DEVICE_ERROR;
+        }
+        sector += (data.len() / block_size) as u64;
     }
 
     Status::SUCCESS

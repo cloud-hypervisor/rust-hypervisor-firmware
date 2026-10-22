@@ -113,14 +113,12 @@ impl SectorBuf {
 }
 
 pub trait SectorRead {
-    /// Read a single sector (512 bytes) from the block device. `data` must be
-    /// exactly 512 bytes long.
+    /// Read consecutive sectors; `data` is a non-empty multiple of 512 bytes.
     fn read(&self, sector: u64, data: &mut [u8]) -> Result<(), Error>;
 }
 
 pub trait SectorWrite {
-    /// Write a single sector (512 bytes) from the block device. `data` must be
-    /// exactly 512 bytes long.
+    /// Write consecutive sectors; `data` is a non-empty multiple of 512 bytes.
     fn write(&self, sector: u64, data: &mut [u8]) -> Result<(), Error>;
     fn flush(&self) -> Result<(), Error>;
 }
@@ -266,11 +264,12 @@ impl<'a> VirtioBlockDevice<'a> {
                     return Err(Error::NoDataBuf);
                 }
                 Some(data) => {
-                    if data.len() != SectorBuf::len() {
-                        return Err(Error::InvalidDataBufSize);
-                    }
+                    let len = match u32::try_from(data.len()) {
+                        Ok(len) if !data.is_empty() && data.len() % SectorBuf::len() == 0 => len,
+                        _ => return Err(Error::InvalidDataBufSize),
+                    };
                     d.addr = data.as_ptr() as u64;
-                    d.length = SectorBuf::len() as u32;
+                    d.length = len;
                 }
             }
         }
